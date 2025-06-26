@@ -1,32 +1,29 @@
 import Image from "next/image";
+import BookingForm from "./BookingForm";
 
 export default function HeroSection() {
   return (
     <section className="relative flex flex-col md:flex-row items-center justify-between gap-8 px-6 py-16 md:py-24 overflow-hidden" style={{ backgroundImage: 'url(/aeroplane.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       {/* Overlay for readability */}
-      <div className="absolute inset-0 bg-black/40 z-0" aria-hidden="true" />
-      {/* Left: Text Content */}
-      <div className="flex-1 max-w-xl z-10">
+      <div className="absolute inset-0 bg-black/50 z-0" aria-hidden="true" />
+      {/* Left: Text Content and Form */}
+      <div className="flex-1 max-w-xl z-10 flex flex-col items-start">
         <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight drop-shadow-lg">
           Book Flights <span className="text-blue-200">Your Way</span>
         </h1>
-        <p className="text-lg md:text-xl text-gray-100 mb-8 drop-shadow">
-          With Aero Bound Ventures, you choose: let our expert team handle your booking for a stress-free experience, or take control and book it yourself. Enjoy flexibility, great deals, and a personal touch every time you fly.
+        <p className="text-lg md:text-xl text-gray-100 mb-10 drop-shadow">
+          With Aero Bound Ventures, you can search and book flights instantly, or let our expert team handle your booking for a stress-free experience. Enjoy flexibility, great deals, and a personal touch every time you fly.
         </p>
-        <div className="flex gap-4 mb-8">
-          <a
-            href="#contact"
-            className="inline-block bg-blue-700 hover:bg-blue-800 text-white font-semibold px-6 py-3 rounded-lg shadow transition-colors text-lg drop-shadow"
-          >
-            We Book For You
-          </a>
-          <a
-            href="#diy"
-            className="inline-block border border-blue-200 text-blue-200 hover:bg-blue-50 hover:text-black font-semibold px-6 py-3 rounded-lg shadow transition-colors text-lg drop-shadow"
-          >
-            Do It Yourself
-          </a>
-        </div>
+        <div className="py-4" />
+        <BookingForm />
+        <a
+          href="https://wa.me/1234567890" // Replace with your WhatsApp number
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 inline-block text-center w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg shadow transition-colors text-lg"
+        >
+          Or, let us book for you on WhatsApp
+        </a>
         <div className="mt-6 flex gap-4 items-center text-sm text-blue-100">
           <span className="inline-flex items-center gap-1">
             <svg className="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
