@@ -42,7 +42,7 @@ export default function HeroSection() {
       {/* Right: Illustration */}
       <div className="flex-1 flex justify-center items-center relative z-10">
         {/* Main image */}
-        <div className="relative w-72 h-72 md:w-96 md:h-96">
+        <div className="relative w-72 h-80 md:w-[28rem] md:h-[28rem]">
           <Image
             src="/smiling_couple_airport2.webp"
             alt="Another smiling couple at the airport"
@@ -51,7 +51,7 @@ export default function HeroSection() {
             priority
           />
           {/* Overlapping secondary image */}
-          <div className="absolute -bottom-10 -right-10 w-40 h-40 md:w-52 md:h-52 border-4 border-white rounded-xl shadow-lg bg-white">
+          <div className="absolute -bottom-12 -right-12 w-44 h-44 md:w-56 md:h-56 border-4 border-white rounded-xl shadow-lg bg-white">
             <Image
               src="/smilling_couple_airport.webp"
               alt="Smiling couple at the airport"
