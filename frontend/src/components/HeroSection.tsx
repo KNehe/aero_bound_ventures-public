@@ -1,6 +1,8 @@
 import Image from "next/image";
 import BookingForm from "./BookingForm";
 
+const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
+
 export default function HeroSection() {
   return (
     <section className="relative flex flex-col md:flex-row items-center justify-between gap-8 px-6 py-16 md:py-24 overflow-hidden" style={{ backgroundImage: 'url(/aeroplane.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
@@ -16,14 +18,16 @@ export default function HeroSection() {
         </p>
         <div className="py-4" />
         <BookingForm />
-        <a
-          href="https://wa.me/1234567890" // Replace with your WhatsApp number
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-6 inline-block text-center w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg shadow transition-colors text-lg"
-        >
-          Or, let us book for you on WhatsApp
-        </a>
+        {whatsappNumber && (
+          <a
+            href={`https://wa.me/${whatsappNumber}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 inline-block text-center w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg shadow transition-colors text-lg"
+          >
+            Or, let us book for you on WhatsApp
+          </a>
+        )}
         <div className="mt-6 flex gap-4 items-center text-sm text-blue-100">
           <span className="inline-flex items-center gap-1">
             <svg className="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
