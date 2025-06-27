@@ -8,10 +8,18 @@ export default function Home() {
   return (
     <main>
       <HeroSection />
-      <HowItWorksSection />
-      <PopularDestinationsSection />
-      <TestimonialsSection />
-      <ContactUsSection />
+      <div id="how-it-works">
+        <HowItWorksSection />
+      </div>
+      <div id="destinations">
+        <PopularDestinationsSection />
+      </div>
+      <div id="testimonials">
+        <TestimonialsSection />
+      </div>
+      <div id="contact">
+        <ContactUsSection />
+      </div>
     </main>
   );
 }
