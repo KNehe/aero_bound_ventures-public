@@ -9,7 +9,7 @@ const navLinks = [
 
 export default function Footer() {
   return (
-    <footer className="w-full bg-blue-900 text-white py-10 px-4 mt-16">
+    <footer className="w-full bg-blue-900 text-white py-10 px-4">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center md:items-start justify-between gap-8">
         {/* Brand */}
         <div className="mb-6 md:mb-0 flex flex-col items-center md:items-start">
