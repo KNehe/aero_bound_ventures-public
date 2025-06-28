@@ -5,7 +5,7 @@ const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
 
 export default function HeroSection() {
   return (
-    <section className="relative flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-6 py-8 md:py-8 overflow-hidden" style={{ backgroundImage: 'url(/aeroplane.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+    <section className="relative flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-6 py-12 md:py-16 min-h-screen overflow-hidden" style={{ backgroundImage: 'url(/aeroplane.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       {/* Overlay for readability */}
       <div className="absolute inset-0 bg-black/50 z-0" aria-hidden="true" />
       {/* Left: Text Content and Form */}
