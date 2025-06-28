@@ -1,7 +1,9 @@
 "use client";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function BookingForm() {
+  const router = useRouter();
   const [form, setForm] = useState({
     from: "",
     to: "",
@@ -29,7 +31,9 @@ export default function BookingForm() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const totalPassengers = Number(form.adults) + Number(form.children) + Number(form.infants);
-    alert(`Searching ${form.tripType} flights from ${form.from} to ${form.to} for ${totalPassengers} passenger(s) (${form.adults} adults, ${form.children} children, ${form.infants} infants) in ${form.travelClass} class on ${form.depart}${form.return ? `, returning ${form.return}` : ""}`);
+    
+    // Navigate to flights results page
+    router.push('/flights');
   }
 
   // Convert string values to numbers for calculations
