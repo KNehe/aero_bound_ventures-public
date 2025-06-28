@@ -117,11 +117,10 @@ export default function FlightsPage() {
   };
 
   const formatTime = (dateTime: string) => {
-    return new Date(dateTime).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
+    const date = new Date(dateTime);
+    const hours = date.getUTCHours().toString().padStart(2, '0');
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
   };
 
   const formatDate = (dateTime: string) => {

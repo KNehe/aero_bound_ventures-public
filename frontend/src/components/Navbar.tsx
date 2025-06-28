@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 
 const navLinks = [
   { name: "Home", href: "#" },
@@ -12,11 +13,15 @@ const navLinks = [
 ];
 
 export default function Navbar() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("");
 
-  // Handle active section tracking
+  // Handle active section tracking (only on home page)
   useEffect(() => {
+    if (pathname !== "/") return;
+    
     const handleScroll = () => {
       const sections = navLinks.map(link => link.href.replace('#', ''));
       const current = sections.find(section => {
@@ -32,24 +37,57 @@ export default function Navbar() {
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [pathname]);
+
+  // Smart navigation handler
+  const handleNavigation = (href: string) => {
+    const sectionId = href.replace('#', '');
+    
+    if (pathname === "/") {
+      // On home page, scroll to section
+      if (sectionId === '') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    } else {
+      // On other pages, navigate to home and then scroll
+      router.push('/');
+      // Use setTimeout to ensure navigation completes before scrolling
+      setTimeout(() => {
+        if (sectionId === '') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          const element = document.getElementById(sectionId);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      }, 100);
+    }
+    
+    setMenuOpen(false);
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-white shadow flex items-center justify-between px-6 py-3">
       {/* Left: Logo and Name */}
-      <Link href="#" className="flex items-center gap-2">
+      <Link href="/" className="flex items-center gap-2">
         <Image src="/globe.svg" alt="Aero Bound Ventures Logo" width={32} height={32} />
         <span className="text-2xl font-extrabold text-blue-700 tracking-wide">Aero Bound Ventures</span>
       </Link>
       {/* Desktop Nav Links */}
       <div className="hidden md:flex gap-8">
         {navLinks.map((link) => {
-          const isActive = activeSection === link.href.replace('#', '') || 
-                          (link.href === '#' && activeSection === '');
+          const isActive = pathname === "/" && (activeSection === link.href.replace('#', '') || 
+                          (link.href === '#' && activeSection === ''));
           return (
-            <Link 
+            <button 
               key={link.name} 
-              href={link.href} 
+              onClick={() => handleNavigation(link.href)}
               className={`font-medium transition-all duration-200 relative ${
                 isActive 
                   ? 'text-blue-600' 
@@ -60,7 +98,7 @@ export default function Navbar() {
               {isActive && (
                 <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-blue-600 rounded-full" />
               )}
-            </Link>
+            </button>
           );
         })}
       </div>
@@ -84,21 +122,20 @@ export default function Navbar() {
           &times;
         </button>
         {navLinks.map((link) => {
-          const isActive = activeSection === link.href.replace('#', '') || 
-                          (link.href === '#' && activeSection === '');
+          const isActive = pathname === "/" && (activeSection === link.href.replace('#', '') || 
+                          (link.href === '#' && activeSection === ''));
           return (
-            <Link
+            <button
               key={link.name}
-              href={link.href}
+              onClick={() => handleNavigation(link.href)}
               className={`font-medium text-lg transition-all duration-200 ${
                 isActive 
                   ? 'text-blue-600' 
                   : 'text-gray-800 hover:text-blue-600'
               }`}
-              onClick={() => setMenuOpen(false)}
             >
               {link.name}
-            </Link>
+            </button>
           );
         })}
       </div>
