@@ -9,7 +9,7 @@ export default function Home() {
     <main>
       <HeroSection />
       <div id="how-it-works">
-        <HowItWorksSection />
+      <HowItWorksSection />
       </div>
       <div id="destinations">
         <PopularDestinationsSection />
