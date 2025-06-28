@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -13,21 +13,56 @@ const navLinks = [
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
+
+  // Handle active section tracking
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = navLinks.map(link => link.href.replace('#', ''));
+      const current = sections.find(section => {
+        if (section === '') return window.scrollY < 100;
+        const element = document.getElementById(section);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          return rect.top <= 100 && rect.bottom >= 100;
+        }
+        return false;
+      });
+      setActiveSection(current || '');
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-white shadow flex items-center justify-between px-6 py-3">
       {/* Left: Logo and Name */}
-      <div className="flex items-center gap-2">
+      <Link href="#" className="flex items-center gap-2">
         <Image src="/globe.svg" alt="Aero Bound Ventures Logo" width={32} height={32} />
         <span className="text-2xl font-extrabold text-blue-700 tracking-wide">Aero Bound Ventures</span>
-      </div>
+      </Link>
       {/* Desktop Nav Links */}
       <div className="hidden md:flex gap-8">
-        {navLinks.map((link) => (
-          <Link key={link.name} href={link.href} className="text-gray-800 font-medium hover:text-blue-600 transition-colors">
-            {link.name}
-          </Link>
-        ))}
+        {navLinks.map((link) => {
+          const isActive = activeSection === link.href.replace('#', '') || 
+                          (link.href === '#' && activeSection === '');
+          return (
+            <Link 
+              key={link.name} 
+              href={link.href} 
+              className={`font-medium transition-all duration-200 relative ${
+                isActive 
+                  ? 'text-blue-600' 
+                  : 'text-gray-800 hover:text-blue-600'
+              }`}
+            >
+              {link.name}
+              {isActive && (
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-blue-600 rounded-full" />
+              )}
+            </Link>
+          );
+        })}
       </div>
       {/* Hamburger Icon */}
       <button
@@ -48,16 +83,24 @@ export default function Navbar() {
         >
           &times;
         </button>
-        {navLinks.map((link) => (
-          <Link
-            key={link.name}
-            href={link.href}
-            className="text-gray-800 font-medium text-lg hover:text-blue-600 transition-colors"
-            onClick={() => setMenuOpen(false)}
-          >
-            {link.name}
-          </Link>
-        ))}
+        {navLinks.map((link) => {
+          const isActive = activeSection === link.href.replace('#', '') || 
+                          (link.href === '#' && activeSection === '');
+          return (
+            <Link
+              key={link.name}
+              href={link.href}
+              className={`font-medium text-lg transition-all duration-200 ${
+                isActive 
+                  ? 'text-blue-600' 
+                  : 'text-gray-800 hover:text-blue-600'
+              }`}
+              onClick={() => setMenuOpen(false)}
+            >
+              {link.name}
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );
