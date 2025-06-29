@@ -135,8 +135,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     // Simulate API call
     setTimeout(() => {
       setIsSubmitting(false);
-      // Navigate to success page with booking ID
-      router.push(`/booking/success/MOCK_BOOKING_ID_${Date.now()}`);
+      // Generate a mock order ID and navigate to success page
+      const orderId = `MOCK_BOOKING_ID_${Date.now()}`;
+      router.push(`/booking/success/${orderId}`);
     }, 2000);
   };
 
