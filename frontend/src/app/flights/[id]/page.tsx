@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 // Mock data structure based on the API response
 interface FlightPricingData {
@@ -190,7 +191,9 @@ const mockPricingData: FlightPricingData = {
   },
 };
 
-export default function FlightPricingPage({ params }: { params: { id: string } }) {
+export default function FlightPricingPage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter();
+  const resolvedParams = React.use(params);
   const [selectedTravelers, setSelectedTravelers] = useState<Record<string, boolean>>({});
   const flightOffer = mockPricingData.data.flightOffers[0];
 
@@ -390,7 +393,7 @@ export default function FlightPricingPage({ params }: { params: { id: string } }
                     {flightOffer.price.fees.map((fee, index) => (
                       <div key={index} className="flex justify-between text-sm">
                         <span className="text-gray-600 capitalize">{fee.type.replace('_', ' ').toLowerCase()}</span>
-                        <span className="text-gray-900">{fee.currency} {fee.amount}</span>
+                        <span className="text-gray-900">{flightOffer.price.currency} {fee.amount}</span>
                       </div>
                     ))}
                   </div>
@@ -432,7 +435,7 @@ export default function FlightPricingPage({ params }: { params: { id: string } }
 
               <button
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg mt-6 transition-colors"
-                onClick={() => alert('Proceeding to booking...')}
+                onClick={() => router.push(`/booking/${resolvedParams.id}`)}
               >
                 Continue to Booking
               </button>
