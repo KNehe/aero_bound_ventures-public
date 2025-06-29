@@ -326,7 +326,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           required
                           value={traveler.firstName}
                           onChange={(e) => updateTraveler(index, 'firstName', e.target.value)}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                         />
                       </div>
                       
@@ -337,7 +337,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           required
                           value={traveler.lastName}
                           onChange={(e) => updateTraveler(index, 'lastName', e.target.value)}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                         />
                       </div>
                       
@@ -348,7 +348,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           required
                           value={traveler.dateOfBirth}
                           onChange={(e) => updateTraveler(index, 'dateOfBirth', e.target.value)}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                         />
                       </div>
                       
@@ -358,7 +358,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           required
                           value={traveler.gender}
                           onChange={(e) => updateTraveler(index, 'gender', e.target.value)}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                         >
                           <option value="MALE">Male</option>
                           <option value="FEMALE">Female</option>
@@ -372,7 +372,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           required
                           value={traveler.email}
                           onChange={(e) => updateTraveler(index, 'email', e.target.value)}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                         />
                       </div>
                       
@@ -382,7 +382,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           <select
                             value={traveler.countryCallingCode}
                             onChange={(e) => updateTraveler(index, 'countryCallingCode', e.target.value)}
-                            className="border border-gray-300 rounded-l-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="border border-gray-300 rounded-l-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                           >
                             <option value="+1">+1</option>
                             <option value="+44">+44</option>
@@ -394,7 +394,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             required
                             value={traveler.phone}
                             onChange={(e) => updateTraveler(index, 'phone', e.target.value)}
-                            className="flex-1 border border-gray-300 rounded-r-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="flex-1 border border-gray-300 rounded-r-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                           />
                         </div>
                       </div>
@@ -410,7 +410,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             required
                             value={traveler.documents.documentType}
                             onChange={(e) => updateTraveler(index, 'documents.documentType', e.target.value)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                           >
                             <option value="PASSPORT">Passport</option>
                             <option value="ID_CARD">ID Card</option>
@@ -424,7 +424,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             required
                             value={traveler.documents.number}
                             onChange={(e) => updateTraveler(index, 'documents.number', e.target.value)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                           />
                         </div>
                         
@@ -435,7 +435,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             required
                             value={traveler.documents.expiryDate}
                             onChange={(e) => updateTraveler(index, 'documents.expiryDate', e.target.value)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                           />
                         </div>
                         
@@ -445,7 +445,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             required
                             value={traveler.documents.nationality}
                             onChange={(e) => updateTraveler(index, 'documents.nationality', e.target.value)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                           >
                             <option value="">Select Nationality</option>
                             <option value="US">United States</option>
@@ -476,7 +476,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     required
                     value={contactInfo.firstName}
                     onChange={(e) => updateContactInfo('firstName', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   />
                 </div>
                 
@@ -487,7 +487,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     required
                     value={contactInfo.lastName}
                     onChange={(e) => updateContactInfo('lastName', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   />
                 </div>
                 
@@ -498,7 +498,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     required
                     value={contactInfo.email}
                     onChange={(e) => updateContactInfo('email', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   />
                 </div>
                 
@@ -508,7 +508,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     <select
                       value={contactInfo.countryCallingCode}
                       onChange={(e) => updateContactInfo('countryCallingCode', e.target.value)}
-                      className="border border-gray-300 rounded-l-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="border border-gray-300 rounded-l-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                     >
                       <option value="+1">+1</option>
                       <option value="+44">+44</option>
@@ -520,7 +520,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                       required
                       value={contactInfo.phone}
                       onChange={(e) => updateContactInfo('phone', e.target.value)}
-                      className="flex-1 border border-gray-300 rounded-r-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 border border-gray-300 rounded-r-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                     />
                   </div>
                 </div>
@@ -532,7 +532,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     required
                     value={contactInfo.address.street}
                     onChange={(e) => updateContactInfo('address.street', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   />
                 </div>
                 
@@ -543,7 +543,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     required
                     value={contactInfo.address.city}
                     onChange={(e) => updateContactInfo('address.city', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   />
                 </div>
                 
@@ -554,7 +554,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     required
                     value={contactInfo.address.postalCode}
                     onChange={(e) => updateContactInfo('address.postalCode', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   />
                 </div>
                 
@@ -564,7 +564,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     required
                     value={contactInfo.address.country}
                     onChange={(e) => updateContactInfo('address.country', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   >
                     <option value="">Select Country</option>
                     <option value="US">United States</option>
@@ -591,7 +591,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     required
                     value={paymentInfo.cardholderName}
                     onChange={(e) => setPaymentInfo(prev => ({ ...prev, cardholderName: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   />
                 </div>
                 
@@ -603,7 +603,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     placeholder="1234 5678 9012 3456"
                     value={paymentInfo.cardNumber}
                     onChange={(e) => setPaymentInfo(prev => ({ ...prev, cardNumber: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700"
                   />
                 </div>
                 
@@ -615,7 +615,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     placeholder="MM/YY"
                     value={paymentInfo.expiryDate}
                     onChange={(e) => setPaymentInfo(prev => ({ ...prev, expiryDate: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700"
                   />
                 </div>
                 
@@ -627,7 +627,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     placeholder="123"
                     value={paymentInfo.cvv}
                     onChange={(e) => setPaymentInfo(prev => ({ ...prev, cvv: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700"
                   />
                 </div>
               </div>

@@ -140,7 +140,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToSignu
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700 ${
                 errors.email ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="john.smith@email.com"
@@ -160,7 +160,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToSignu
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700 ${
                 errors.password ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="••••••••"

@@ -84,7 +84,7 @@ export default function BookingForm() {
             type="text"
             required
             placeholder="City or Airport (e.g., NYC, LAX)"
-            className="w-full border border-white/30 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900 text-base bg-white/90"
+            className="w-full border border-white/30 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900 placeholder-gray-700 text-base bg-white/90"
             value={form.from}
             onChange={handleChange}
           />
@@ -97,7 +97,7 @@ export default function BookingForm() {
             type="text"
             required
             placeholder="City or Airport (e.g., LON, CDG)"
-            className="w-full border border-white/30 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900 text-base bg-white/90"
+            className="w-full border border-white/30 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900 placeholder-gray-700 text-base bg-white/90"
             value={form.to}
             onChange={handleChange}
           />
@@ -126,7 +126,7 @@ export default function BookingForm() {
             type="date"
             required={form.tripType === "roundtrip"}
             disabled={form.tripType === "oneway"}
-            className="w-full border border-white/30 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900 text-base bg-white/90 disabled:bg-gray-300"
+            className="w-full border border-white/30 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900 text-base bg-white/90 disabled:bg-gray-300 disabled:text-gray-500"
             value={form.return}
             onChange={handleChange}
           />

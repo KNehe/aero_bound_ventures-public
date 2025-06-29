@@ -147,7 +147,7 @@ export default function UserAccount({ user, bookings, onLogout }: UserAccountPro
                         type="text"
                         value={editForm.firstName}
                         onChange={(e) => setEditForm({...editForm, firstName: e.target.value})}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                       />
                     </div>
                     <div>
@@ -158,7 +158,7 @@ export default function UserAccount({ user, bookings, onLogout }: UserAccountPro
                         type="text"
                         value={editForm.lastName}
                         onChange={(e) => setEditForm({...editForm, lastName: e.target.value})}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                       />
                     </div>
                   </div>
@@ -170,7 +170,7 @@ export default function UserAccount({ user, bookings, onLogout }: UserAccountPro
                       type="tel"
                       value={editForm.phone}
                       onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                     />
                   </div>
                   <div className="flex space-x-3">

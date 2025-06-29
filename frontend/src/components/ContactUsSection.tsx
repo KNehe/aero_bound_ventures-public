@@ -18,7 +18,7 @@ export default function ContactUsSection() {
             id="name"
             name="name"
             required
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-blue-900 placeholder-blue-900"
+            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900 placeholder-gray-700"
             placeholder="Your Name"
           />
         </div>
@@ -29,7 +29,7 @@ export default function ContactUsSection() {
             id="email"
             name="email"
             required
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-blue-900 placeholder-blue-900"
+            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900 placeholder-gray-700"
             placeholder="you@email.com"
           />
         </div>
@@ -40,7 +40,7 @@ export default function ContactUsSection() {
             name="message"
             required
             rows={4}
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none text-blue-900 placeholder-blue-900"
+            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none text-gray-900 placeholder-gray-700"
             placeholder="How can we help you?"
           />
         </div>

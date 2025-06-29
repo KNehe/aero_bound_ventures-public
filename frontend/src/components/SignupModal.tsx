@@ -128,7 +128,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, bookingId }: S
                 name="firstName"
                 value={formData.firstName}
                 onChange={handleChange}
-                className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700 ${
                   errors.firstName ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="John"
@@ -148,7 +148,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, bookingId }: S
                 name="lastName"
                 value={formData.lastName}
                 onChange={handleChange}
-                className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700 ${
                   errors.lastName ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="Smith"
@@ -169,7 +169,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, bookingId }: S
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700 ${
                 errors.email ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="john.smith@email.com"
@@ -189,7 +189,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, bookingId }: S
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700"
               placeholder="+1 555-123-4567"
             />
           </div>
@@ -204,7 +204,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, bookingId }: S
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700 ${
                 errors.password ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="••••••••"
@@ -224,7 +224,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, bookingId }: S
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700 ${
                 errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="••••••••"
