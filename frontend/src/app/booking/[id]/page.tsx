@@ -2,6 +2,16 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import SignupModal from "../../../components/SignupModal";
+import LoginModal from "../../../components/LoginModal";
+
+interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+}
 
 interface Traveler {
   id: string;
@@ -39,8 +49,11 @@ interface ContactInfo {
 export default function BookingPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const resolvedParams = React.use(params);
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0); // Start with authentication step
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [showSignup, setShowSignup] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   
   // Mock flight data (in real app, this would come from the pricing API)
   const [travelers, setTravelers] = useState<Traveler[]>([
@@ -105,6 +118,24 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
   const [termsAccepted, setTermsAccepted] = useState(false);
 
+  // Authentication handlers
+  const handleSignupSuccess = (userData: User) => {
+    setUser(userData);
+    setShowSignup(false);
+    setCurrentStep(1); // Move to traveler information
+  };
+
+  const handleLoginSuccess = (userData: User) => {
+    setUser(userData);
+    setShowLogin(false);
+    setCurrentStep(1); // Move to traveler information
+  };
+
+  const handleSwitchToSignup = () => {
+    setShowLogin(false);
+    setShowSignup(true);
+  };
+
   const updateTraveler = (index: number, field: string, value: string) => {
     const updatedTravelers = [...travelers];
     if (field.includes('.')) {
@@ -141,7 +172,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     }, 2000);
   };
 
-  const totalSteps = 4;
+  const totalSteps = 5; // Now includes authentication step
   const progress = (currentStep / totalSteps) * 100;
 
   return (
@@ -156,9 +187,17 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
               </svg>
               <span className="font-semibold">Back to Flight Details</span>
             </Link>
-            <div className="text-right">
-              <div className="text-2xl font-bold">EUR 546.70</div>
-              <div className="text-sm opacity-90">Total for all passengers</div>
+            <div className="flex items-center gap-6">
+              {user && (
+                <div className="text-right">
+                  <p className="text-sm opacity-90">Booking for</p>
+                  <p className="font-semibold">{user.firstName} {user.lastName}</p>
+                </div>
+              )}
+              <div className="text-right">
+                <div className="text-2xl font-bold">EUR 546.70</div>
+                <div className="text-sm opacity-90">Total for all passengers</div>
+              </div>
             </div>
           </div>
         </div>
@@ -168,13 +207,14 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Step {currentStep} of {totalSteps}</span>
+            <span className="text-sm font-medium text-gray-700">Step {currentStep + 1} of {totalSteps}</span>
             <span className="text-sm text-gray-500">{Math.round(progress)}% Complete</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
           </div>
           <div className="flex justify-between mt-2 text-xs text-gray-500">
+            <span>Sign In</span>
             <span>Traveler Info</span>
             <span>Contact Details</span>
             <span>Payment</span>
@@ -184,6 +224,87 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Step 0: Authentication */}
+        {currentStep === 0 && (
+          <div className="bg-white rounded-lg shadow-sm border p-8">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Sign In to Continue</h2>
+              <p className="text-gray-600">
+                Please sign in or create an account to proceed with your booking
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+              {/* Login Card */}
+              <div className="border border-gray-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Already have an account?</h3>
+                <p className="text-gray-600 mb-6">
+                  Sign in to access your existing bookings and complete your purchase.
+                </p>
+                <button
+                  onClick={() => setShowLogin(true)}
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 font-medium"
+                >
+                  Sign In
+                </button>
+              </div>
+
+              {/* Signup Card */}
+              <div className="border border-gray-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">New to Aero Bound?</h3>
+                <p className="text-gray-600 mb-6">
+                  Create an account to manage your bookings and get exclusive offers.
+                </p>
+                <button
+                  onClick={() => setShowSignup(true)}
+                  className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 font-medium"
+                >
+                  Create Account
+                </button>
+              </div>
+            </div>
+
+            {/* Benefits */}
+            <div className="mt-8 p-6 bg-blue-50 rounded-lg">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Why create an account?</h3>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="flex items-start">
+                  <svg className="w-5 h-5 text-blue-600 mt-1 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <p className="font-medium text-gray-900">Manage Bookings</p>
+                    <p className="text-sm text-gray-600">Access all your tickets in one place</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <svg className="w-5 h-5 text-blue-600 mt-1 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <p className="font-medium text-gray-900">Exclusive Offers</p>
+                    <p className="text-sm text-gray-600">Get member-only deals and discounts</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <svg className="w-5 h-5 text-blue-600 mt-1 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <p className="font-medium text-gray-900">Quick Booking</p>
+                    <p className="text-sm text-gray-600">Save your details for faster booking</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Step 1: Traveler Information */}
           {currentStep === 1 && (
@@ -590,19 +711,20 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
           <div className="flex justify-between">
             <button
               type="button"
-              onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
-              disabled={currentStep === 1}
+              onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
+              disabled={currentStep === 0}
               className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
             
             <div className="flex gap-3">
-              {currentStep < totalSteps ? (
+              {currentStep < totalSteps - 1 ? (
                 <button
                   type="button"
                   onClick={() => setCurrentStep(prev => prev + 1)}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  disabled={currentStep === 0 && !user} // Disable if on auth step and no user
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>
@@ -626,6 +748,41 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
           </div>
         </form>
       </div>
+
+      {/* Authentication Modals */}
+      <SignupModal
+        isOpen={showSignup}
+        onClose={() => setShowSignup(false)}
+        onSuccess={() => {
+          // Simulate successful signup with user data
+          const userData: User = {
+            id: "1",
+            firstName: "John",
+            lastName: "Smith",
+            email: "john.smith@email.com",
+            phone: "+1 555-123-4567",
+          };
+          handleSignupSuccess(userData);
+        }}
+        bookingId={resolvedParams.id}
+      />
+
+      <LoginModal
+        isOpen={showLogin}
+        onClose={() => setShowLogin(false)}
+        onSuccess={() => {
+          // Simulate successful login with user data
+          const userData: User = {
+            id: "1",
+            firstName: "John",
+            lastName: "Smith",
+            email: "john.smith@email.com",
+            phone: "+1 555-123-4567",
+          };
+          handleLoginSuccess(userData);
+        }}
+        onSwitchToSignup={handleSwitchToSignup}
+      />
     </div>
   );
 } 
