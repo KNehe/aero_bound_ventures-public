@@ -392,6 +392,12 @@ export default function BookingSuccessPage({ params }: { params: Promise<{ order
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Actions</h3>
               <div className="space-y-3">
+                <Link
+                  href={`/tickets/processing/${bookingData.orderId}`}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-center block"
+                >
+                  View Ticket Status
+                </Link>
                 <button
                   onClick={() => window.print()}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
@@ -414,6 +420,30 @@ export default function BookingSuccessPage({ params }: { params: Promise<{ order
                   Contact Support
                 </Link>
               </div>
+            </div>
+
+            {/* Ticket Processing Status */}
+            <div className="bg-yellow-50 rounded-lg border border-yellow-200 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-yellow-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-yellow-900">Tickets Being Processed</h3>
+              </div>
+              <p className="text-sm text-yellow-800 mb-4">
+                Your tickets are currently being processed by our system. This usually takes 5-10 minutes.
+              </p>
+              <Link
+                href={`/tickets/processing/${bookingData.orderId}`}
+                className="inline-flex items-center gap-2 text-yellow-800 hover:text-yellow-900 font-medium"
+              >
+                <span>Track Processing Status</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
             </div>
           </div>
         </div>
