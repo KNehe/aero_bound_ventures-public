@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 // Mock data structure based on the API response
 interface FlightOffer {
@@ -103,6 +104,7 @@ const mockFlightData = {
 };
 
 export default function FlightsPage() {
+  const router = useRouter();
   const [selectedFlight, setSelectedFlight] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"price" | "duration" | "departure">("price");
 
@@ -145,6 +147,10 @@ export default function FlightsPage() {
         return 0;
     }
   });
+
+  const handleFlightSelection = (flightId: string) => {
+    router.push(`/flights/${flightId}`);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -325,8 +331,7 @@ export default function FlightsPage() {
                     }`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Handle booking logic here
-                      alert(`Booking flight ${flight.id} for ${flight.price.currency} ${flight.price.total}`);
+                      handleFlightSelection(flight.id);
                     }}
                   >
                     {selectedFlight === flight.id ? "Select Flight" : "Select This Flight"}
