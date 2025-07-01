@@ -117,6 +117,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   });
 
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('card');
 
   // Authentication handlers
   const handleSignupSuccess = (userData: User) => {
@@ -152,7 +153,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       const [parent, child] = field.split('.');
       setContactInfo(prev => ({
         ...prev,
-        [parent]: { ...prev[parent as keyof ContactInfo], [child]: value }
+        [parent]: parent === 'address'
+          ? { ...(prev.address as ContactInfo['address']), [child]: value }
+          : { [child]: value }
       }));
     } else {
       setContactInfo(prev => ({ ...prev, [field]: value }));
@@ -305,7 +308,15 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={e => {
+          if (currentStep === 3 && paymentMethod === 'cash') {
+            // Skip card validation if cash is selected, go to next step
+            e.preventDefault();
+            setCurrentStep(prev => prev + 1);
+            return;
+          }
+          handleSubmit(e);
+        }} className="space-y-8">
           {/* Step 1: Traveler Information */}
           {currentStep === 1 && (
             <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -582,56 +593,91 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
           {currentStep === 3 && (
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Payment Information</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cardholder Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={paymentInfo.cardholderName}
-                    onChange={(e) => setPaymentInfo(prev => ({ ...prev, cardholderName: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  />
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Card Number *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="1234 5678 9012 3456"
-                    value={paymentInfo.cardNumber}
-                    onChange={(e) => setPaymentInfo(prev => ({ ...prev, cardNumber: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="MM/YY"
-                    value={paymentInfo.expiryDate}
-                    onChange={(e) => setPaymentInfo(prev => ({ ...prev, expiryDate: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">CVV *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="123"
-                    value={paymentInfo.cvv}
-                    onChange={(e) => setPaymentInfo(prev => ({ ...prev, cvv: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700"
-                  />
-                </div>
+
+              {/* Payment Method Selector */}
+              <div className="mb-6 flex gap-4">
+                <button
+                  type="button"
+                  className={`px-4 py-2 rounded-lg border font-medium transition-colors duration-150 focus:outline-none ${paymentMethod === 'card' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                  onClick={() => setPaymentMethod('card')}
+                >
+                  Pay by Card
+                </button>
+                <button
+                  type="button"
+                  className={`px-4 py-2 rounded-lg border font-medium transition-colors duration-150 focus:outline-none ${paymentMethod === 'cash' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                  onClick={() => setPaymentMethod('cash')}
+                >
+                  Pay by Cash at Office
+                </button>
               </div>
-              
+
+              {/* Card Payment Fields */}
+              {paymentMethod === 'card' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cardholder Name *</label>
+                    <input
+                      type="text"
+                      required={paymentMethod === 'card'}
+                      value={paymentInfo.cardholderName}
+                      onChange={(e) => setPaymentInfo(prev => ({ ...prev, cardholderName: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Card Number *</label>
+                    <input
+                      type="text"
+                      required={paymentMethod === 'card'}
+                      placeholder="1234 5678 9012 3456"
+                      value={paymentInfo.cardNumber}
+                      onChange={(e) => setPaymentInfo(prev => ({ ...prev, cardNumber: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date *</label>
+                    <input
+                      type="text"
+                      required={paymentMethod === 'card'}
+                      placeholder="MM/YY"
+                      value={paymentInfo.expiryDate}
+                      onChange={(e) => setPaymentInfo(prev => ({ ...prev, expiryDate: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">CVV *</label>
+                    <input
+                      type="text"
+                      required={paymentMethod === 'card'}
+                      placeholder="123"
+                      value={paymentInfo.cvv}
+                      onChange={(e) => setPaymentInfo(prev => ({ ...prev, cvv: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Cash Payment Instructions */}
+              {paymentMethod === 'cash' && (
+                <div className="p-6 bg-green-50 rounded-lg border border-green-200 mt-2">
+                  <h3 className="text-lg font-semibold text-green-800 mb-2 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0 10c-4.418 0-8-1.79-8-4V8c0-2.21 3.582-4 8-4s8 1.79 8 4v6c0 2.21-3.582 4-8 4z" /></svg>
+                    Pay by Cash at Office
+                  </h3>
+                  <p className="text-green-700 mb-2">You have chosen to pay by cash at our office. Please visit our office within 24 hours to complete your payment and confirm your booking.</p>
+                  <ul className="list-disc pl-6 text-green-700 text-sm mb-2">
+                    <li>Office Address: <span className="font-medium">Kampala Road ETower Level 6 Room 1</span></li>
+                    <li>Opening Hours: <span className="font-medium">Mon-Fri 9:00am - 6:00pm</span></li>
+                    <li>Bring your booking reference and a valid ID.</li>
+                  </ul>
+                  <p className="text-green-700 text-sm">Your booking will be held for 24 hours. If payment is not received, your reservation may be cancelled.</p>
+                </div>
+              )}
+
               <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                 <div className="flex items-start">
                   <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
