@@ -186,7 +186,9 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToSignu
             </div>
             <button
               type="button"
-              onClick={() => alert("Forgot password functionality would be implemented here")}
+              onClick={() => {
+                window.location.href = "/auth/forgot-password";
+              }}
               className="text-sm text-blue-600 hover:underline"
             >
               Forgot password?
