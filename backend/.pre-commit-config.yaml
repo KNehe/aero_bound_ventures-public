@@ -1,0 +1,19 @@
+repos:
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  # Ruff version.
+  rev: v0.12.7
+  hooks:
+    # Run the linter.
+    - id: ruff-check
+      args: [ --fix ]
+    # Run the formatter.
+    - id: ruff-format
+
+- repo: https://github.com/christophmeissner/pytest-pre-commit
+  rev: 1.0.0
+  hooks:
+  - id: pytest
+    entry: bash -c 'PYTHONPATH=. pytest' # sets the Python path to the project root.
+    language: system #system allows us to use the local Python + environment
+    pass_filenames: false
+    always_run: true
