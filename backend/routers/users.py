@@ -4,7 +4,7 @@ from backend.schemas.users import UserCreate, UserRead
 from backend.crud.database import get_session
 from backend.crud.users import get_user_by_email, create_user
 from sqlmodel import Session
-from backend.utils.email import send_email_async
+from backend.external_services.email import send_email_async
 from fastapi import BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from backend.models.auth import Token
