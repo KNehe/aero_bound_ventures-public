@@ -8,6 +8,9 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
     depends_on:
       - db
+    volumes:
+      - .:/app/backend
+      - /app/backend/.venv  # Exclude virtual environment from volume mount
   db:
     image: postgres:16
     container_name: postgres-db
