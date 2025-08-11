@@ -1,6 +1,11 @@
 from fastapi import APIRouter, HTTPException
 from backend.external_services.flight import amadeus_flight_service
-from backend.schemas.flights import AmadeusFlightSearchRequest, FlightSearchResponse
+from backend.schemas.flights import (
+    AmadeusFlightSearchRequest,
+    FlightSearchResponse,
+    FlightOfferRequest,
+    FlightPricingResponse,
+)
 
 router = APIRouter()
 
@@ -25,3 +30,24 @@ async def search_flights(request: AmadeusFlightSearchRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Flight search failed: {str(e)}")
+
+
+@router.post("/flights/price", response_model=FlightPricingResponse)
+async def confirm_price(request: FlightOfferRequest):
+    """
+    Confirm flight pricing using the Amadeus Flight Offers Pricing API
+
+    This endpoint accepts a flight offer request and returns confirmed pricing information
+    from the Amadeus API.
+    """
+    try:
+        request_body = request.model_dump()
+        response = amadeus_flight_service.confirm_price(request_body)
+        return response
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Price confirmation failed: {str(e)}"
+        )

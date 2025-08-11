@@ -3,13 +3,14 @@ FROM python:3.12-slim
 # Install uv.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+# Set working directory
+WORKDIR /backend
+
 # Copy the application into the container.
-COPY . /app/backend
+COPY . .
 
 # Install the application dependencies.
-WORKDIR /app/backend
 RUN uv sync --frozen --no-cache
 
-
-# Run the application.
-CMD ["/app/backend/.venv/bin/fastapi", "run", "main.py", "--port", "80", "--host", "0.0.0.0"]
+# Expose port
+EXPOSE 80

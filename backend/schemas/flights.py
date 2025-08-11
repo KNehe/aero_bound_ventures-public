@@ -113,6 +113,125 @@ class AmadeusFlightSearchRequest(BaseModel):
     searchCriteria: SearchCriteria
 
 
+# Nested Models
+class Itinerary(BaseModel):
+    duration: str
+    segments: list["Segment"]
+
+
+class Segment(BaseModel):
+    departure: "Location"
+    arrival: "Location"
+    carrierCode: str
+    number: str
+    aircraft: "Aircraft"
+    operating: "Operating"
+    duration: str
+    id: str
+    numberOfStops: int
+    blacklistedInEU: bool
+
+
+class Location(BaseModel):
+    iataCode: str
+    terminal: str
+    at: str
+
+
+class Aircraft(BaseModel):
+    code: str
+
+
+class Operating(BaseModel):
+    carrierCode: str
+
+
+class Price(BaseModel):
+    currency: str
+    total: str
+    base: str
+    fees: list["Fee"]
+    grandTotal: str
+    additionalServices: list["AdditionalService"]
+
+
+class Fee(BaseModel):
+    amount: str
+    type: str
+
+
+class AdditionalService(BaseModel):
+    amount: str
+    type: str
+
+
+class PricingOptions(BaseModel):
+    fareType: list[str]
+    includedCheckedBagsOnly: bool
+
+
+class TravelerPricing(BaseModel):
+    travelerId: str
+    fareOption: str
+    travelerType: str
+    price: "TravelerPrice"
+    fareDetailsBySegment: list["FareDetailsBySegment"]
+
+
+class TravelerPrice(BaseModel):
+    currency: str
+    total: str
+    base: str
+
+
+class FareDetailsBySegment(BaseModel):
+    segmentId: str
+    cabin: str
+    fareBasis: str
+    brandedFare: str
+    brandedFareLabel: str
+    class_: str = Field(
+        ..., alias="class"
+    )  # Using Field and alias to handle 'class' keyword
+    includedCheckedBags: "Bags"
+    includedCabinBags: "Bags"
+    amenities: list["Amenity"]
+
+
+class Bags(BaseModel):
+    quantity: int
+
+
+class Amenity(BaseModel):
+    description: str
+    isChargeable: bool
+    amenityType: str
+    amenityProvider: "AmenityProvider"
+
+
+class AmenityProvider(BaseModel):
+    name: str
+
+
+# Root Model
+class FlightOfferRequest(BaseModel):
+    type: str = "flight-offer"
+    id: str
+    source: str
+    instantTicketingRequired: bool
+    nonHomogeneous: bool
+    oneWay: bool
+    isUpsellOffer: bool
+    lastTicketingDate: str
+    lastTicketingDateTime: str
+    numberOfBookableSeats: int
+    itineraries: list[Itinerary]
+    price: Price
+    pricingOptions: PricingOptions
+    validatingAirlineCodes: list[str]
+    travelerPricings: list[TravelerPricing]
+
+
 # RESPONSE MODELS
 class FlightOffer(BaseModel):
     type: str
@@ -140,4 +259,10 @@ class FlightOffer(BaseModel):
 class FlightSearchResponse(BaseModel):
     data: list[FlightOffer]
     dictionaries: dict[str, Any] | None = None
+    meta: dict[str, Any] | None = None
+
+
+class FlightPricingResponse(BaseModel):
+    data: dict[str, Any] | None = None
+    result: dict[str, Any] | None = None
     meta: dict[str, Any] | None = None

@@ -43,11 +43,47 @@ class AmadeusFlightService:
 
             except ResponseError as api_error:
                 print(f"Amadeus API error: {api_error}")
-                raise Exception(f"Amadeus API error: {api_error}")
+                raise Exception(f"{api_error}")
 
         except Exception as e:
             print(f"Error processing flight search: {e}")
-            raise Exception(f"Error processing flight search: {str(e)}")
+            raise Exception(f"{e}")
+
+    def confirm_price(self, request_body: dict):
+        try:
+            # Log the request for debugging
+            print(
+                f"Confirming price for flight offer: {request_body.get('id', 'unknown')}"
+            )
+
+            # Validate that required fields are present
+            required_fields = [
+                "type",
+                "id",
+                "source",
+                "itineraries",
+                "price",
+                "travelerPricings",
+            ]
+            for field in required_fields:
+                if field not in request_body:
+                    raise ValueError(f"Missing required field: {field}")
+
+            response = self.amadeus.shopping.flight_offers.pricing.post(request_body)
+
+            if hasattr(response, "data"):
+                return {"data": response.data}
+            elif hasattr(response, "result"):
+                return {"result": response.result}
+            else:
+                return {"data": response}
+
+        except ResponseError as api_error:
+            print(f"Amadeus API error in confirm_price: {api_error}")
+            raise Exception(f"Amadeus API error: {api_error}")
+        except Exception as e:
+            print(f"Error processing price confirmation: {e}")
+            raise Exception(f"Price confirmation failed: {str(e)}")
 
 
 # Create a singleton instance
