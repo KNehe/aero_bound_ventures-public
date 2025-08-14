@@ -232,6 +232,70 @@ class FlightOfferRequest(BaseModel):
     travelerPricings: list[TravelerPricing]
 
 
+class Phone(BaseModel):
+    """
+    Represents a phone number with device type, country code, and number.
+    """
+
+    deviceType: str
+    countryCallingCode: str
+    number: str
+
+
+# A Pydantic model for contact information
+class Contact(BaseModel):
+    """
+    Represents a person's contact information, including email and a list of phones.
+    """
+
+    emailAddress: str
+    phones: list[Phone]
+
+
+# A Pydantic model for a person's name
+class Name(BaseModel):
+    """
+    Represents a person's first and last name.
+    """
+
+    firstName: str
+    lastName: str
+
+
+# A Pydantic model for a travel document
+class Document(BaseModel):
+    """
+    Represents a travel document like a passport, including issuance and expiry details.
+    """
+
+    documentType: str
+    birthPlace: str
+    issuanceLocation: str
+    issuanceDate: str
+    number: str
+    expiryDate: str
+    issuanceCountry: str
+    validityCountry: str
+    nationality: str
+    holder: bool
+
+
+# The main Pydantic model for a traveler,
+# which combines all the nested models.
+class Traveler(BaseModel):
+    id: str
+    dateOfBirth: str
+    name: Name
+    gender: str
+    contact: Contact
+    documents: list[Document]
+
+
+class FlightOrderRequest(BaseModel):
+    flight_offer: FlightOfferRequest
+    traveler: Traveler
+
+
 # RESPONSE MODELS
 class FlightOffer(BaseModel):
     type: str

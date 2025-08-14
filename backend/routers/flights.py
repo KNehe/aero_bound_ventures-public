@@ -5,6 +5,7 @@ from backend.schemas.flights import (
     FlightSearchResponse,
     FlightOfferRequest,
     FlightPricingResponse,
+    FlightOrderRequest,
 )
 
 router = APIRouter()
@@ -51,3 +52,11 @@ async def confirm_price(request: FlightOfferRequest):
         raise HTTPException(
             status_code=500, detail=f"Price confirmation failed: {str(e)}"
         )
+
+
+@router.post("/flights/order")
+async def flight_order(request: FlightOrderRequest):
+    flight_data = request.flight_offer.model_dump()
+    traveler_data = request.traveler.model_dump()
+    response = amadeus_flight_service.create_flight_order(flight_data, traveler_data)
+    return response

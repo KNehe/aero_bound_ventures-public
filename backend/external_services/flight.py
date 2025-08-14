@@ -3,6 +3,32 @@ from amadeus import Client, ResponseError
 from dotenv import load_dotenv
 
 load_dotenv()
+traveler = {
+    "id": "1",
+    "dateOfBirth": "2000-01-16",
+    "name": {"firstName": "JORGE", "lastName": "GONZALES"},
+    "gender": "MALE",
+    "contact": {
+        "emailAddress": "jorge.gonzales833@gmail.com",
+        "phones": [
+            {"deviceType": "MOBILE", "countryCallingCode": "34", "number": "480080076"}
+        ],
+    },
+    "documents": [
+        {
+            "documentType": "PASSPORT",
+            "birthPlace": "Madrid",
+            "issuanceLocation": "Madrid",
+            "issuanceDate": "2025-04-14",
+            "number": "00000000",
+            "expiryDate": "2026-04-14",
+            "issuanceCountry": "ES",
+            "validityCountry": "ES",
+            "nationality": "ES",
+            "holder": True,
+        }
+    ],
+}
 
 
 class AmadeusFlightService:
@@ -84,6 +110,17 @@ class AmadeusFlightService:
         except Exception as e:
             print(f"Error processing price confirmation: {e}")
             raise Exception(f"Price confirmation failed: {str(e)}")
+
+    def create_flight_order(self, flight_data, traveler_data):
+        try:
+            booked_flight = self.amadeus.booking.flight_orders.post(
+                flight_data, traveler_data
+            ).data
+
+            return booked_flight
+
+        except ResponseError as error:
+            raise error
 
 
 # Create a singleton instance
