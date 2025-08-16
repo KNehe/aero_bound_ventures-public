@@ -38,16 +38,6 @@ class OriginDestination(BaseModel):
     departureDateTimeRange: DepartureDateTimeRange
 
 
-class Traveler(BaseModel):
-    """
-    Model for a single traveler.
-    """
-
-    id: str
-    travelerType: TravelerType
-    associatedAdultId: str | None = None  # This is optional for ADULTs
-
-
 class AdditionalInformation(BaseModel):
     """
     Model for additional search information.
@@ -102,15 +92,6 @@ class SearchCriteria(BaseModel):
     additionalInformation: AdditionalInformation
     pricingOptions: PricingOptions
     flightFilters: FlightFilters
-
-
-# The main request body model
-class AmadeusFlightSearchRequest(BaseModel):
-    currencyCode: str = Field(min_length=3, max_length=3)
-    originDestinations: list[OriginDestination]
-    travelers: list[Traveler]
-    sources: list[str]
-    searchCriteria: SearchCriteria
 
 
 # Nested Models
@@ -278,22 +259,6 @@ class Document(BaseModel):
     validityCountry: str
     nationality: str
     holder: bool
-
-
-# The main Pydantic model for a traveler,
-# which combines all the nested models.
-class Traveler(BaseModel):
-    id: str
-    dateOfBirth: str
-    name: Name
-    gender: str
-    contact: Contact
-    documents: list[Document]
-
-
-class FlightOrderRequest(BaseModel):
-    flight_offer: FlightOfferRequest
-    traveler: Traveler
 
 
 # RESPONSE MODELS

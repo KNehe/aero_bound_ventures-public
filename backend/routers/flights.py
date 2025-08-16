@@ -1,18 +1,22 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from backend.external_services.flight import amadeus_flight_service
 from backend.schemas.flights import (
-    AmadeusFlightSearchRequest,
     FlightSearchResponse,
-    FlightOfferRequest,
     FlightPricingResponse,
-    FlightOrderRequest,
 )
+from typing import Annotated
+from backend.schemas.flight_search import (
+    FlightSearchRequestGet,
+    FlightSearchRequestPost,
+)
+from backend.schemas.flight_price_confirm import FlightOfferRequest
+from backend.schemas.flight_order import FlightOrderRequestBody
 
 router = APIRouter()
 
 
-@router.post("/flights/search", response_model=FlightSearchResponse)
-async def search_flights(request: AmadeusFlightSearchRequest):
+@router.post("/shopping/flight-offers", response_model=FlightSearchResponse)
+async def search_flights(request: FlightSearchRequestPost):
     """
     Search for flights using the Amadeus Flight Search API
 
@@ -33,7 +37,14 @@ async def search_flights(request: AmadeusFlightSearchRequest):
         raise HTTPException(status_code=500, detail=f"Flight search failed: {str(e)}")
 
 
-@router.post("/flights/price", response_model=FlightPricingResponse)
+@router.get("/shopping/flight-offers")
+async def search_flights2(request: Annotated[FlightSearchRequestGet, Query()]):
+    request_body = request.model_dump(exclude_none=True)
+    response = amadeus_flight_service.search_flights_get(request_body)
+    return response
+
+
+@router.post("/shopping/flight-offers/pricing", response_model=FlightPricingResponse)
 async def confirm_price(request: FlightOfferRequest):
     """
     Confirm flight pricing using the Amadeus Flight Offers Pricing API
@@ -54,9 +65,10 @@ async def confirm_price(request: FlightOfferRequest):
         )
 
 
-@router.post("/flights/order")
-async def flight_order(request: FlightOrderRequest):
-    flight_data = request.flight_offer.model_dump()
-    traveler_data = request.traveler.model_dump()
-    response = amadeus_flight_service.create_flight_order(flight_data, traveler_data)
+@router.post("/booking/flight-orders")
+async def flight_order(request: FlightOrderRequestBody):
+    """Create order associated with a flight"""
+    request_body = request.model_dump(by_alias=True)
+
+    response = amadeus_flight_service.create_flight_order(request_body)
     return response
