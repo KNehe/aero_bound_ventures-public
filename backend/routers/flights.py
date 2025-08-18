@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from backend.external_services.flight import amadeus_flight_service
 from backend.schemas.flights import (
     FlightSearchResponse,
@@ -11,6 +11,9 @@ from backend.schemas.flight_search import (
 )
 from backend.schemas.flight_price_confirm import FlightOfferRequest
 from backend.schemas.flight_order import FlightOrderRequestBody
+from backend.utils.security import get_current_user
+from backend.models.users import UserInDB
+
 
 router = APIRouter()
 
@@ -66,7 +69,10 @@ async def confirm_price(request: FlightOfferRequest):
 
 
 @router.post("/booking/flight-orders")
-async def flight_order(request: FlightOrderRequestBody):
+async def flight_order(
+    request: FlightOrderRequestBody,
+    current_user: UserInDB = Depends(get_current_user),
+):
     """Create order associated with a flight"""
     request_body = request.model_dump(by_alias=True)
 
