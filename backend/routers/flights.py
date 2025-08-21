@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, HTTPException, Query, Depends, Path
 from backend.external_services.flight import amadeus_flight_service
 from backend.schemas.flights import (
     FlightSearchResponse,
@@ -13,6 +13,7 @@ from backend.schemas.flight_price_confirm import FlightOffer
 from backend.schemas.flight_order import FlightOrderRequestBody
 from backend.utils.security import get_current_user
 from backend.models.users import UserInDB
+from amadeus.client.errors import NotFoundError, ClientError
 
 
 router = APIRouter()
@@ -91,3 +92,38 @@ async def view_seat_map_post(request: FlightOffer):
     request_body = request.model_dump()
     response = amadeus_flight_service.view_seat_map_post(request_body)
     return response
+
+
+@router.get("/booking/flight-orders/{flight_orderId:path}")
+async def get_flight_order(
+    flight_orderId: Annotated[str, Path()],
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Get flight order details by flight order ID"""
+    try:
+        response = amadeus_flight_service.get_flight_order(flight_orderId)
+        return response
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="Flight order not found")
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred while retrieving the flight order",
+        )
+
+
+@router.delete("/booking/flight-orders/{flight_orderId:path}")
+async def cancel_flight_order_management(
+    flight_orderId: Annotated[str, Path()],
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """Cancel flight order by flight order ID"""
+    try:
+        response = amadeus_flight_service.cancel_flight_order(flight_orderId)
+        return response.data
+    except ClientError:
+        raise HTTPException(status_code=400, detail="Invalid flight order ID")
+    except Exception:
+        raise HTTPException(
+            status_code=500, detail="An error occurred while deleting the flight order"
+        )

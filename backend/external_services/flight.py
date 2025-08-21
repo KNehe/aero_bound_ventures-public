@@ -109,10 +109,42 @@ class AmadeusFlightService:
         except ResponseError as error:
             raise error
 
-    def view_seat_map_post(self, request_body: dict) -> dict:
+    def view_seat_map_post(self, flight_offer: dict) -> dict:
         try:
-            body = {"data": [request_body]}
+            body = {"data": [flight_offer]}
             response = self.amadeus.shopping.seatmaps.post(body).data
+            return response
+        except ResponseError as error:
+            raise error
+
+    def get_flight_order(self, flight_orderId: str) -> dict:
+        """
+        Retrieves flight order details using the Amadeus Flight Orders API.
+
+        Args:
+            flight_order_id (str): The ID of the flight order to retrieve.
+
+        Returns:
+            dict: The flight order details.
+        """
+        try:
+            response = self.amadeus.booking.flight_order(flight_orderId).get()
+            return response.data
+        except ResponseError as error:
+            raise error
+
+    def cancel_flight_order(self, flight_orderId: str) -> dict:
+        """
+        Cancels flight order details using the Amadeus Flight Orders API.
+
+        Args:
+            flight_order_id (str): The ID of the flight order to retrieve.
+
+        Returns:
+            dict: The flight order details.
+        """
+        try:
+            response = self.amadeus.booking.flight_order(flight_orderId).delete()
             return response
         except ResponseError as error:
             raise error
