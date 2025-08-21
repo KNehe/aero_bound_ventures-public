@@ -116,7 +116,7 @@ class TravelerPricing(BaseModel):
     associatedAdultId: str = None
 
 
-class FlightOfferRequest(BaseModel):
+class FlightOffer(BaseModel):
     """
     The main model representing the full flight offer.
     """

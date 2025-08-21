@@ -9,7 +9,7 @@ from backend.schemas.flight_search import (
     FlightSearchRequestGet,
     FlightSearchRequestPost,
 )
-from backend.schemas.flight_price_confirm import FlightOfferRequest
+from backend.schemas.flight_price_confirm import FlightOffer
 from backend.schemas.flight_order import FlightOrderRequestBody
 from backend.utils.security import get_current_user
 from backend.models.users import UserInDB
@@ -48,7 +48,7 @@ async def search_flights2(request: Annotated[FlightSearchRequestGet, Query()]):
 
 
 @router.post("/shopping/flight-offers/pricing", response_model=FlightPricingResponse)
-async def confirm_price(request: FlightOfferRequest):
+async def confirm_price(request: FlightOffer):
     """
     Confirm flight pricing using the Amadeus Flight Offers Pricing API
 
@@ -77,4 +77,17 @@ async def flight_order(
     request_body = request.model_dump(by_alias=True)
 
     response = amadeus_flight_service.create_flight_order(request_body)
+    return response
+
+
+@router.get("/shopping/seatmaps")
+async def view_seat_map_get(flightorderId: Annotated[str, Query()]):
+    response = amadeus_flight_service.view_seat_map(flightorderId=flightorderId)
+    return response
+
+
+@router.post("/shopping/seatmaps")
+async def view_seat_map_post(request: FlightOffer):
+    request_body = request.model_dump()
+    response = amadeus_flight_service.view_seat_map_post(request_body)
     return response
