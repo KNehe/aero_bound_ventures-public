@@ -7,7 +7,7 @@ from sqlmodel import Session
 from backend.external_services.email import send_email_async
 from fastapi import BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
-from backend.models.auth import Token
+from backend.schemas.auth import Token
 from backend.utils.security import authenticate_user
 from backend.utils.security import create_access_token
 
