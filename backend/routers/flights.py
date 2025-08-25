@@ -14,6 +14,8 @@ from backend.schemas.flight_order import FlightOrderRequestBody
 from backend.utils.security import get_current_user
 from backend.models.users import UserInDB
 from amadeus.client.errors import NotFoundError, ClientError
+from backend.external_services.cache import redis_cache
+from backend.utils.helpers import build_flight_search_key
 
 
 router = APIRouter()
@@ -44,7 +46,15 @@ async def search_flights(request: FlightSearchRequestPost):
 @router.get("/shopping/flight-offers")
 async def search_flights2(request: Annotated[FlightSearchRequestGet, Query()]):
     request_body = request.model_dump(exclude_none=True)
+
+    key = build_flight_search_key(request_body)
+    flight_data = redis_cache.get(key)
+    if flight_data:
+        return flight_data
+
     response = amadeus_flight_service.search_flights_get(request_body)
+    redis_cache.set(key, response)
+
     return response
 
 
