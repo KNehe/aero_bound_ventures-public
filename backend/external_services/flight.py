@@ -2,6 +2,7 @@ import os
 from amadeus import Client, ResponseError
 from dotenv import load_dotenv
 import requests
+from amadeus import Location
 
 load_dotenv()
 
@@ -146,6 +147,24 @@ class AmadeusFlightService:
         try:
             response = self.amadeus.booking.flight_order(flight_orderId).delete()
             return response
+        except ResponseError as error:
+            raise error
+
+    def airport_city_search(self, request_body: dict) -> dict:
+        try:
+            keyword = request_body.get("keyword")
+            sub_type = request_body.get("sub_type", "ANY")
+            if sub_type.upper() == "AIRPORT":
+                sub_type = Location.AIRPORT
+            elif sub_type.upper() == "CITY":
+                sub_type = Location.CITY
+            else:
+                sub_type = Location.ANY
+
+            response = self.amadeus.reference_data.locations.get(
+                keyword=keyword, subType=sub_type
+            )
+            return response.data
         except ResponseError as error:
             raise error
 

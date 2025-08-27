@@ -15,7 +15,11 @@ from backend.utils.security import get_current_user
 from backend.models.users import UserInDB
 from amadeus.client.errors import NotFoundError, ClientError
 from backend.external_services.cache import redis_cache
-from backend.utils.helpers import build_flight_search_key
+from backend.utils.helpers import build_redis_key
+from backend.schemas.locations import (
+    AirportCitySearchRequest,
+    AirportCitySearchResponse,
+)
 
 
 router = APIRouter()
@@ -47,7 +51,7 @@ async def search_flights(request: FlightSearchRequestPost):
 async def search_flights2(request: Annotated[FlightSearchRequestGet, Query()]):
     request_body = request.model_dump(exclude_none=True)
 
-    key = build_flight_search_key(request_body)
+    key = build_redis_key(request_body)
     flight_data = redis_cache.get(key)
     if flight_data:
         return flight_data
@@ -136,4 +140,24 @@ async def cancel_flight_order_management(
     except Exception:
         raise HTTPException(
             status_code=500, detail="An error occurred while deleting the flight order"
+        )
+
+
+@router.get("/reference-data/locations", response_model=list[AirportCitySearchResponse])
+async def airport_city_search(request: Annotated[AirportCitySearchRequest, Query()]):
+    try:
+        request_body = request.model_dump()
+
+        key = build_redis_key(request_body)
+        data = redis_cache.get(key)
+        if data:
+            return data
+
+        response = amadeus_flight_service.airport_city_search(request_body)
+        redis_cache.set(key, response)
+        return response
+
+    except Exception:
+        raise HTTPException(
+            status_code=500, detail="An error occurred while searching for a location"
         )
