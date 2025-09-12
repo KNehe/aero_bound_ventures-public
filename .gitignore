@@ -5,3 +5,8 @@ __pycache__
 .ruff_cache/
 .env
 postgres_data/
+
+# Terraform
+terraform/.terraform
+terraform/*.tfstate
+terraform/*.tfstate.*
