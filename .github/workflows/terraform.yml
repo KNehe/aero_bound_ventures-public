@@ -27,7 +27,7 @@ jobs:
               run: |
                 cat <<EOF > terraform/terraform.tfvars
                 gh_pat              = "${{ secrets.GH_PAT }}"
-                repo_url            = "${{ secrets.REPO_URL }}"
+                repo_url            = "${{ github.repository }}"
                 mail_username       = "${{ secrets.MAIL_USERNAME }}"
                 mail_password       = "${{ secrets.MAIL_PASSWORD }}"
                 mail_from           = "${{ secrets.MAIL_FROM }}"
