@@ -10,3 +10,5 @@ postgres_data/
 terraform/.terraform
 terraform/*.tfstate
 terraform/*.tfstate.*
+terraform/terraform.tfvars
+terraform/terraform.tfvars.json
