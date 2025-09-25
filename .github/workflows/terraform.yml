@@ -39,6 +39,7 @@ jobs:
                 amadeus_api_key     = "${{ secrets.AMADEUS_API_KEY }}"
                 amadeus_api_secret  = "${{ secrets.AMADEUS_API_SECRET }}"
                 amadeus_base_url   = "${{ secrets.AMADEUS_BASE_URL }}"
+                database_url     = "${{ secrets.DATABASE_URL }}"
                 EOF
             - name: Terraform Plan
               run: terraform -chdir=terraform plan -out=tfplan
