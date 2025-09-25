@@ -7,8 +7,8 @@ data "aws_vpc" "default" {
 }
 
 resource "aws_security_group" "app_server_sg"{
-  name  = "app-server-sg"
-  description = "Allow inbound traffic on port 80"
+  name  = "aero-bound-ventures-sg"
+  description = "Allow inbound traffic on port 8000"
   vpc_id = data.aws_vpc.default.id
 
   ingress{
@@ -40,18 +40,18 @@ resource "aws_instance" "app_server" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = var.instance_type
   user_data = templatefile("./setup.sh", {
-    repo_url = var.repo_url
-    gh_pat = var.gh_pat
-    mail_username = var.mail_username
-    mail_password = var.mail_password
-    mail_from = var.mail_from
-    mail_port = var.mail_port
-    mail_server = var.mail_server
-    access_token_expire_minutes = var.access_token_expire_minutes
-    secret_key = var.secret_key
-    algorithm = var.algorithm
-    amadeus_api_key = var.amadeus_api_key
-    amadeus_api_secret = var.amadeus_api_secret
+    repo_url = var.repo_url,
+    gh_pat = var.gh_pat,
+    mail_username = var.mail_username,
+    mail_password = var.mail_password,
+    mail_from = var.mail_from,
+    mail_port = var.mail_port,
+    mail_server = var.mail_server,
+    access_token_expire_minutes = var.access_token_expire_minutes,
+    secret_key = var.secret_key,
+    algorithm = var.algorithm,
+    amadeus_api_key = var.amadeus_api_key,
+    amadeus_api_secret = var.amadeus_api_secret,
     amadeus_base_url = var.amadeus_base_url
   })
 
