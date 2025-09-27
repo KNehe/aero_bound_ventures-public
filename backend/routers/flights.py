@@ -20,6 +20,9 @@ from backend.schemas.locations import (
     AirportCitySearchRequest,
     AirportCitySearchResponse,
 )
+from backend.models.bookings import Booking
+from backend.crud.database import get_session
+from sqlmodel import Session
 
 
 router = APIRouter()
@@ -87,11 +90,17 @@ async def confirm_price(request: FlightOffer):
 async def flight_order(
     request: FlightOrderRequestBody,
     current_user: UserInDB = Depends(get_current_user),
+    session: Session = Depends(get_session),
 ):
     """Create order associated with a flight"""
     request_body = request.model_dump(by_alias=True)
 
     response = amadeus_flight_service.create_flight_order(request_body)
+
+    booking = Booking(user=current_user, flight_order_id=response["id"])
+    session.add(booking)
+    session.commit()
+
     return response
 
 
