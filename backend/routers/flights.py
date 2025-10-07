@@ -52,17 +52,24 @@ async def search_flights(request: FlightSearchRequestPost):
 
 @router.get("/shopping/flight-offers")
 async def search_flights2(request: Annotated[FlightSearchRequestGet, Query()]):
-    request_body = request.model_dump(exclude_none=True)
+    try:
+        request_body = request.model_dump(exclude_none=True)
 
-    key = build_redis_key(request_body)
-    flight_data = redis_cache.get(key)
-    if flight_data:
-        return flight_data
+        key = build_redis_key(request_body)
+        flight_data = redis_cache.get(key)
+        if flight_data:
+            return flight_data
 
-    response = amadeus_flight_service.search_flights_get(request_body)
-    redis_cache.set(key, response)
+        response = amadeus_flight_service.search_flights_get(request_body)
+        redis_cache.set(key, response)
 
-    return response
+        return response
+    except ClientError:
+        raise HTTPException(status_code=400, detail="Invalid request parameters")
+    except Exception:
+        raise HTTPException(
+            status_code=500, detail="An error occurred while searching for flights"
+        )
 
 
 @router.post("/shopping/flight-offers/pricing", response_model=FlightPricingResponse)
