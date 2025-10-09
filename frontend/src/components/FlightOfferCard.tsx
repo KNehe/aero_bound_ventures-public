@@ -1,14 +1,16 @@
 import { FaPlane } from 'react-icons/fa';
+import { FlightOffer, Segment} from "@/types/flight_offer"
 
-export default function FlightOfferCard({ flight }) {
+
+export default function FlightOfferCard({ flight }: { flight: FlightOffer }) {
   const { itineraries, price } = flight;
   const there = itineraries[0].segments;
   const back = itineraries.length > 1 ? itineraries[1].segments : null;
 
-  const formatTime = (datetime) => new Date(datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const formatDate = (datetime) => new Date(datetime).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const formatTime = (datetime: string) => new Date(datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const formatDate = (datetime: string) => new Date(datetime).toLocaleDateString([], { month: 'short', day: 'numeric' });
 
-  const renderSegment = (segment, isLast) => (
+  const renderSegment = (segment: Segment, isLast: boolean) => (
     <div key={segment.id} className={`flex items-center gap-2 ${!isLast ? 'mb-2' : ''}`}>
       <FaPlane className="text-blue-500" />
       <div className="text-sm">
@@ -19,16 +21,21 @@ export default function FlightOfferCard({ flight }) {
   );
 
   return (
-    <div className="bg-white shadow-lg rounded-lg overflow-hidden mb-6 transition-transform hover:scale-105">
+    <div className="bg-white shadow-lg rounded-lg overflow-hidden mb-6 transition-transform hover:scale-105 text-black">
       <div className="p-4 border-b">
         <div className="flex justify-between items-center">
           <div>
-            <h3 className="font-bold text-lg text-blue-800">{there[0].departure.iataCode} to {there[there.length - 1].arrival.iataCode}</h3>
-            <p className="text-sm text-gray-600">{formatDate(there[0].departure.at)}</p>
+            <h3 className="font-bold text-lg text-black">{there[0].departure.iataCode} to {there[there.length - 1].arrival.iataCode}</h3>
+            <div className="text-sm text-black">
+              <div>{formatDate(there[0].departure.at)}</div>
+              {back && back.length > 0 && (
+                <div className="text-sm text-black">Return: {formatDate(back[0].departure.at)}</div>
+              )}
+            </div>
           </div>
           <div className="text-right">
             <div className="font-extrabold text-2xl text-blue-600">${price.total}</div>
-            <div className="text-xs text-gray-500">Total price for all passengers</div>
+            <div className="text-xs text-black">Total price for all passengers</div>
           </div>
         </div>
       </div>
