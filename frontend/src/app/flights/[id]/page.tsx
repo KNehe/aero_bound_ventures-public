@@ -1,451 +1,161 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
+import useFlights from "@/store/flights";
+import { FlightOffer } from "@/types/flight_offer";
 
-// Mock data structure based on the API response
-interface FlightPricingData {
-  data: {
-    type: string;
-    flightOffers: Array<{
-      id: string;
-      itineraries: Array<{
-        segments: Array<{
-          departure: {
-            iataCode: string;
-            terminal?: string;
-            at: string;
-          };
-          arrival: {
-            iataCode: string;
-            terminal?: string;
-            at: string;
-          };
-          carrierCode: string;
-          number: string;
-          duration: string;
-          numberOfStops: number;
-          aircraft?: {
-            code: string;
-          };
-        }>;
-      }>;
-      price: {
-        currency: string;
-        total: string;
-        base: string;
-        grandTotal: string;
-        billingCurrency?: string;
-        fees: Array<{
-          amount: string;
-          type: string;
-        }>;
-      };
-      validatingAirlineCodes: string[];
-      travelerPricings: Array<{
-        travelerId: string;
-        travelerType: string;
-        price: {
-          currency: string;
-          total: string;
-          base: string;
-          taxes?: Array<{
-            amount: string;
-            code: string;
-          }>;
-        };
-        fareDetailsBySegment: Array<{
-          segmentId: string;
-          cabin: string;
-          fareBasis: string;
-          class: string;
-          includedCheckedBags: {
-            weight?: number;
-            weightUnit?: string;
-            quantity?: number;
-          };
-        }>;
-      }>;
-    }>;
-  };
-  dictionaries?: {
-    locations?: Record<string, { cityCode: string; countryCode: string }>;
-  };
-}
 
-// Mock data for demonstration
-const mockPricingData: FlightPricingData = {
-  data: {
-    type: "flight-offers-pricing",
-    flightOffers: [
-      {
-        id: "1",
-        itineraries: [
-          {
-            segments: [
-              {
-                departure: { iataCode: "SYD", terminal: "1", at: "2021-02-01T19:15:00" },
-                arrival: { iataCode: "SIN", terminal: "1", at: "2021-02-02T00:30:00" },
-                carrierCode: "TR",
-                number: "13",
-                duration: "PT8H15M",
-                numberOfStops: 0,
-                aircraft: { code: "789" },
-              },
-              {
-                departure: { iataCode: "SIN", terminal: "1", at: "2021-02-02T22:05:00" },
-                arrival: { iataCode: "DMK", terminal: "1", at: "2021-02-02T23:30:00" },
-                carrierCode: "TR",
-                number: "868",
-                duration: "PT2H25M",
-                numberOfStops: 0,
-                aircraft: { code: "788" },
-              },
-            ],
-          },
-          {
-            segments: [
-              {
-                departure: { iataCode: "DMK", terminal: "1", at: "2021-02-05T23:15:00" },
-                arrival: { iataCode: "SIN", terminal: "1", at: "2021-02-06T02:50:00" },
-                carrierCode: "TR",
-                number: "867",
-                duration: "PT2H35M",
-                numberOfStops: 0,
-                aircraft: { code: "788" },
-              },
-              {
-                departure: { iataCode: "SIN", terminal: "1", at: "2021-02-06T06:55:00" },
-                arrival: { iataCode: "SYD", terminal: "1", at: "2021-02-06T18:15:00" },
-                carrierCode: "TR",
-                number: "12",
-                duration: "PT8H20M",
-                numberOfStops: 0,
-                aircraft: { code: "789" },
-              },
-            ],
-          },
-        ],
-        price: {
-          currency: "EUR",
-          total: "546.70",
-          base: "334.00",
-          grandTotal: "546.70",
-          fees: [
-            { amount: "0.00", type: "SUPPLIER" },
-            { amount: "0.00", type: "TICKETING" },
-          ],
-        },
-        validatingAirlineCodes: ["HR"],
-        travelerPricings: [
-          {
-            travelerId: "1",
-            travelerType: "ADULT",
-            price: {
-              currency: "EUR",
-              total: "546.70",
-              base: "334.00",
-            },
-            fareDetailsBySegment: [
-              {
-                segmentId: "1",
-                cabin: "ECONOMY",
-                fareBasis: "O2TR24",
-                class: "O",
-                includedCheckedBags: { weight: 20, weightUnit: "KG" },
-              },
-              {
-                segmentId: "2",
-                cabin: "ECONOMY",
-                fareBasis: "O2TR24",
-                class: "O",
-                includedCheckedBags: { weight: 20, weightUnit: "KG" },
-              },
-              {
-                segmentId: "5",
-                cabin: "ECONOMY",
-                fareBasis: "X2TR24",
-                class: "X",
-                includedCheckedBags: { weight: 20, weightUnit: "KG" },
-              },
-              {
-                segmentId: "6",
-                cabin: "ECONOMY",
-                fareBasis: "H2TR24",
-                class: "H",
-                includedCheckedBags: { weight: 20, weightUnit: "KG" },
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  dictionaries: {
-    locations: {
-      SYD: { cityCode: "SYD", countryCode: "AU" },
-      SIN: { cityCode: "SIN", countryCode: "SG" },
-      DMK: { cityCode: "BKK", countryCode: "TH" },
-    },
-  },
-};
+const BASE_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
 export default function FlightPricingPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const resolvedParams = React.use(params);
-  const [selectedTravelers, setSelectedTravelers] = useState<Record<string, boolean>>({});
-  const flightOffer = mockPricingData.data.flightOffers[0];
+  const selectedFlight = useFlights(state => state.selectedFlight) as FlightOffer
+  const [flightOffer, setFlightOffer] = useState<FlightOffer>(selectedFlight);
+  const selectFlight = useFlights(state => state.selectFlight);
 
-  const formatDuration = (duration: string) => {
-    const match = duration.match(/PT(\d+)H(\d+)M/);
-    if (match) {
-      const hours = parseInt(match[1]);
-      const minutes = parseInt(match[2]);
-      return `${hours}h ${minutes}m`;
-    }
-    return duration;
-  };
+  useEffect(() =>{
+    confirmPrice()
+  }, [])
 
-  const formatTime = (dateTime: string) => {
-    const date = new Date(dateTime);
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
-  };
+  const confirmPrice = async ()=>{
+    const url = `${BASE_API_URL}/shopping/flight-offers/pricing`
 
-  const formatDate = (dateTime: string) => {
-    const date = new Date(dateTime);
-    return date.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
-  };
+    const res = await fetch(url, {
+                            method: "POST",
+                            body: JSON.stringify(selectedFlight),
+                            headers: {
+                              "Content-Type": "application/json",
+                            }
+                        });
+    const data = await res.json()
+    console.log(data?.data?.flightOffers[0])
+    selectFlight(data)
+  }
 
-  const totalPrice = flightOffer.travelerPricings.reduce(
-    (sum, traveler) => sum + parseFloat(traveler.price.total),
-    0
-  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
-            <Link href="/flights" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span className="font-semibold">Back to Results</span>
-            </Link>
-            <div className="text-right">
-              <div className="text-2xl font-bold">{flightOffer.price.currency} {totalPrice.toFixed(2)}</div>
-              <div className="text-sm opacity-90">Total for all passengers</div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-5xl mx-auto px-4">
+        <div className="mb-6">
+          <Link href="/flights" className="text-sm text-blue-600 hover:underline">&larr; Back to search</Link>
+          <h1 className="mt-3 text-2xl font-bold text-black">Confirm flight offer</h1>
+          <p className="text-sm text-gray-700 font-medium">Review and confirm the selected flight before continuing to payment.</p>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Flight Details */}
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Flight Details</h2>
-              
-              {/* Outbound Flight */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">Outbound • {formatDate(flightOffer.itineraries[0].segments[0].departure.at)}</h3>
-                <div className="space-y-4">
-                  {flightOffer.itineraries[0].segments.map((segment, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <div>
-                              <div className="text-lg font-semibold text-gray-900">
-                                {formatTime(segment.departure.at)}
+        {flightOffer ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2">
+              <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+                <div className="p-5 border-b">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h2 className="text-lg font-semibold text-black">
+                        {flightOffer.itineraries[0].segments[0].departure.iataCode} 
+                        <span className="text-gray-500">→</span> {flightOffer.itineraries[0].segments[flightOffer.itineraries[0].segments.length - 1].arrival.iataCode}
+                      </h2>
+                      <div className="text-sm text-gray-800 mt-1 font-medium">
+                        Depart: {new Date(flightOffer.itineraries[0].segments[0].departure.at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                        {flightOffer.itineraries.length > 1 && (
+                          <span className="ml-3">• Return: {new Date(flightOffer.itineraries[1].segments[0].departure.at).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-extrabold text-blue-600">${flightOffer.price.total}</div>
+                      <div className="text-xs text-gray-600">Total price for all passengers</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-5 space-y-6">
+                  {flightOffer.itineraries.map((itinerary, itinIdx) => (
+                    <div key={itinIdx}>
+                      <h3 className="text-sm font-semibold text-gray-800 mb-3">{itinIdx === 0 ? 'Outbound' : 'Return'} • {itinerary.duration ?? ''}</h3>
+
+                      <div className="space-y-3">
+                        {itinerary.segments.map((segment, sIdx) => (
+                          <div key={segment.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
+                            <div className="flex items-center gap-4">
+                              <div className="text-right w-20">
+                                <div className="font-medium text-sm text-gray-800">{new Date(segment.departure.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                <div className="text-xs text-gray-600">{new Date(segment.departure.at).toLocaleDateString([], { month: 'short', day: 'numeric' })}</div>
                               </div>
-                              <div className="text-sm text-gray-600">
-                                {segment.departure.iataCode}
-                                {segment.departure.terminal && ` Terminal ${segment.departure.terminal}`}
+                              <div>
+                                <div className="font-semibold text-gray-800">{segment.departure.iataCode} → {segment.arrival.iataCode}</div>
+                                <div className="text-xs text-gray-700">{segment.carrierCode ?? ''} {segment.number ?? ''} • {segment.aircraft?.code ?? ''}</div>
                               </div>
                             </div>
-                            <div className="flex-1 mx-4">
-                              <div className="flex items-center">
-                                <div className="flex-1 h-px bg-gray-300"></div>
-                                <div className="mx-2 text-xs text-gray-500">
-                                  {formatDuration(segment.duration)}
-                                </div>
-                                <div className="flex-1 h-px bg-gray-300"></div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-lg font-semibold text-gray-900">
-                                {formatTime(segment.arrival.at)}
-                              </div>
-                              <div className="text-sm text-gray-600">
-                                {segment.arrival.iataCode}
-                                {segment.arrival.terminal && ` Terminal ${segment.arrival.terminal}`}
-                              </div>
+
+                            <div className="text-right w-24">
+                              <div className="font-medium text-sm text-gray-800">{new Date(segment.arrival.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                              <div className="text-xs text-gray-600">{new Date(segment.arrival.at).toLocaleDateString([], { month: 'short', day: 'numeric' })}</div>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between text-sm text-gray-600">
-                            <span>{segment.carrierCode}{segment.number}</span>
-                            <span>{segment.aircraft?.code && `Aircraft: ${segment.aircraft.code}`}</span>
-                          </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
                   ))}
+
+                    <div className="pt-2 border-t">
+                    <h4 className="text-sm font-semibold text-gray-800 mb-2">Traveler pricing</h4>
+                    <div className="space-y-2">
+                      {flightOffer.travelerPricings?.map((tp, idx) => (
+                        <div key={idx} className="flex items-center justify-between">
+                          <div className="text-sm text-gray-800 font-medium">{tp.travelerType ?? 'Passenger'} • {tp.fareOption ?? ''}</div>
+                          <div className="text-sm font-medium text-black">{tp.price?.currency ?? flightOffer.price.currency} {tp.price?.total}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {/* Return Flight */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">Return • {formatDate(flightOffer.itineraries[1].segments[0].departure.at)}</h3>
-                <div className="space-y-4">
-                  {flightOffer.itineraries[1].segments.map((segment, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <div>
-                              <div className="text-lg font-semibold text-gray-900">
-                                {formatTime(segment.departure.at)}
-                              </div>
-                              <div className="text-sm text-gray-600">
-                                {segment.departure.iataCode}
-                                {segment.departure.terminal && ` Terminal ${segment.departure.terminal}`}
-                              </div>
-                            </div>
-                            <div className="flex-1 mx-4">
-                              <div className="flex items-center">
-                                <div className="flex-1 h-px bg-gray-300"></div>
-                                <div className="mx-2 text-xs text-gray-500">
-                                  {formatDuration(segment.duration)}
-                                </div>
-                                <div className="flex-1 h-px bg-gray-300"></div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-lg font-semibold text-gray-900">
-                                {formatTime(segment.arrival.at)}
-                              </div>
-                              <div className="text-sm text-gray-600">
-                                {segment.arrival.iataCode}
-                                {segment.arrival.terminal && ` Terminal ${segment.arrival.terminal}`}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between text-sm text-gray-600">
-                            <span>{segment.carrierCode}{segment.number}</span>
-                            <span>{segment.aircraft?.code && `Aircraft: ${segment.aircraft.code}`}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+            <aside>
+              <div className="bg-white shadow-sm rounded-lg overflow-hidden p-5 space-y-4">
+                <div>
+                  <div className="text-sm text-gray-800 font-medium">Price summary</div>
+                  <div className="mt-2 text-2xl font-extrabold text-blue-600">${flightOffer.price.total}</div>
+                </div>
+
+                <div className="text-sm text-gray-800">
+                  <div className="flex justify-between"><span>Base fare</span><span>{flightOffer.price.currency ?? 'USD'} {flightOffer.price.base}</span></div>
+                  {flightOffer.price.fees?.map((f, i) => (
+                    <div key={i} className="flex justify-between text-xs text-gray-600"><span>{f.type}</span><span>{f.amount}</span></div>
                   ))}
                 </div>
-              </div>
-            </div>
 
-            {/* Pricing Breakdown */}
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Pricing Breakdown</h2>
-              
-              <div className="space-y-4">
-                {flightOffer.travelerPricings.map((traveler) => (
-                  <div key={traveler.travelerId} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-gray-800 capitalize">
-                        {traveler.travelerType} {traveler.travelerId}
-                      </h3>
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-gray-900">
-                          {traveler.price.currency} {traveler.price.total}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Base: {traveler.price.currency} {traveler.price.base}
-                        </div>
-                      </div>
+                <div className="pt-4 border-t">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-sm font-medium text-gray-800">Grand total</div>
+                      <div className="text-xs text-gray-600">Includes taxes & fees</div>
                     </div>
-                    
-                    <div className="text-sm text-gray-600">
-                      <div className="grid grid-cols-2 gap-2">
-                        <span>Fare Class: {traveler.fareDetailsBySegment[0].class}</span>
-                        <span>Cabin: {traveler.fareDetailsBySegment[0].cabin}</span>
-                        <span>Checked Bags: {traveler.fareDetailsBySegment[0].includedCheckedBags.weight || traveler.fareDetailsBySegment[0].includedCheckedBags.quantity} {traveler.fareDetailsBySegment[0].includedCheckedBags.weightUnit || 'pieces'}</span>
-                      </div>
+
+                    <div className="inline-flex items-center gap-3 bg-blue-50 px-4 py-2 rounded-lg">
+                      <div className="text-sm text-gray-600">Payable</div>
+                      <div className="text-2xl md:text-3xl font-extrabold text-blue-600">{flightOffer.price.currency ?? 'USD'} {flightOffer.price.grandTotal ?? flightOffer.price.total}</div>
                     </div>
                   </div>
-                ))}
-              </div>
-
-              {/* Fees */}
-              {flightOffer.price.fees.length > 0 && (
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <h4 className="font-semibold text-gray-800 mb-2">Fees</h4>
-                  <div className="space-y-2">
-                    {flightOffer.price.fees.map((fee, index) => (
-                      <div key={index} className="flex justify-between text-sm">
-                        <span className="text-gray-600 capitalize">{fee.type.replace('_', ' ').toLowerCase()}</span>
-                        <span className="text-gray-900">{flightOffer.price.currency} {fee.amount}</span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
-              )}
-            </div>
+
+                <div>
+                  <button
+                    onClick={() => router.push('/')}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg"
+                  >
+                    Confirm and continue
+                  </button>
+                </div>
+
+                <div className="text-xs text-gray-500">By confirming you agree to the fare rules and ticketing terms.</div>
+              </div>
+            </aside>
           </div>
-
-          {/* Sidebar - Booking Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border p-6 sticky top-24">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Booking Summary</h2>
-              
-              <div className="space-y-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Base Fare</span>
-                  <span className="text-gray-900">{flightOffer.price.currency} {flightOffer.price.base}</span>
-                </div>
-                
-                {flightOffer.price.fees.map((fee, index) => (
-                  <div key={index} className="flex justify-between text-sm">
-                    <span className="text-gray-600 capitalize">{fee.type.replace('_', ' ').toLowerCase()}</span>
-                    <span className="text-gray-900">{flightOffer.price.currency} {fee.amount}</span>
-                  </div>
-                ))}
-                
-                <div className="border-t border-gray-200 pt-4">
-                  <div className="flex justify-between text-lg font-bold">
-                    <span>Total</span>
-                    <span>{flightOffer.price.currency} {flightOffer.price.grandTotal}</span>
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">
-                    {flightOffer.price.billingCurrency && flightOffer.price.billingCurrency !== flightOffer.price.currency && 
-                      `Billed in ${flightOffer.price.billingCurrency}`
-                    }
-                  </div>
-                </div>
-              </div>
-
-              <button
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg mt-6 transition-colors"
-                onClick={() => router.push(`/booking/${resolvedParams.id}`)}
-              >
-                Continue to Booking
-              </button>
-
-              <div className="mt-4 text-xs text-gray-500 text-center">
-                By continuing, you agree to our terms and conditions
-              </div>
-            </div>
-          </div>
-        </div>
+        ) : (
+          <div className="bg-white p-6 rounded-lg shadow-sm text-center text-gray-600">Loading flight offer...</div>
+        )}
       </div>
     </div>
   );

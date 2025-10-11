@@ -1,11 +1,15 @@
 import { FaPlane } from 'react-icons/fa';
 import { FlightOffer, Segment} from "@/types/flight_offer"
+import useFlights from '@/store/flights';
+import { useRouter } from 'next/navigation'
 
 
 export default function FlightOfferCard({ flight }: { flight: FlightOffer }) {
   const { itineraries, price } = flight;
   const there = itineraries[0].segments;
   const back = itineraries.length > 1 ? itineraries[1].segments : null;
+  const selectFlight = useFlights(state => state.selectFlight);
+  const router = useRouter()
 
   const formatTime = (datetime: string) => new Date(datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const formatDate = (datetime: string) => new Date(datetime).toLocaleDateString([], { month: 'short', day: 'numeric' });
@@ -19,6 +23,11 @@ export default function FlightOfferCard({ flight }: { flight: FlightOffer }) {
       <div className="text-xs text-gray-500">{segment.carrierCode} {segment.number}</div>
     </div>
   );
+
+  const onSelectFlight = () => {
+    selectFlight(flight)
+    router.push(`/flights/${flight.id}/`)
+  }
 
   return (
     <div className="bg-white shadow-lg rounded-lg overflow-hidden mb-6 transition-transform hover:scale-105 text-black">
@@ -54,7 +63,10 @@ export default function FlightOfferCard({ flight }: { flight: FlightOffer }) {
         </div>
       </div>
       <div className="bg-blue-50 p-4 text-right">
-        <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+        <button 
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:cursor-pointer"
+          onClick={onSelectFlight}
+        >
           Select Flight
         </button>
       </div>
