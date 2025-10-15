@@ -1,9 +1,26 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from 'next/navigation'
 import useFlights from "@/store/flights";
 
 export default function BookingForm() {
+  const originRef = useRef<HTMLDivElement>(null);
+  const destinationRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      // Check if click was outside both dropdowns
+      if (originRef.current && !originRef.current.contains(event.target as Node) &&
+          destinationRef.current && !destinationRef.current.contains(event.target as Node)) {
+        setShowDropdown({ origin: false, destination: false });
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   const [form, setForm] = useState({
     originLocationCode: "",
     destinationLocationCode: "",
@@ -17,8 +34,24 @@ export default function BookingForm() {
     currency: "USD",
     nonStop: false,
   });
+  const [displayValues, setDisplayValues] = useState({
+    origin: "",
+    destination: ""
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [locationSearchResults, setLocationSearchResults] = useState<{ origin: any[]; destination: any[] }>({
+    origin: [],
+    destination: []
+  });
+  const [searchLoading, setSearchLoading] = useState<{ origin: boolean; destination: boolean }>({
+    origin: false,
+    destination: false
+  });
+  const [showDropdown, setShowDropdown] = useState<{ origin: boolean; destination: boolean }>({
+    origin: false,
+    destination: false
+  });
 
   const router = useRouter();
 
@@ -26,6 +59,40 @@ export default function BookingForm() {
 
   const BASE_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
+  const searchLocations = async (searchType: 'origin' | 'destination', query: string) => {
+    if (query.length < 2) {
+      setLocationSearchResults(prev => ({ ...prev, [searchType]: [] }));
+      return;
+    }
+
+    setSearchLoading(prev => ({ ...prev, [searchType]: true }));
+    try {
+      const response = await fetch(`${BASE_API_URL}/reference-data/locations?keyword=${query}`);
+      const data = await response.json();
+      
+      const locations = Array.isArray(data) ? data : [];
+      
+      setLocationSearchResults(prev => ({ ...prev, [searchType]: locations }));
+      setShowDropdown(prev => ({ ...prev, [searchType]: true }));
+    } catch (error) {
+      console.error('Error fetching locations:', error);
+      setLocationSearchResults(prev => ({ ...prev, [searchType]: [] }));
+    } finally {
+      setSearchLoading(prev => ({ ...prev, [searchType]: false }));
+    }
+  };
+
+  const handleLocationSelect = (searchType: 'origin' | 'destination', location: any) => {
+    setForm(prev => ({
+      ...prev,
+      [`${searchType}LocationCode`]: location.iataCode
+    }));
+    setDisplayValues(prev => ({
+      ...prev,
+      [searchType]: location.subType === 'CITY' ? location.name : `${location.name}, ${location.address.cityName}`
+    }));
+    setShowDropdown(prev => ({ ...prev, [searchType]: false }));
+  };
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value, type } = e.target;
@@ -129,7 +196,7 @@ export default function BookingForm() {
 
       {/* Column 1: From/To */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
+        <div className="relative" ref={originRef}>
           <label htmlFor="originLocationCode" className="block text-white font-semibold mb-1 text-base">From</label>
           <input
             id="originLocationCode"
@@ -139,10 +206,59 @@ export default function BookingForm() {
             placeholder="City or Airport (e.g., NYC, LAX)"
             className="w-full border border-white/30 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900 placeholder-gray-700 text-base bg-white/90"
             value={form.originLocationCode}
-            onChange={handleChange}
+            onChange={(e) => {
+              const value = e.target.value;
+              setDisplayValues(prev => ({ ...prev, origin: value }));
+              setForm(prev => ({ ...prev, originLocationCode: value }));
+              searchLocations('origin', value);
+            }}
+            onFocus={() => setShowDropdown(prev => ({ ...prev, origin: true }))}
+            onBlur={(e) => {
+              // Only hide if the related target is not in the dropdown
+              if (!originRef.current?.contains(e.relatedTarget)) {
+                setTimeout(() => {
+                  setShowDropdown(prev => ({ ...prev, origin: false }));
+                }, 200);
+              }
+            }}
           />
+          {showDropdown.origin && (
+            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {searchLoading.origin ? (
+                <div className="p-3 text-gray-500">Loading...</div>
+              ) : locationSearchResults.origin.length > 0 ? (
+                locationSearchResults.origin.map((location: any) => (
+                  <div
+                    key={location.id}
+                    className="p-3 hover:bg-gray-100 cursor-pointer"
+                    onClick={() => handleLocationSelect('origin', location)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-900">{location.iataCode}</span>
+                      <span className="text-xs px-2 py-0.5 bg-gray-200 rounded-full text-gray-700">
+                        {location.subType === 'CITY' ? 'City' : 'Airport'}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-800">
+                      {location.subType === 'CITY' ? location.name : (
+                        <>
+                          {location.name}
+                          <span className="text-gray-600"> · {location.address.cityName}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {location.address.countryName}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-3 text-gray-500">No results found</div>
+              )}
+            </div>
+          )}
         </div>
-        <div>
+        <div className="relative" ref={destinationRef}>
           <label htmlFor="destinationLocationCode" className="block text-white font-semibold mb-1 text-base">To</label>
           <input
             id="destinationLocationCode"
@@ -152,8 +268,57 @@ export default function BookingForm() {
             placeholder="City or Airport (e.g., LON, CDG)"
             className="w-full border border-white/30 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900 placeholder-gray-700 text-base bg-white/90"
             value={form.destinationLocationCode}
-            onChange={handleChange}
+            onChange={(e) => {
+              const value = e.target.value;
+              setDisplayValues(prev => ({ ...prev, destination: value }));
+              setForm(prev => ({ ...prev, destinationLocationCode: value }));
+              searchLocations('destination', value);
+            }}
+            onFocus={() => setShowDropdown(prev => ({ ...prev, destination: true }))}
+            onBlur={(e) => {
+              // Only hide if the related target is not in the dropdown
+              if (!destinationRef.current?.contains(e.relatedTarget)) {
+                setTimeout(() => {
+                  setShowDropdown(prev => ({ ...prev, destination: false }));
+                }, 200);
+              }
+            }}
           />
+          {showDropdown.destination && (
+            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {searchLoading.destination ? (
+                <div className="p-3 text-gray-500">Loading...</div>
+              ) : locationSearchResults.destination.length > 0 ? (
+                locationSearchResults.destination.map((location: any) => (
+                  <div
+                    key={location.id}
+                    className="p-3 hover:bg-gray-100 cursor-pointer"
+                    onClick={() => handleLocationSelect('destination', location)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-900">{location.iataCode}</span>
+                      <span className="text-xs px-2 py-0.5 bg-gray-200 rounded-full text-gray-700">
+                        {location.subType === 'CITY' ? 'City' : 'Airport'}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-800">
+                      {location.subType === 'CITY' ? location.name : (
+                        <>
+                          {location.name}
+                          <span className="text-gray-600"> · {location.address.cityName}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {location.address.countryName}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-3 text-gray-500">No results found</div>
+              )}
+            </div>
+          )}
         </div>
         <div>
           <label htmlFor="departureDate" className="block text-white font-semibold mb-1 text-base">Departure</label>
