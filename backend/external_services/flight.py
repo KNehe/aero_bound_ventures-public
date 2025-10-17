@@ -66,30 +66,33 @@ class AmadeusFlightService:
             raise error
 
     def create_flight_order(self, request_body: dict):
+        """
+        Creates a flight order using a pre-selected and price-confirmed flight offer.
+
+        IMPORTANT: The flight offer must be recent (from a fresh search/pricing call).
+        Amadeus flight offers expire quickly and cannot be booked after they become stale.
+        """
         try:
+            flight_offer = request_body.get("flight_offer")
             travelers = request_body.get("travelers")
 
-            body = {
-                "originLocationCode": request_body.get("originLocationCode"),
-                "destinationLocationCode": request_body.get("destinationLocationCode"),
-                "departureDate": request_body.get("departureDate"),
-                "adults": request_body.get("adults"),
-            }
+            if not flight_offer:
+                raise ValueError("flight_offer is required in request body")
+            if not travelers:
+                raise ValueError("travelers information is required")
 
-            if request_body.get("returnDate"):
-                body.update({"returnDate": request_body.get("returnDate")})
-
-            flight_search = self.amadeus.shopping.flight_offers_search.get(**body).data
-
-            self.amadeus.shopping.flight_offers.pricing.post(flight_search[0]).data
-
+            # The Amadeus SDK expects flight_offer and travelers as separate arguments
             booked_flight = self.amadeus.booking.flight_orders.post(
-                flight_search[0], travelers
+                flight_offer, travelers
             ).data
 
             return booked_flight
 
         except ResponseError as error:
+            # Log the error for debugging
+            print(f"Amadeus API Error: {error}")
+            if hasattr(error, "response"):
+                print(f"Response body: {error.response.body}")
             raise error
 
     def search_flights_get(self, request_body: dict) -> dict:
