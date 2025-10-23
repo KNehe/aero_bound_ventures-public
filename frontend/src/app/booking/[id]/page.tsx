@@ -1,21 +1,15 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import SignupModal from "../../../components/SignupModal";
-import LoginModal from "../../../components/LoginModal";
+import type { Traveler as ApiTraveler, FlightBookingData, FlightOffer } from "@/types/flight-booking";
+import useFlights from "@/store/flights";
+import countryCodes from "@/data/countryCodes.json";
 
-interface User {
+// Local interface for form state - simplified for the booking form
+interface BookingTraveler {
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
-}
-
-interface Traveler {
-  id: string;
-  travelerType: "ADULT" | "CHILD" | "INFANT";
+  travelerType: string; // ADULT, CHILD, INFANT - from API
   firstName: string;
   lastName: string;
   dateOfBirth: string;
@@ -23,118 +17,150 @@ interface Traveler {
   email: string;
   phone: string;
   countryCallingCode: string;
+  deviceType: "MOBILE" | "LANDLINE";
   documents: {
     documentType: "PASSPORT" | "ID_CARD";
     number: string;
     expiryDate: string;
     issuanceCountry: string;
+    validityCountry: string;
     nationality: string;
+    birthPlace: string;
+    issuanceLocation: string;
+    issuanceDate: string;
+    holder: boolean;
   };
 }
 
-interface ContactInfo {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  countryCallingCode: string;
-  address: {
-    street: string;
-    city: string;
-    postalCode: string;
-    country: string;
+// Helper function to transform BookingTraveler to API Traveler format
+const transformToApiTraveler = (bookingTraveler: BookingTraveler): ApiTraveler => {
+  // Smart defaults for optional fields
+  const validityCountry = bookingTraveler.documents.validityCountry || bookingTraveler.documents.issuanceCountry;
+  const issuanceLocation = bookingTraveler.documents.issuanceLocation || bookingTraveler.documents.birthPlace;
+  
+  // Calculate issuance date if not provided (assume 10 years before expiry for new passports)
+  let issuanceDate = bookingTraveler.documents.issuanceDate;
+  if (!issuanceDate && bookingTraveler.documents.expiryDate) {
+    const expiry = new Date(bookingTraveler.documents.expiryDate);
+    const calculatedIssuance = new Date(expiry);
+    calculatedIssuance.setFullYear(expiry.getFullYear() - 10);
+    issuanceDate = calculatedIssuance.toISOString().split('T')[0];
+  }
+  
+  return {
+    id: bookingTraveler.id,
+    dateOfBirth: bookingTraveler.dateOfBirth,
+    name: {
+      firstName: bookingTraveler.firstName,
+      lastName: bookingTraveler.lastName,
+    },
+    gender: bookingTraveler.gender,
+    contact: {
+      emailAddress: bookingTraveler.email,
+      phones: [
+        {
+          deviceType: bookingTraveler.deviceType,
+          countryCallingCode: bookingTraveler.countryCallingCode.replace('+', ''), // Remove + prefix
+          number: bookingTraveler.phone,
+        },
+      ],
+    },
+    documents: [
+      {
+        documentType: bookingTraveler.documents.documentType,
+        birthPlace: bookingTraveler.documents.birthPlace,
+        issuanceLocation: issuanceLocation,
+        issuanceDate: issuanceDate || '',
+        number: bookingTraveler.documents.number,
+        expiryDate: bookingTraveler.documents.expiryDate,
+        issuanceCountry: bookingTraveler.documents.issuanceCountry,
+        validityCountry: validityCountry,
+        nationality: bookingTraveler.documents.nationality,
+        holder: bookingTraveler.documents.holder,
+      },
+    ],
   };
-}
+};
 
 export default function BookingPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const resolvedParams = React.use(params);
-  const [currentStep, setCurrentStep] = useState(0); // Start with authentication step
+  const [currentStep, setCurrentStep] = useState(0); // Step 0: Traveler Info
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [showSignup, setShowSignup] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
   
-  // Mock flight data (in real app, this would come from the pricing API)
-  const [travelers, setTravelers] = useState<Traveler[]>([
-    {
-      id: "1",
-      travelerType: "ADULT",
-      firstName: "",
-      lastName: "",
-      dateOfBirth: "",
-      gender: "MALE",
-      email: "",
-      phone: "",
-      countryCallingCode: "+1",
-      documents: {
-        documentType: "PASSPORT",
-        number: "",
-        expiryDate: "",
-        issuanceCountry: "",
-        nationality: "",
-      },
-    },
-    {
-      id: "2",
-      travelerType: "CHILD",
-      firstName: "",
-      lastName: "",
-      dateOfBirth: "",
-      gender: "FEMALE",
-      email: "",
-      phone: "",
-      countryCallingCode: "+1",
-      documents: {
-        documentType: "PASSPORT",
-        number: "",
-        expiryDate: "",
-        issuanceCountry: "",
-        nationality: "",
-      },
-    },
-  ]);
+  // Get selected flight from Zustand store (this is the flight offer)
+  const selectedFlight = useFlights((state) => state.selectedFlight?.data.flightOffers[0]) as FlightOffer | null;
 
-  const [contactInfo, setContactInfo] = useState<ContactInfo>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    countryCallingCode: "+1",
-    address: {
-      street: "",
-      city: "",
-      postalCode: "",
-      country: "",
-    },
-  });
+  // console.log("Selected Flight in Booking Page:", selectedFlight?.data.flightOffers[0]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Initialize travelers based on flight offer
+  const [travelers, setTravelers] = useState<BookingTraveler[]>([]);
 
-  const [paymentInfo, setPaymentInfo] = useState({
-    cardNumber: "",
-    expiryDate: "",
-    cvv: "",
-    cardholderName: "",
-  });
+  // Initialize travelers based on selected flight offer
+  useEffect(() => {
+    if (selectedFlight) {
+      // Initialize travelers based on travelerPricings from the flight offer
+      if (selectedFlight.travelerPricings && selectedFlight.travelerPricings.length > 0) {
+        const initialTravelers: BookingTraveler[] = selectedFlight.travelerPricings.map((pricing) => ({
+          id: pricing.travelerId,
+          travelerType: pricing.travelerType,
+          firstName: "",
+          lastName: "",
+          dateOfBirth: "",
+          gender: "MALE",
+          email: "",
+          phone: "",
+          countryCallingCode: "+1",
+          deviceType: "MOBILE",
+          documents: {
+            documentType: "PASSPORT",
+            number: "",
+            expiryDate: "",
+            issuanceCountry: "",
+            validityCountry: "",
+            nationality: "",
+            birthPlace: "",
+            issuanceLocation: "",
+            issuanceDate: "",
+            holder: true,
+          },
+        }));
+        console.log(selectedFlight)
+        setTravelers(initialTravelers);
+      }
+    }
+    setIsLoading(false);
+  }, [selectedFlight]);
 
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('card');
+  // Removed payment and authentication-related state/handlers
 
-  // Authentication handlers
-  const handleSignupSuccess = (userData: User) => {
-    setUser(userData);
-    setShowSignup(false);
-    setCurrentStep(1); // Move to traveler information
+  // Helper function to format date to YYYY-MM-DD format
+  const formatDateForBackend = (date: string | Date): string => {
+    if (!date) return '';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
-  const handleLoginSuccess = (userData: User) => {
-    setUser(userData);
-    setShowLogin(false);
-    setCurrentStep(1); // Move to traveler information
+  // Helper functions for passport expiry date validation
+  const getMinPassportExpiryDate = () => {
+    // Passport must be valid for at least 6 months beyond today
+    const today = new Date();
+    const minDate = new Date(today);
+    minDate.setMonth(minDate.getMonth() + 6);
+    return formatDateForBackend(minDate);
   };
 
-  const handleSwitchToSignup = () => {
-    setShowLogin(false);
-    setShowSignup(true);
+  const getMaxPassportExpiryDate = () => {
+    // Passports typically valid for 10 years maximum from today
+    const today = new Date();
+    const maxDate = new Date(today);
+    maxDate.setFullYear(maxDate.getFullYear() + 10);
+    return formatDateForBackend(maxDate);
   };
 
   const updateTraveler = (index: number, field: string, value: string) => {
@@ -148,35 +174,89 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     setTravelers(updatedTravelers);
   };
 
-  const updateContactInfo = (field: string, value: string) => {
-    if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      setContactInfo(prev => ({
-        ...prev,
-        [parent]: parent === 'address'
-          ? { ...(prev.address as ContactInfo['address']), [child]: value }
-          : { [child]: value }
-      }));
-    } else {
-      setContactInfo(prev => ({ ...prev, [field]: value }));
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Transform booking travelers to API format
+      const apiTravelers: ApiTraveler[] = travelers.map(transformToApiTraveler);
+
+      // Prepare booking payload with flight offer and travelers
+      const bookingPayload: FlightBookingData = {
+        flight_offer: selectedFlight!,
+        travelers: apiTravelers,
+      };
+
+      console.log("Booking Payload:", bookingPayload);
+
+      // Get the base URL from environment variables
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+      // Get auth token from localStorage (if user is authenticated)
+      const token = localStorage.getItem('access_token');
+      
+      if (!token) {
+        // If no token, redirect to login or show error
+        alert('Please login to complete your booking');
+        return;
+      }
+
+      // Send booking request to API
+      const response = await fetch(`${baseUrl}/booking/flight-orders`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(bookingPayload),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to create booking');
+      }
+
+      const bookingResult = await response.json();
+
+      router.push(`/booking/success/${bookingResult.id}`);
+
+    } catch (error) {
+      console.error("Booking error:", error);
+      alert(error instanceof Error ? error.message : 'An error occurred while creating your booking. Please try again.');
+    } finally {
       setIsSubmitting(false);
-      // Generate a mock order ID and navigate to success page
-      const orderId = `MOCK_BOOKING_ID_${Date.now()}`;
-      router.push(`/booking/success/${orderId}`);
-    }, 2000);
+    }
   };
 
-  const totalSteps = 5; // Now includes authentication step
+  const totalSteps = 2; // Traveler Info -> Review
   const progress = (currentStep / totalSteps) * 100;
+
+  // Show loading state while fetching flight offer
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading flight details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!selectedFlight) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 text-xl mb-4">No flight selected</p>
+          <p className="text-gray-600 mb-6">Please select a flight to proceed with booking.</p>
+          <Link href="/flights" className="text-blue-600 hover:underline font-semibold">
+            Return to flight search
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -191,14 +271,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
               <span className="font-semibold">Back to Flight Details</span>
             </Link>
             <div className="flex items-center gap-6">
-              {user && (
-                <div className="text-right">
-                  <p className="text-sm opacity-90">Booking for</p>
-                  <p className="font-semibold">{user.firstName} {user.lastName}</p>
-                </div>
-              )}
               <div className="text-right">
-                <div className="text-2xl font-bold">EUR 546.70</div>
+                <div className="text-2xl font-bold">{selectedFlight.price.currency} {selectedFlight.price.total}</div>
                 <div className="text-sm opacity-90">Total for all passengers</div>
               </div>
             </div>
@@ -217,108 +291,16 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
           </div>
           <div className="flex justify-between mt-2 text-xs text-gray-500">
-            <span>Sign In</span>
             <span>Traveler Info</span>
-            <span>Contact Details</span>
-            <span>Payment</span>
             <span>Review</span>
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Step 0: Authentication */}
-        {currentStep === 0 && (
-          <div className="bg-white rounded-lg shadow-sm border p-8">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Sign In to Continue</h2>
-              <p className="text-gray-600">
-                Please sign in or create an account to proceed with your booking
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-              {/* Login Card */}
-              <div className="border border-gray-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Already have an account?</h3>
-                <p className="text-gray-600 mb-6">
-                  Sign in to access your existing bookings and complete your purchase.
-                </p>
-                <button
-                  onClick={() => setShowLogin(true)}
-                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 font-medium"
-                >
-                  Sign In
-                </button>
-              </div>
-
-              {/* Signup Card */}
-              <div className="border border-gray-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">New to Aero Bound?</h3>
-                <p className="text-gray-600 mb-6">
-                  Create an account to manage your bookings and get exclusive offers.
-                </p>
-                <button
-                  onClick={() => setShowSignup(true)}
-                  className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 font-medium"
-                >
-                  Create Account
-                </button>
-              </div>
-            </div>
-
-            {/* Benefits */}
-            <div className="mt-8 p-6 bg-blue-50 rounded-lg">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Why create an account?</h3>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="flex items-start">
-                  <svg className="w-5 h-5 text-blue-600 mt-1 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div>
-                    <p className="font-medium text-gray-900">Manage Bookings</p>
-                    <p className="text-sm text-gray-600">Access all your tickets in one place</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <svg className="w-5 h-5 text-blue-600 mt-1 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div>
-                    <p className="font-medium text-gray-900">Exclusive Offers</p>
-                    <p className="text-sm text-gray-600">Get member-only deals and discounts</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <svg className="w-5 h-5 text-blue-600 mt-1 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div>
-                    <p className="font-medium text-gray-900">Quick Booking</p>
-                    <p className="text-sm text-gray-600">Save your details for faster booking</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <form onSubmit={e => {
-          if (currentStep === 3 && paymentMethod === 'cash') {
-            // Skip card validation if cash is selected, go to next step
-            e.preventDefault();
-            setCurrentStep(prev => prev + 1);
-            return;
-          }
-          handleSubmit(e);
-        }} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-8">
           {/* Step 1: Traveler Information */}
-          {currentStep === 1 && (
+          {currentStep === 0 && (
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Traveler Information</h2>
               
@@ -357,6 +339,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                         <input
                           type="date"
                           required
+                          max={formatDateForBackend(new Date())}
                           value={traveler.dateOfBirth}
                           onChange={(e) => updateTraveler(index, 'dateOfBirth', e.target.value)}
                           className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
@@ -395,10 +378,11 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             onChange={(e) => updateTraveler(index, 'countryCallingCode', e.target.value)}
                             className="border border-gray-300 rounded-l-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                           >
-                            <option value="+1">+1</option>
-                            <option value="+44">+44</option>
-                            <option value="+33">+33</option>
-                            <option value="+49">+49</option>
+                            {countryCodes.map((country, i) => (
+                              <option key={i} value={`+${country.code}`}>
+                                +{country.code}
+                              </option>
+                            ))}
                           </select>
                           <input
                             type="tel"
@@ -417,15 +401,12 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Document Type *</label>
-                          <select
-                            required
-                            value={traveler.documents.documentType}
-                            onChange={(e) => updateTraveler(index, 'documents.documentType', e.target.value)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                          >
-                            <option value="PASSPORT">Passport</option>
-                            <option value="ID_CARD">ID Card</option>
-                          </select>
+                          <input
+                            type="text"
+                            value="Passport"
+                            readOnly
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-900 cursor-not-allowed"
+                          />
                         </div>
                         
                         <div>
@@ -440,14 +421,22 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                         </div>
                         
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date *</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Passport Expiry Date *
+                            <span className="text-xs text-gray-500 ml-1">(must be valid for 6+ months)</span>
+                          </label>
                           <input
                             type="date"
                             required
+                            min={getMinPassportExpiryDate()}
+                            max={getMaxPassportExpiryDate()}
                             value={traveler.documents.expiryDate}
                             onChange={(e) => updateTraveler(index, 'documents.expiryDate', e.target.value)}
                             className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                           />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Must be valid for at least 6 months from today
+                          </p>
                         </div>
                         
                         <div>
@@ -459,12 +448,91 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                           >
                             <option value="">Select Nationality</option>
-                            <option value="US">United States</option>
-                            <option value="GB">United Kingdom</option>
-                            <option value="FR">France</option>
-                            <option value="DE">Germany</option>
-                            <option value="ES">Spain</option>
+                            {countryCodes.map((country, i) => (
+                              <option key={i} value={country.iso}>
+                                {country.country}
+                              </option>
+                            ))}
                           </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Issuance Country *</label>
+                          <select
+                            required
+                            value={traveler.documents.issuanceCountry}
+                            onChange={(e) => updateTraveler(index, 'documents.issuanceCountry', e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                          >
+                            <option value="">Select Issuance Country</option>
+                            {countryCodes.map((country, i) => (
+                              <option key={i} value={country.iso}>
+                                {country.country}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Validity Country 
+                            <span className="text-xs text-gray-500 ml-1">(Optional - defaults to issuance country)</span>
+                          </label>
+                          <select
+                            value={traveler.documents.validityCountry}
+                            onChange={(e) => updateTraveler(index, 'documents.validityCountry', e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                          >
+                            <option value="">Same as Issuance Country</option>
+                            {countryCodes.map((country, i) => (
+                              <option key={i} value={country.iso}>
+                                {country.country}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Birth Place *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="City of birth"
+                            value={traveler.documents.birthPlace}
+                            onChange={(e) => updateTraveler(index, 'documents.birthPlace', e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Issuance Location 
+                            <span className="text-xs text-gray-500 ml-1">(Optional - defaults to birth place)</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="City where passport was issued"
+                            value={traveler.documents.issuanceLocation}
+                            onChange={(e) => updateTraveler(index, 'documents.issuanceLocation', e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Issuance Date 
+                            <span className="text-xs text-gray-500 ml-1">(Optional - auto-calculated if omitted)</span>
+                          </label>
+                          <input
+                            type="date"
+                            max={formatDateForBackend(new Date())}
+                            value={traveler.documents.issuanceDate}
+                            onChange={(e) => updateTraveler(index, 'documents.issuanceDate', e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Will be calculated from expiry date if not provided
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -474,226 +542,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             </div>
           )}
 
-          {/* Step 2: Contact Information */}
-          {currentStep === 2 && (
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Contact Information</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={contactInfo.firstName}
-                    onChange={(e) => updateContactInfo('firstName', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={contactInfo.lastName}
-                    onChange={(e) => updateContactInfo('lastName', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                  <input
-                    type="email"
-                    required
-                    value={contactInfo.email}
-                    onChange={(e) => updateContactInfo('email', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-                  <div className="flex">
-                    <select
-                      value={contactInfo.countryCallingCode}
-                      onChange={(e) => updateContactInfo('countryCallingCode', e.target.value)}
-                      className="border border-gray-300 rounded-l-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    >
-                      <option value="+1">+1</option>
-                      <option value="+44">+44</option>
-                      <option value="+33">+33</option>
-                      <option value="+49">+49</option>
-                    </select>
-                    <input
-                      type="tel"
-                      required
-                      value={contactInfo.phone}
-                      onChange={(e) => updateContactInfo('phone', e.target.value)}
-                      className="flex-1 border border-gray-300 rounded-r-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    />
-                  </div>
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Street Address *</label>
-                  <input
-                    type="text"
-                    required
-                    value={contactInfo.address.street}
-                    onChange={(e) => updateContactInfo('address.street', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
-                  <input
-                    type="text"
-                    required
-                    value={contactInfo.address.city}
-                    onChange={(e) => updateContactInfo('address.city', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code *</label>
-                  <input
-                    type="text"
-                    required
-                    value={contactInfo.address.postalCode}
-                    onChange={(e) => updateContactInfo('address.postalCode', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  />
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Country *</label>
-                  <select
-                    required
-                    value={contactInfo.address.country}
-                    onChange={(e) => updateContactInfo('address.country', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  >
-                    <option value="">Select Country</option>
-                    <option value="US">United States</option>
-                    <option value="GB">United Kingdom</option>
-                    <option value="FR">France</option>
-                    <option value="DE">Germany</option>
-                    <option value="ES">Spain</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Payment Information */}
-          {currentStep === 3 && (
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Payment Information</h2>
-
-              {/* Payment Method Selector */}
-              <div className="mb-6 flex gap-4">
-                <button
-                  type="button"
-                  className={`px-4 py-2 rounded-lg border font-medium transition-colors duration-150 focus:outline-none ${paymentMethod === 'card' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-                  onClick={() => setPaymentMethod('card')}
-                >
-                  Pay by Card
-                </button>
-                <button
-                  type="button"
-                  className={`px-4 py-2 rounded-lg border font-medium transition-colors duration-150 focus:outline-none ${paymentMethod === 'cash' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-                  onClick={() => setPaymentMethod('cash')}
-                >
-                  Pay by Cash at Office
-                </button>
-              </div>
-
-              {/* Card Payment Fields */}
-              {paymentMethod === 'card' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cardholder Name *</label>
-                    <input
-                      type="text"
-                      required={paymentMethod === 'card'}
-                      value={paymentInfo.cardholderName}
-                      onChange={(e) => setPaymentInfo(prev => ({ ...prev, cardholderName: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Card Number *</label>
-                    <input
-                      type="text"
-                      required={paymentMethod === 'card'}
-                      placeholder="1234 5678 9012 3456"
-                      value={paymentInfo.cardNumber}
-                      onChange={(e) => setPaymentInfo(prev => ({ ...prev, cardNumber: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date *</label>
-                    <input
-                      type="text"
-                      required={paymentMethod === 'card'}
-                      placeholder="MM/YY"
-                      value={paymentInfo.expiryDate}
-                      onChange={(e) => setPaymentInfo(prev => ({ ...prev, expiryDate: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">CVV *</label>
-                    <input
-                      type="text"
-                      required={paymentMethod === 'card'}
-                      placeholder="123"
-                      value={paymentInfo.cvv}
-                      onChange={(e) => setPaymentInfo(prev => ({ ...prev, cvv: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Cash Payment Instructions */}
-              {paymentMethod === 'cash' && (
-                <div className="p-6 bg-green-50 rounded-lg border border-green-200 mt-2">
-                  <h3 className="text-lg font-semibold text-green-800 mb-2 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0 10c-4.418 0-8-1.79-8-4V8c0-2.21 3.582-4 8-4s8 1.79 8 4v6c0 2.21-3.582 4-8 4z" /></svg>
-                    Pay by Cash at Office
-                  </h3>
-                  <p className="text-green-700 mb-2">You have chosen to pay by cash at our office. Please visit our office within 24 hours to complete your payment and confirm your booking.</p>
-                  <ul className="list-disc pl-6 text-green-700 text-sm mb-2">
-                    <li>Office Address: <span className="font-medium">Kampala Road ETower Level 6 Room 1</span></li>
-                    <li>Opening Hours: <span className="font-medium">Mon-Fri 9:00am - 6:00pm</span></li>
-                    <li>Bring your booking reference and a valid ID.</li>
-                  </ul>
-                  <p className="text-green-700 text-sm">Your booking will be held for 24 hours. If payment is not received, your reservation may be cancelled.</p>
-                </div>
-              )}
-
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                <div className="flex items-start">
-                  <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div className="text-sm text-blue-800">
-                    <p className="font-medium">Secure Payment</p>
-                    <p>Your payment information is encrypted and secure. We use industry-standard SSL encryption to protect your data.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Review and Confirm */}
-          {currentStep === 4 && (
+          {/* Step 2: Review and Confirm */}
+          {currentStep === 1 && (
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Review and Confirm</h2>
               
@@ -702,10 +552,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-gray-800 mb-3">Flight Summary</h3>
                   <div className="text-sm text-gray-600">
-                    <p><strong>Route:</strong> SYD → SIN → DMK (Round Trip)</p>
-                    <p><strong>Date:</strong> Feb 1, 2021 - Feb 5, 2021</p>
-                    <p><strong>Passengers:</strong> 2 (1 Adult, 1 Child)</p>
-                    <p><strong>Total:</strong> EUR 546.70</p>
+                    <p><strong>Flight ID:</strong> {selectedFlight.id}</p>
+                    <p><strong>Passengers:</strong> {travelers.length} ({travelers.map(t => t.travelerType).join(', ')})</p>
+                    <p><strong>Total:</strong> {selectedFlight.price.currency} {selectedFlight.price.total}</p>
                   </div>
                 </div>
                 
@@ -720,17 +569,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                       </p>
                     </div>
                   ))}
-                </div>
-                
-                {/* Contact Summary */}
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Contact Information</h3>
-                  <div className="text-sm text-gray-600">
-                    <p>{contactInfo.firstName} {contactInfo.lastName}</p>
-                    <p>{contactInfo.email}</p>
-                    <p>{contactInfo.countryCallingCode} {contactInfo.phone}</p>
-                    <p>{contactInfo.address.street}, {contactInfo.address.city}, {contactInfo.address.postalCode}, {contactInfo.address.country}</p>
-                  </div>
                 </div>
                 
                 {/* Terms and Conditions */}
@@ -769,7 +607,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                 <button
                   type="button"
                   onClick={() => setCurrentStep(prev => prev + 1)}
-                  disabled={currentStep === 0 && !user} // Disable if on auth step and no user
                   className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
@@ -794,41 +631,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
           </div>
         </form>
       </div>
-
-      {/* Authentication Modals */}
-      <SignupModal
-        isOpen={showSignup}
-        onClose={() => setShowSignup(false)}
-        onSuccess={() => {
-          // Simulate successful signup with user data
-          const userData: User = {
-            id: "1",
-            firstName: "John",
-            lastName: "Smith",
-            email: "john.smith@email.com",
-            phone: "+1 555-123-4567",
-          };
-          handleSignupSuccess(userData);
-        }}
-        bookingId={resolvedParams.id}
-      />
-
-      <LoginModal
-        isOpen={showLogin}
-        onClose={() => setShowLogin(false)}
-        onSuccess={() => {
-          // Simulate successful login with user data
-          const userData: User = {
-            id: "1",
-            firstName: "John",
-            lastName: "Smith",
-            email: "john.smith@email.com",
-            phone: "+1 555-123-4567",
-          };
-          handleLoginSuccess(userData);
-        }}
-        onSwitchToSignup={handleSwitchToSignup}
-      />
     </div>
   );
 } 
