@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Traveler as ApiTraveler, FlightBookingData, FlightOffer } from "@/types/flight-booking";
 import useFlights from "@/store/flights";
+import useAuth from "@/store/auth";
 import countryCodes from "@/data/countryCodes.json";
 
 // Local interface for form state - simplified for the booking form
@@ -88,7 +89,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const [currentStep, setCurrentStep] = useState(0); // Step 0: Traveler Info
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Get selected flight from Zustand store (this is the flight offer)
+  // Use Zustand stores
+  const { token, isAuthenticated } = useAuth();
   const selectedFlight = useFlights((state) => state.selectedFlight?.data.flightOffers[0]) as FlightOffer | null;
 
   // console.log("Selected Flight in Booking Page:", selectedFlight?.data.flightOffers[0]);
@@ -96,6 +98,15 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   
   // Initialize travelers based on flight offer
   const [travelers, setTravelers] = useState<BookingTraveler[]>([]);
+
+  // Check authentication on mount
+  useEffect(() => {
+    if (!isAuthenticated) {
+      // Redirect to login with current page as redirect target
+      const currentPath = `/booking/${resolvedParams.id}`;
+      router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
+    }
+  }, [isAuthenticated, resolvedParams.id, router]);
 
   // Initialize travelers based on selected flight offer
   useEffect(() => {
@@ -193,12 +204,11 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       // Get the base URL from environment variables
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-      // Get auth token from localStorage (if user is authenticated)
-      const token = localStorage.getItem('access_token');
-      
+      // Get auth token from Zustand store (should always exist due to mount check, but double-check)
       if (!token) {
-        // If no token, redirect to login or show error
-        alert('Please login to complete your booking');
+        // If no token, redirect to login with current page as redirect target
+        const currentPath = `/booking/${resolvedParams.id}`;
+        router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
         return;
       }
 
@@ -231,6 +241,18 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
   const totalSteps = 2; // Traveler Info -> Review
   const progress = (currentStep / totalSteps) * 100;
+
+  // Show loading/redirecting state while checking authentication
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Show loading state while fetching flight offer
   if (isLoading) {

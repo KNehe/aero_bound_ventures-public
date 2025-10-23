@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import useAuth from "@/store/auth";
 
 const navLinks = [
   { name: "Home", href: "#" },
@@ -17,6 +18,9 @@ export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("");
+  
+  // Use Zustand store for auth state
+  const { isAuthenticated, userEmail, logout } = useAuth();
 
   // Handle active section tracking (only on home page)
   useEffect(() => {
@@ -72,6 +76,12 @@ export default function Navbar() {
     setMenuOpen(false);
   };
 
+  const handleLogout = () => {
+    logout();
+    router.push("/");
+    setMenuOpen(false);
+  };
+
   return (
     <nav className="sticky top-0 z-50 w-full bg-white shadow flex items-center justify-between px-6 py-3">
       {/* Left: Logo and Name */}
@@ -108,6 +118,25 @@ export default function Navbar() {
         >
           My Bookings
         </Link>
+        {/* Auth Links */}
+        {isAuthenticated ? (
+          <div className="flex items-center gap-3 ml-2">
+            <span className="text-sm text-gray-600">{userEmail}</span>
+            <button
+              onClick={handleLogout}
+              className="font-medium text-white bg-red-600 hover:bg-red-700 transition-colors px-4 py-1 rounded-lg"
+            >
+              Logout
+            </button>
+          </div>
+        ) : (
+          <Link
+            href="/auth/login"
+            className="font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors px-4 py-1 rounded-lg ml-2"
+          >
+            Login
+          </Link>
+        )}
       </div>
       {/* Hamburger Icon */}
       <button
@@ -152,6 +181,25 @@ export default function Navbar() {
         >
           My Bookings
         </Link>
+        {/* Auth Links */}
+        {isAuthenticated ? (
+          <div className="flex flex-col gap-3">
+            <span className="text-sm text-gray-600">{userEmail}</span>
+            <button
+              onClick={handleLogout}
+              className="font-medium text-lg text-white bg-red-600 hover:bg-red-700 transition-colors px-4 py-2 rounded-lg"
+            >
+              Logout
+            </button>
+          </div>
+        ) : (
+          <Link
+            href="/auth/login"
+            className="font-medium text-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors px-4 py-2 rounded-lg"
+          >
+            Login
+          </Link>
+        )}
       </div>
     </nav>
   );
