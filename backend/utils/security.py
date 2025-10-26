@@ -8,6 +8,7 @@ import os
 from fastapi import Depends, HTTPException, status
 from jwt.exceptions import InvalidTokenError
 from backend.crud.database import get_session
+import secrets
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -25,6 +26,21 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
+
+
+def generate_reset_token() -> str:
+    """Generate a cryptographically secure random token for password reset."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_reset_token(token: str) -> str:
+    """Hash the reset token before storing in database."""
+    return pwd_context.hash(token)
+
+
+def verify_reset_token(plain_token: str, hashed_token: str) -> bool:
+    """Verify a reset token against its hash."""
+    return pwd_context.verify(plain_token, hashed_token)
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:

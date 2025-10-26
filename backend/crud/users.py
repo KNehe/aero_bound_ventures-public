@@ -1,6 +1,13 @@
 from sqlmodel import Session, select
 from backend.models.users import UserInDB
-from backend.utils.security import hash_password
+from backend.utils.security import (
+    hash_password,
+    generate_reset_token,
+    hash_reset_token,
+    verify_reset_token,
+)
+from datetime import datetime, timedelta
+from typing import Optional
 
 
 def get_user_by_email(session: Session, email: str):
@@ -14,3 +21,79 @@ def create_user(session: Session, email: str, password: str):
     session.commit()
     session.refresh(user)
     return user
+
+
+def create_password_reset_token(session: Session, email: str) -> Optional[str]:
+    """
+    Create a password reset token for a user.
+    Returns the plain token if user exists, None otherwise.
+    """
+    user = get_user_by_email(session, email)
+    if not user:
+        return None
+
+    # Generate token and hash it
+    plain_token = generate_reset_token()
+    hashed_token = hash_reset_token(plain_token)
+
+    # Set expiration to 1 hour from now (timezone-naive for PostgreSQL TIMESTAMP compatibility)
+    expires_at = datetime.now() + timedelta(hours=1)
+
+    # Update user with reset token
+    user.reset_token = hashed_token
+    user.reset_token_expires = expires_at
+    session.add(user)
+    session.commit()
+
+    return plain_token
+
+
+def verify_password_reset_token(session: Session, token: str) -> Optional[UserInDB]:
+    """
+    Verify a password reset token and return the user if valid.
+    Returns None if token is invalid or expired.
+    """
+    # Get all users with a reset token set
+    users = session.exec(
+        select(UserInDB).where(UserInDB.reset_token.is_not(None))
+    ).all()
+
+    for user in users:
+        # Check if token matches and hasn't expired
+        if user.reset_token and verify_reset_token(token, user.reset_token):
+            if user.reset_token_expires and user.reset_token_expires > datetime.now():
+                return user
+
+    return None
+
+
+def update_password_with_token(session: Session, token: str, new_password: str) -> bool:
+    """
+    Update user password using reset token.
+    Returns True if successful, False otherwise.
+    """
+    user = verify_password_reset_token(session, token)
+    if not user:
+        return False
+
+    # Update password
+    user.password = hash_password(new_password)
+
+    # Invalidate reset token
+    user.reset_token = None
+    user.reset_token_expires = None
+
+    session.add(user)
+    session.commit()
+
+    return True
+
+
+def invalidate_reset_token(session: Session, user_id: str):
+    """Invalidate a user's reset token."""
+    user = session.get(UserInDB, user_id)
+    if user:
+        user.reset_token = None
+        user.reset_token_expires = None
+        session.add(user)
+        session.commit()

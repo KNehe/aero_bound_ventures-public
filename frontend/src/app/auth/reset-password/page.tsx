@@ -1,15 +1,13 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-interface PageProps {
-  params: Promise<{ token: string }>;
-}
-
-export default function ResetPasswordPage({ params }: PageProps) {
+export default function ResetPasswordPage() {
   const router = useRouter();
-  const [token, setToken] = useState<string>("");
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token") || "";
+
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -23,16 +21,14 @@ export default function ResetPasswordPage({ params }: PageProps) {
     color: string;
   }>({ score: 0, message: "", color: "" });
 
-  // Unwrap params
-  useEffect(() => {
-    params.then((resolvedParams) => {
-      setToken(resolvedParams.token);
-    });
-  }, [params]);
-
   // Verify token when component mounts
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setError("No reset token provided.");
+      setTokenValid(false);
+      setIsVerifying(false);
+      return;
+    }
 
     const verifyToken = async () => {
       try {
@@ -380,4 +376,4 @@ export default function ResetPasswordPage({ params }: PageProps) {
       </div>
     </div>
   );
-} 
+}
