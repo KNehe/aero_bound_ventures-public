@@ -22,10 +22,12 @@ from backend.schemas.auth import (
 )
 from backend.utils.security import authenticate_user
 from backend.utils.security import create_access_token
-import logging
+from backend.utils.log_manager import get_app_logger
+
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
+
+logger = get_app_logger(__name__)
 
 
 @router.post("/register/", response_model=UserRead)
