@@ -171,5 +171,18 @@ class AmadeusFlightService:
         except ResponseError as error:
             raise error
 
+    def get_flight_orders(self, flight_order_ids: list[str]):
+        try:
+            """
+             Retrieve multiple flight orders based on their ids
+            """
+            flight_orders = []
+            for order_id in flight_order_ids:
+                response = self.amadeus.booking.flight_order(order_id).get()
+                flight_orders.append(response.data)
+            return flight_orders
+        except ResponseError as error:
+            raise error
+
 
 amadeus_flight_service = AmadeusFlightService()

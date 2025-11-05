@@ -22,7 +22,7 @@ from backend.schemas.locations import (
 )
 from backend.models.bookings import Booking
 from backend.crud.database import get_session
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 
 router = APIRouter()
@@ -297,3 +297,26 @@ def _parse_amadeus_client_error(error: ClientError) -> str:
 
     except Exception:
         return DEFAULT_MESSAGE
+
+
+@router.get("/bookings")
+async def get_user_bookings(
+    user: UserInDB = Depends(get_current_user), session: Session = Depends(get_session)
+):
+    try:
+        order_ids = session.exec(
+            select(Booking.flight_order_id).where(Booking.user_id == user.id)
+        ).all()
+
+        key = build_redis_key({"order_ids": order_ids})
+        flight_orders = redis_cache.get(key)
+        if flight_orders:
+            return flight_orders
+
+        flight_orders = amadeus_flight_service.get_flight_orders(order_ids)
+
+        redis_cache.set(key, flight_orders)
+
+        return flight_orders
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
