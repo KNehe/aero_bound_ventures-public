@@ -1,3 +1,4 @@
+from backend.models.users import UserInDB
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Annotated
 from backend.schemas.users import UserCreate, UserRead
@@ -14,14 +15,21 @@ from backend.external_services.email import send_email_async, send_password_rese
 from fastapi import BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from backend.schemas.auth import (
+    ChangePasswordRequest,
+    ChangePasswordResponse,
     Token,
     ForgotPasswordRequest,
     ResetPasswordRequest,
     ResetPasswordResponse,
     VerifyResetTokenResponse,
 )
-from backend.utils.security import authenticate_user
-from backend.utils.security import create_access_token
+from backend.utils.security import (
+    authenticate_user,
+    create_access_token,
+    get_current_user,
+    hash_password,
+    verify_password,
+)
 from backend.utils.log_manager import get_app_logger
 
 
@@ -149,4 +157,29 @@ async def reset_password(
 
     return ResetPasswordResponse(
         success=True, message="Password has been reset successfully"
+    )
+
+
+@router.get("/me/", response_model=UserRead)
+async def fetch_current_user(current_user: UserInDB = Depends(get_current_user)):
+    return current_user
+
+
+@router.post("/change-password/", response_model=ChangePasswordResponse)
+def change_password(
+    password_data: ChangePasswordRequest,
+    user: UserInDB = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    if not verify_password(password_data.old_password, user.password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Old password is incorrect"
+        )
+
+    user.password = hash_password(password_data.new_password)
+    session.add(user)
+    session.commit()
+
+    return ChangePasswordResponse(
+        success=True, message="Password has been changed successfully"
     )

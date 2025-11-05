@@ -121,7 +121,12 @@ export default function Navbar() {
         {/* Auth Links */}
         {isAuthenticated ? (
           <div className="flex items-center gap-3 ml-2">
-            <span className="text-sm text-gray-600">{userEmail}</span>
+            <button
+              onClick={() => router.push('/profile')}
+              className="text-sm text-gray-600 hover:text-blue-600 transition-colors"
+            >
+              {userEmail}
+            </button>
             <button
               onClick={handleLogout}
               className="font-medium text-white bg-red-600 hover:bg-red-700 transition-colors px-4 py-1 rounded-lg"
@@ -184,7 +189,12 @@ export default function Navbar() {
         {/* Auth Links */}
         {isAuthenticated ? (
           <div className="flex flex-col gap-3">
-            <span className="text-sm text-gray-600">{userEmail}</span>
+            <button
+              onClick={() => router.push('/profile')}
+              className="text-sm text-gray-600 hover:text-blue-600 transition-colors"
+            >
+              {userEmail}
+            </button>
             <button
               onClick={handleLogout}
               className="font-medium text-lg text-white bg-red-600 hover:bg-red-700 transition-colors px-4 py-2 rounded-lg"
