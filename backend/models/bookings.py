@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Field, Relationship
 import uuid
 from typing import TYPE_CHECKING
+from datetime import datetime
 
 if TYPE_CHECKING:
     from .users import UserInDB
@@ -14,4 +15,5 @@ class Booking(SQLModel, table=True):
     flight_order_id: str = Field(nullable=False)
     # Status could  be "pending", "confirmed", "cancelled"
     status: str = Field(default="pending", nullable=False)
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     user: "UserInDB" = Relationship(back_populates="bookings")

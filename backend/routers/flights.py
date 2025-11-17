@@ -21,8 +21,13 @@ from backend.schemas.locations import (
     AirportCitySearchResponse,
 )
 from backend.models.bookings import Booking
+from backend.schemas.bookings import BookingResponse
 from backend.crud.database import get_session
+from backend.utils.log_manager import get_app_logger
 from sqlmodel import Session, select
+
+
+logger = get_app_logger(__name__)
 
 
 router = APIRouter()
@@ -93,7 +98,7 @@ async def confirm_price(request: FlightOffer):
         )
 
 
-@router.post("/booking/flight-orders")
+@router.post("/booking/flight-orders", response_model=BookingResponse)
 async def flight_order(
     request: FlightOrderRequestBody,
     current_user: UserInDB = Depends(get_current_user),
@@ -107,43 +112,71 @@ async def flight_order(
     - Flight offers expire quickly (typically within minutes)
     - Always call /shopping/flight-offers/pricing before this endpoint
     """
+    logger.info(f"Flight order creation initiated by user_id: {current_user.id}")
+
     try:
+        logger.debug(
+            f"Preparing flight order request body for user_id: {current_user.id}"
+        )
         request_body = request.model_dump(by_alias=True)
 
+        logger.info(
+            f"Creating flight order with Amadeus service for user_id: {current_user.id}"
+        )
         response = amadeus_flight_service.create_flight_order(request_body)
-
         flight_order_id = response.get("id")
-        if not flight_order_id:
-            raise ValueError("Invalid response from booking service: missing order ID")
 
-        try:
-            booking = Booking(user_id=current_user.id, flight_order_id=flight_order_id)
-            session.add(booking)
-            session.commit()
-            session.refresh(booking)
-        except Exception:
-            session.rollback()
-            # Booking created in Amadeus but DB save failed
-            raise HTTPException(
-                status_code=500,
-                detail=("Booking failed, try again later."),
-            )
+        logger.info(
+            f"Flight order created successfully: {flight_order_id} for user_id: {current_user.id}"
+        )
 
+        logger.debug(
+            f"Saving booking record for user_id: {current_user.id}, flight_order_id: {flight_order_id}"
+        )
+        booking = Booking(user_id=current_user.id, flight_order_id=flight_order_id)
+        session.add(booking)
+        session.commit()
+
+        # Access all attributes we need before detaching from session
+        booking_id = booking.id
+        booking_flight_order_id = booking.flight_order_id
+        booking_status = booking.status
+
+        # Detach booking from session to prevent lazy loading on cleanup
+        session.expunge(booking)
+
+        # Create response object with only the fields we want to return
+        response = BookingResponse(
+            id=booking_id,
+            flight_order_id=booking_flight_order_id,
+            status=booking_status,
+        )
+
+        logger.info(
+            f"Booking record saved successfully for user_id: {current_user.id}, flight_order_id: {flight_order_id}"
+        )
+        logger.debug(f"Returning booking object: {response.model_dump()}")
         return response
 
     except ValueError as e:
+        logger.warning(
+            f"ValueError during flight order creation for user_id: {current_user.id}: {str(e)}"
+        )
         raise HTTPException(status_code=400, detail=str(e))
 
     except ClientError as e:
+        logger.error(
+            f"ClientError during flight order creation for user_id: {current_user.id}: {str(e)}"
+        )
         # Parse Amadeus error for user-friendly message
         error_detail = _parse_amadeus_client_error(e)
         raise HTTPException(status_code=400, detail=error_detail)
 
-    except HTTPException:
-        # Re-raise HTTPExceptions as-is
-        raise
-
     except Exception:
+        logger.exception(
+            f"Unexpected error during flight order creation for user_id: {current_user.id}"
+        )
+        session.rollback()
         raise HTTPException(
             status_code=500,
             detail="An unexpected error occurred while creating the flight order. Please try again.",
@@ -163,21 +196,72 @@ async def view_seat_map_post(request: FlightOffer):
     return response
 
 
-@router.get("/booking/flight-orders/{flight_orderId:path}")
+@router.get("/booking/flight-orders/{booking_id}")
 async def get_flight_order(
-    flight_orderId: Annotated[str, Path()],
+    booking_id: str,
     current_user: UserInDB = Depends(get_current_user),
+    session: Session = Depends(get_session),
 ):
-    """Get flight order details by flight order ID"""
+    """
+    Get complete booking details for the booking success page.
+    Combines database booking info with Amadeus flight order data.
+
+    Args:
+        booking_id: Database booking UUID
+
+    Returns:
+        Transformed booking data matching frontend BookingSuccessData interface
+    """
+    from backend.utils.booking_transformer import transform_amadeus_to_booking_success
+    import uuid as uuid_module
+
+    logger.info(
+        f"Fetching booking details for booking_id: {booking_id}, user_id: {current_user.id}"
+    )
+
     try:
-        response = amadeus_flight_service.get_flight_order(flight_orderId)
-        return response
+        try:
+            booking_uuid = uuid_module.UUID(booking_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid booking ID format")
+
+        booking = session.exec(
+            select(Booking)
+            .where(Booking.id == booking_uuid)
+            .where(Booking.user_id == current_user.id)
+        ).first()
+
+        if not booking:
+            raise HTTPException(
+                status_code=404,
+                detail="Booking not found or you don't have permission to access it",
+            )
+
+        # Fetch flight order from Amadeus
+        amadeus_order = amadeus_flight_service.get_flight_order(booking.flight_order_id)
+
+        # Transform to frontend format
+        booking_details = transform_amadeus_to_booking_success(
+            booking_id=str(booking.id),
+            booking_date=booking.created_at,
+            booking_status=booking.status,
+            amadeus_order=amadeus_order,
+        )
+
+        logger.info(
+            f"Successfully retrieved booking details for booking_id: {booking_id}"
+        )
+        return booking_details
+
+    except HTTPException:
+        raise
     except NotFoundError:
+        logger.error(f"Flight order not found in Amadeus for booking_id: {booking_id}")
         raise HTTPException(status_code=404, detail="Flight order not found")
     except Exception:
+        logger.exception(f"Error fetching booking details for booking_id: {booking_id}")
         raise HTTPException(
-            status_code=500,
-            detail="An error occurred while retrieving the flight order",
+            status_code=500, detail="An error occurred while retrieving booking details"
         )
 
 

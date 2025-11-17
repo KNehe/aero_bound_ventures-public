@@ -14,7 +14,7 @@ services:
     volumes:
       - .:/backend
       - /backend/.venv  # Exclude virtual environment from volume mount
-    command: ["uv", "run", "fastapi", "run", "main.py", "--port", "80", "--host", "0.0.0.0", "--reload"]
+    command: ["uv", "run", "fastapi", "run", "main.py", "--port", "80", "--host", "0.0.0.0"]
   db:
     image: postgres:16
     container_name: postgres-db

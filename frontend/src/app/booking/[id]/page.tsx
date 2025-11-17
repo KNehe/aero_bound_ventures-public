@@ -90,8 +90,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Use Zustand stores
-  const { token, isAuthenticated } = useAuth();
-  const selectedFlight = useFlights((state) => state.selectedFlight?.data.flightOffers[0]) as FlightOffer | null;
+  const { token, isAuthenticated, logout } = useAuth();
+  const selectedFlight = useFlights((state) => state.selectedFlight?.data?.flightOffers[0]) as FlightOffer | null;
 
   // console.log("Selected Flight in Booking Page:", selectedFlight?.data.flightOffers[0]);
   const [isLoading, setIsLoading] = useState(true);
@@ -185,6 +185,40 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     setTravelers(updatedTravelers);
   };
 
+  // DEV ONLY: Populate test traveler data
+  const populateTestData = () => {
+    const testTravelerData: BookingTraveler = {
+      id: "1",
+      travelerType: travelers[0]?.travelerType || "ADULT",
+      dateOfBirth: "2000-01-16",
+      firstName: "JORGE",
+      lastName: "GONZALES",
+      gender: "MALE",
+      email: "jorge.gonzales833@gmail.com",
+      countryCallingCode: "+34",
+      phone: "480080076",
+      deviceType: "MOBILE",
+      documents: {
+        documentType: "PASSPORT",
+        number: "00000000",
+        expiryDate: "2026-04-14",
+        issuanceCountry: "ES",
+        validityCountry: "ES",
+        nationality: "ES",
+        birthPlace: "Madrid",
+        issuanceLocation: "Madrid",
+        issuanceDate: "2025-04-14",
+        holder: true,
+      },
+    };
+
+    const updatedTravelers = [...travelers];
+    if (updatedTravelers.length > 0) {
+      updatedTravelers[0] = testTravelerData;
+      setTravelers(updatedTravelers);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -221,6 +255,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         },
         body: JSON.stringify(bookingPayload),
       });
+            
+      if (response.status === 401) logout()
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -228,6 +264,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       }
 
       const bookingResult = await response.json();
+
+      console.log("Booking Result:", bookingResult);
 
       router.push(`/booking/success/${bookingResult.id}`);
 
@@ -320,11 +358,22 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-8">c
           {/* Step 1: Traveler Information */}
           {currentStep === 0 && (
             <div className="bg-white rounded-lg shadow-sm border p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Traveler Information</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Traveler Information</h2>
+                {process.env.NODE_ENV === 'development' && (
+                  <button
+                    type="button"
+                    onClick={populateTestData}
+                    className="px-3 py-1 bg-yellow-400 text-yellow-900 text-sm font-medium rounded hover:bg-yellow-500 transition-colors"
+                  >
+                    Fill Test Data (DEV)
+                  </button>
+                )}
+              </div>
               
               <div className="space-y-8">
                 {travelers.map((traveler, index) => (
