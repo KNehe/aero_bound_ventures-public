@@ -240,12 +240,13 @@ async def get_flight_order(
         # Fetch flight order from Amadeus
         amadeus_order = amadeus_flight_service.get_flight_order(booking.flight_order_id)
 
-        # Transform to frontend format
+        # Transform to frontend format, passing user email as fallback
         booking_details = transform_amadeus_to_booking_success(
             booking_id=str(booking.id),
             booking_date=booking.created_at,
             booking_status=booking.status,
             amadeus_order=amadeus_order,
+            user_email=current_user.email,  # Pass user email as fallback
         )
 
         logger.info(

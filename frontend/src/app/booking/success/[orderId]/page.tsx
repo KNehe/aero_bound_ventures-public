@@ -1,8 +1,39 @@
 "use client";
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import useAuth from "@/store/auth";
+
+// Pesapal uses server-side integration
+// No global window object needed for iframe approach
+
+interface PesapalPaymentRequest {
+  booking_id: string;
+  amount: number;
+  currency: string;
+  description: string;
+  callback_url: string;
+  notification_id?: string;
+  billing_address: {
+    email_address: string;
+    phone_number: string;
+    country_code: string;
+    first_name: string;
+    last_name: string;
+  };
+}
+
+interface PesapalPaymentResponse {
+  order_tracking_id: string;
+  merchant_reference: string;
+  redirect_url: string;
+  error?: {
+    error_type: string;
+    code: string;
+    message: string;
+    details: string;
+  };
+}
 
 
 interface BookingSuccessData {
@@ -56,12 +87,94 @@ export default function BookingSuccessPage() {
   const [bookingData, setBookingData] = useState<BookingSuccessData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [showPaymentIframe, setShowPaymentIframe] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const { token, logout } = useAuth();
   const params =  useParams();
   const {orderId} = params;
 
+  // Handle hydration
   useEffect(() => {
-    if (!orderId) return;
+    setIsHydrated(true);
+  }, []);
+
+  // Handle Pesapal payment
+  const handlePayment = async () => {
+    if (!bookingData) return;
+
+    try {
+      setIsProcessingPayment(true);
+
+      // Use first passenger's information (primary traveler) for Pesapal billing
+      const firstPassenger = bookingData.passengers[0];
+      const nameParts = firstPassenger?.name.split(' ') || bookingData.contact.name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || firstName;
+
+      // Extract country calling code from phone number (format: +256 712345678)
+      const phoneMatch = bookingData.contact.phone.match(/^\+?(\d{1,3})\s?(.+)$/);
+      const countryCode = phoneMatch ? phoneMatch[1] : '256'; // Default to Uganda
+      const phoneNumber = phoneMatch ? phoneMatch[2].replace(/\s/g, '') : bookingData.contact.phone;
+
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+      
+      // Create payment request on backend
+      const response = await fetch(`${baseUrl}/payments/pesapal/initiate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          booking_id: bookingData.orderId,
+          amount: parseFloat(bookingData.pricing.total),
+          currency: 'USD', 
+          description: `Flight booking ${bookingData.pnr}`,
+          callback_url: `${window.location.origin}/booking/payment/callback`,
+          billing_address: {
+            email_address: bookingData.contact.email,
+            phone_number: phoneNumber,
+            country_code: countryCode,
+            first_name: firstName,
+            last_name: lastName,
+          },
+        }),
+      });
+      console.log("response:", response);
+
+      if(response.status === 401) {
+        logout();
+        router.push(`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Backend error:', errorData);
+        throw new Error(errorData.detail || `Failed to initiate payment (${response.status})`);
+      }
+
+      const data: PesapalPaymentResponse = await response.json();
+      console.log('Payment response:', data);
+
+      if (data.error) {
+        throw new Error(data.error.message || 'Payment initiation failed');
+      }
+
+      // Show payment iframe instead of redirecting
+      setPaymentUrl(data.redirect_url);
+      setShowPaymentIframe(true);
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to initiate payment. Please try again.');
+      setIsProcessingPayment(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!orderId || !isHydrated) return;
 
 
     const fetchBookingData = async () => {
@@ -96,6 +209,7 @@ export default function BookingSuccessPage() {
         const data = await response.json();
         console.log("Fetched booking data:", data);
         setBookingData(data);
+        console.log("Fetched booking data:", data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -104,7 +218,7 @@ export default function BookingSuccessPage() {
     };
 
     fetchBookingData();
-  }, []);
+  }, [isHydrated, orderId, token]);
 
   if (loading) {
     return (
@@ -164,6 +278,37 @@ export default function BookingSuccessPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Payment Iframe Modal */}
+      {showPaymentIframe && paymentUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">Complete Payment</h3>
+              <button
+                onClick={() => {
+                  setShowPaymentIframe(false);
+                  setPaymentUrl(null);
+                  setIsProcessingPayment(false);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <iframe
+                src={paymentUrl}
+                className="w-full h-full border-0"
+                title="Pesapal Payment"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-top-navigation allow-popups"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-gradient-to-r from-green-600 to-green-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -396,12 +541,13 @@ export default function BookingSuccessPage() {
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Actions</h3>
               <div className="space-y-3">
-                <Link
-                  href={`/booking/${bookingData.orderId}/payment`}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-center block"
+                <button
+                  onClick={handlePayment}
+                  disabled={isProcessingPayment}
+                  className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors text-center"
                 >
-                  Pay to Confirm
-                </Link>
+                  {isProcessingPayment ? 'Processing...' : 'Pay to Confirm'}
+                </button>
               </div>
             </div>
           </div>

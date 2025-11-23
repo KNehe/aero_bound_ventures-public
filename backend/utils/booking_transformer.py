@@ -7,7 +7,11 @@ import re
 
 
 def transform_amadeus_to_booking_success(
-    booking_id: str, booking_date: datetime, booking_status: str, amadeus_order: dict
+    booking_id: str,
+    booking_date: datetime,
+    booking_status: str,
+    amadeus_order: dict,
+    user_email: str | None = None,
 ) -> dict:
     """
     Transform Amadeus flight order response and database booking data
@@ -18,6 +22,7 @@ def transform_amadeus_to_booking_success(
         booking_date: When the booking was created
         booking_status: Current booking status (pending/confirmed/cancelled)
         amadeus_order: Raw Amadeus flight order response
+        user_email: User's email address to use as fallback if not in Amadeus data
 
     Returns:
         dict: Transformed booking data matching BookingSuccessData interface
@@ -49,8 +54,8 @@ def transform_amadeus_to_booking_success(
     # Transform pricing
     pricing = _transform_pricing(flight_offer.get("price", {}))
 
-    # Extract contact information
-    contact = _transform_contact(amadeus_order.get("contacts", []))
+    # Extract contact information (with user email fallback)
+    contact = _transform_contact(amadeus_order.get("contacts", []), user_email)
 
     return {
         "orderId": booking_id,
@@ -205,15 +210,16 @@ def _transform_pricing(price_data: dict) -> dict:
     return {"total": total, "currency": currency, "breakdown": breakdown}
 
 
-def _transform_contact(contacts: list) -> dict:
+def _transform_contact(contacts: list, user_email: str | None = None) -> dict:
     """Extract primary contact information"""
     if not contacts:
-        return {"name": "N/A", "email": "N/A", "phone": "N/A"}
+        # Use user email as fallback
+        return {"name": "N/A", "email": user_email or "N/A", "phone": "N/A"}
 
     primary_contact = contacts[0]
 
-    # Get email
-    email_address = primary_contact.get("emailAddress", "N/A")
+    # Get email (use user_email as fallback if not provided)
+    email_address = primary_contact.get("emailAddress", user_email or "N/A")
 
     # Get phone
     phones = primary_contact.get("phones", [])

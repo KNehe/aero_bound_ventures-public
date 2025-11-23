@@ -12,6 +12,7 @@ dependencies = [
     "fastapi[standard]>=0.116.1",
     "httpx>=0.28.1",
     "passlib>=1.7.4",
+    "pre-commit>=4.5.0",
     "psycopg2-binary>=2.9.10",
     "pyjwt>=2.10.1",
     "pytest>=8.4.1",
