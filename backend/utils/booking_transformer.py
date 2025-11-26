@@ -12,6 +12,7 @@ def transform_amadeus_to_booking_success(
     booking_status: str,
     amadeus_order: dict,
     user_email: str | None = None,
+    ticket_url: str | None = None,
 ) -> dict:
     """
     Transform Amadeus flight order response and database booking data
@@ -33,14 +34,6 @@ def transform_amadeus_to_booking_success(
     if "associatedRecords" in amadeus_order and amadeus_order["associatedRecords"]:
         pnr = amadeus_order["associatedRecords"][0].get("reference", "N/A")
 
-    # Map database status to frontend expected values
-    status_map = {
-        "pending": "PENDING",
-        "confirmed": "CONFIRMED",
-        "cancelled": "CANCELLED",
-    }
-    status = status_map.get(booking_status.lower(), "PENDING")
-
     # Extract flight offer (first one)
     flight_offers = amadeus_order.get("flightOffers", [])
     flight_offer = flight_offers[0] if flight_offers else {}
@@ -61,11 +54,12 @@ def transform_amadeus_to_booking_success(
         "orderId": booking_id,
         "pnr": pnr,
         "bookingDate": booking_date.isoformat(),
-        "status": status,
+        "status": booking_status,
         "flightDetails": flight_details,
         "passengers": passengers,
         "pricing": pricing,
         "contact": contact,
+        "ticket_url": ticket_url,
     }
 
 

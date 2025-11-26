@@ -13,7 +13,7 @@ from backend.schemas.flight_price_confirm import FlightOffer
 from backend.schemas.flight_order import FlightOrderRequestBody
 from backend.utils.security import get_current_user
 from backend.models.users import UserInDB
-from amadeus.client.errors import NotFoundError, ClientError
+from amadeus.client.errors import ClientError
 from backend.external_services.cache import redis_cache
 from backend.utils.helpers import build_redis_key
 from backend.schemas.locations import (
@@ -208,7 +208,7 @@ async def get_flight_order(
 ):
     """
     Get complete booking details for the booking success page.
-    Combines database booking info with Amadeus flight order data.
+    Uses stored Amadeus order response from the database.
 
     Args:
         booking_id: Database booking UUID
@@ -241,17 +241,19 @@ async def get_flight_order(
                 detail="Booking not found or you don't have permission to access it",
             )
 
-        # Fetch flight order from Amadeus
-        amadeus_order = amadeus_flight_service.get_flight_order(booking.flight_order_id)
+        # Use stored Amadeus order response
+        amadeus_order = booking.amadeus_order_response
 
-        # Transform to frontend format, passing user email as fallback
+        # Transform to frontend format, passing user email and ticket_url as fallback
         booking_details = transform_amadeus_to_booking_success(
             booking_id=str(booking.id),
             booking_date=booking.created_at,
             booking_status=booking.status,
             amadeus_order=amadeus_order,
-            user_email=current_user.email,  # Pass user email as fallback
+            user_email=current_user.email,
+            ticket_url=booking.ticket_url,
         )
+        print(f"booking.status: {booking.status}")
 
         logger.info(
             f"Successfully retrieved booking details for booking_id: {booking_id}"
@@ -260,9 +262,6 @@ async def get_flight_order(
 
     except HTTPException:
         raise
-    except NotFoundError:
-        logger.error(f"Flight order not found in Amadeus for booking_id: {booking_id}")
-        raise HTTPException(status_code=404, detail="Flight order not found")
     except Exception:
         logger.exception(f"Error fetching booking details for booking_id: {booking_id}")
         raise HTTPException(

@@ -33,6 +33,17 @@ export default function MyBookingsAndTicketsPage() {
   
   const PAGE_SIZE = 10;
 
+  // Status constants to avoid hardcoded strings (matching backend BookingStatus class)
+  const BOOKING_STATUS = {
+    CONFIRMED: "confirmed",
+    PAID: "paid",
+    PENDING: "pending",
+    CANCELLED: "cancelled",
+    REVERSED: "reversed",
+    FAILED: "failed",
+    REFUNDED: "refunded",
+  } as const;
+
   useEffect(() => {
     const fetchBookings = async () => {
       if (!token) {
@@ -100,12 +111,20 @@ export default function MyBookingsAndTicketsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "CONFIRMED":
+      case BOOKING_STATUS.CONFIRMED:
         return "bg-green-100 text-green-800";
-      case "PENDING":
+      case BOOKING_STATUS.PAID:
+        return "bg-green-100 text-green-800";
+      case BOOKING_STATUS.PENDING:
         return "bg-yellow-100 text-yellow-800";
-      case "CANCELLED":
+      case BOOKING_STATUS.CANCELLED:
         return "bg-red-100 text-red-800";
+      case BOOKING_STATUS.FAILED:
+        return "bg-red-100 text-red-800";
+      case BOOKING_STATUS.REVERSED:
+        return "bg-orange-100 text-orange-800";
+      case BOOKING_STATUS.REFUNDED:
+        return "bg-blue-100 text-blue-800";
       default:
         return "bg-gray-100 text-gray-800";
     }

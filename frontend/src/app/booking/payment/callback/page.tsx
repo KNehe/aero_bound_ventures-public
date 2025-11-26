@@ -8,6 +8,7 @@ export default function PaymentCallbackPage() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"processing" | "success" | "failed">("processing");
   const [message, setMessage] = useState("Processing your payment...");
+  const [originalBookingId, setOriginalBookingId] = useState<string>("");
 
   useEffect(() => {
     const orderTrackingId = searchParams.get("OrderTrackingId");
@@ -23,6 +24,8 @@ export default function PaymentCallbackPage() {
     const originalBookingId = orderMerchantReference.includes('-') 
       ? orderMerchantReference.substring(0, orderMerchantReference.lastIndexOf('-'))
       : orderMerchantReference;
+
+    setOriginalBookingId(originalBookingId);
 
     // Call backend to verify payment
     const verifyPayment = async () => {
@@ -105,10 +108,10 @@ export default function PaymentCallbackPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Failed</h2>
             <p className="text-gray-600 mb-6">{message}</p>
             <Link
-              href="/"
+              href={originalBookingId ? `/booking/success/${originalBookingId}` : "/"}
               className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
             >
-              Return Home
+              Try Payment Again
             </Link>
           </div>
         )}

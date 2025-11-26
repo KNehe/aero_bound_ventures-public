@@ -40,7 +40,8 @@ interface BookingSuccessData {
   orderId: string;
   pnr: string;
   bookingDate: string;
-  status: "CONFIRMED" | "PENDING" | "CANCELLED";
+  status: "confirmed" | "pending" | "cancelled" | "paid" | "reversed" | "failed" | "refunded";
+  ticket_url?: string;
   flightDetails: {
     outbound: {
       date: string;
@@ -83,6 +84,16 @@ interface BookingSuccessData {
 }
 
 export default function BookingSuccessPage() {
+// Status constants to avoid hardcoded strings (matching backend BookingStatus class)
+const BOOKING_STATUS = {
+  CONFIRMED: "confirmed",
+  PAID: "paid",
+  PENDING: "pending",
+  CANCELLED: "cancelled",
+  REVERSED: "reversed",
+  FAILED: "failed",
+  REFUNDED: "refunded",
+} as const;
   const router = useRouter();
   const [bookingData, setBookingData] = useState<BookingSuccessData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -207,7 +218,6 @@ export default function BookingSuccessPage() {
         }
 
         const data = await response.json();
-        console.log("Fetched booking data:", data);
         setBookingData(data);
         console.log("Fetched booking data:", data);
       } catch (err) {
@@ -265,16 +275,31 @@ export default function BookingSuccessPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "CONFIRMED":
+      case BOOKING_STATUS.CONFIRMED:
         return "bg-green-100 text-green-800";
-      case "PENDING":
+      case BOOKING_STATUS.PAID:
+        return "bg-green-100 text-green-800";
+      case BOOKING_STATUS.PENDING:
         return "bg-yellow-100 text-yellow-800";
-      case "CANCELLED":
+      case BOOKING_STATUS.CANCELLED:
         return "bg-red-100 text-red-800";
+      case BOOKING_STATUS.FAILED:
+        return "bg-red-100 text-red-800";
+      case BOOKING_STATUS.REVERSED:
+        return "bg-orange-100 text-orange-800";
+      case BOOKING_STATUS.REFUNDED:
+        return "bg-blue-100 text-blue-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  // Helper to check if booking is paid (for payment button)
+  const isPaid = bookingData.status === BOOKING_STATUS.CONFIRMED || bookingData.status === BOOKING_STATUS.PAID;
+  // Helper to check if ticket is available
+  const hasTicket = Boolean((bookingData as any).ticket_url);
+  // Show processing message only if status is PAID and ticket is not present
+  const showProcessingMessage = bookingData.status === BOOKING_STATUS.PAID && !hasTicket;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -340,7 +365,7 @@ export default function BookingSuccessPage() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">Booking Summary</h2>
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(bookingData.status)}`}>
-                  {bookingData.status}
+                    {bookingData.status.toUpperCase()}
                 </span>
               </div>
               
@@ -541,13 +566,36 @@ export default function BookingSuccessPage() {
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Actions</h3>
               <div className="space-y-3">
-                <button
-                  onClick={handlePayment}
-                  disabled={isProcessingPayment}
-                  className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors text-center"
-                >
-                  {isProcessingPayment ? 'Processing...' : 'Pay to Confirm'}
-                </button>
+                {/* Show payment button only if not paid */}
+                {!(bookingData.status === BOOKING_STATUS.PAID || bookingData.status === BOOKING_STATUS.CONFIRMED) && (
+                  <button
+                    onClick={handlePayment}
+                    disabled={isProcessingPayment}
+                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors text-center"
+                  >
+                    {isProcessingPayment ? 'Processing...' : 'Pay to Receive Ticket'}
+                  </button>
+                )}
+                {/* Show download button if ticket is available */}
+                {isPaid && hasTicket && (
+                  <a
+                    href={(bookingData as any).ticket_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-center transition-colors"
+                  >
+                    Download Ticket
+                  </a>
+                )}
+                {/* Show processing message only if status is PAID and ticket is not present */}
+                {showProcessingMessage && (
+                  <button
+                    disabled
+                    className="w-full bg-yellow-400 text-yellow-900 font-semibold py-2 px-4 rounded-lg text-center cursor-not-allowed"
+                  >
+                    Ticket is being processed. Please be patient (max 24 hours)
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -555,4 +603,4 @@ export default function BookingSuccessPage() {
       </div>
     </div>
   );
-} 
+}

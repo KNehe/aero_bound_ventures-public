@@ -1,6 +1,17 @@
 "use client";
 import React, { useState } from "react";
 
+// Status constants to avoid hardcoded strings (matching backend BookingStatus class)
+const BOOKING_STATUS = {
+  CONFIRMED: "confirmed",
+  PAID: "paid",
+  PENDING: "pending",
+  CANCELLED: "cancelled",
+  REVERSED: "reversed",
+  FAILED: "failed",
+  REFUNDED: "refunded",
+} as const;
+
 interface User {
   id: string;
   firstName: string;
@@ -17,7 +28,7 @@ interface Booking {
   destination: string;
   departureDate: string;
   returnDate?: string;
-  status: "confirmed" | "pending" | "cancelled";
+  status: string;
   passengers: number;
   totalPrice: number;
   airline: string;
@@ -46,14 +57,22 @@ export default function UserAccount({ user, bookings, onLogout }: UserAccountPro
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'confirmed':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
+      case BOOKING_STATUS.CONFIRMED:
+        return "bg-green-100 text-green-800";
+      case BOOKING_STATUS.PAID:
+        return "bg-green-100 text-green-800";
+      case BOOKING_STATUS.PENDING:
+        return "bg-yellow-100 text-yellow-800";
+      case BOOKING_STATUS.CANCELLED:
+        return "bg-red-100 text-red-800";
+      case BOOKING_STATUS.FAILED:
+        return "bg-red-100 text-red-800";
+      case BOOKING_STATUS.REVERSED:
+        return "bg-orange-100 text-orange-800";
+      case BOOKING_STATUS.REFUNDED:
+        return "bg-blue-100 text-blue-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 

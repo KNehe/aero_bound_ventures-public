@@ -15,6 +15,10 @@ from backend.schemas.payments import (
 from backend.utils.security import get_current_user
 from backend.models.users import UserInDB
 from backend.crud.bookings import get_booking_by_id, update_booking_status
+from backend.utils.log_manager import get_app_logger
+
+
+logger = get_app_logger(__name__)
 
 
 router = APIRouter(prefix="/payments", tags=["payments"])
@@ -150,7 +154,18 @@ async def pesapal_payment_callback(
             else OrderMerchantReference
         )
 
-        # 1. Fetch transaction status from Pesapal
+        # 1. Get booking to update
+        booking = get_booking_by_id(session, original_booking_id)
+
+        if not booking:
+            logger.error(f"Booking not found for ID: {original_booking_id}")
+            return {
+                "status": "error",
+                "message": "Booking not found",
+                "order_tracking_id": OrderTrackingId,
+            }
+
+        # 2. Fetch transaction status from Pesapal
         try:
             transaction_status = await pesapal_client.get_transaction_status(
                 OrderTrackingId
@@ -165,17 +180,6 @@ async def pesapal_payment_callback(
                 }
             # Otherwise, re-raise
             raise
-
-        # 2. Get booking to update
-        booking = get_booking_by_id(session, original_booking_id)
-
-        if not booking:
-            # Booking not found - redirect to error page
-            return {
-                "status": "error",
-                "message": "Booking not found",
-                "order_tracking_id": OrderTrackingId,
-            }
 
         # 3. Check payment status
         payment_status_code = transaction_status.get("status_code")
@@ -230,6 +234,8 @@ async def pesapal_payment_callback(
 
     except Exception as e:
         update_booking_status(session, str(booking.id), BookingStatus.CANCELLED)
+        print("Error processing Pesapal callback:", str(e))
+        logger.error(f"Error processing Pesapal callback: {str(e)}")
         return {
             "status": "error",
             "message": f"Error processing callback: {str(e)}",
