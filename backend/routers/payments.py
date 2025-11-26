@@ -6,6 +6,7 @@ from sqlmodel import Session
 
 from backend.crud.database import get_session
 from backend.external_services.pesapal import pesapal_client
+from backend.models.bookings import BookingStatus
 from backend.schemas.payments import (
     PesapalPaymentRequest,
     PesapalPaymentResponse,
@@ -183,8 +184,7 @@ async def pesapal_payment_callback(
         )
 
         if payment_status_code == 1:  # COMPLETED
-            # Update booking to paid
-            update_booking_status(session, str(booking.id), "paid")
+            update_booking_status(session, str(booking.id), BookingStatus.PAID)
 
             return {
                 "status": "success",
@@ -196,6 +196,7 @@ async def pesapal_payment_callback(
             }
 
         elif payment_status_code == 2:  # FAILED
+            update_booking_status(session, str(booking.id), BookingStatus.FAILED)
             return {
                 "status": "failed",
                 "message": f"Payment failed: {transaction_status.get('description', 'Unknown error')}",
@@ -203,6 +204,7 @@ async def pesapal_payment_callback(
             }
 
         elif payment_status_code == 3:  # REVERSED
+            update_booking_status(session, str(booking.id), BookingStatus.REVERSED)
             return {
                 "status": "reversed",
                 "message": "Payment was reversed",
@@ -210,7 +212,7 @@ async def pesapal_payment_callback(
             }
 
         else:  # INVALID, PENDING, or unknown (status_code = 0)
-            # Check if it's a pending payment (not yet completed)
+            update_booking_status(session, str(booking.id), BookingStatus.PENDING)
             error = transaction_status.get("error", {})
             if error and error.get("code") == "payment_details_not_found":
                 return {
@@ -227,6 +229,7 @@ async def pesapal_payment_callback(
             }
 
     except Exception as e:
+        update_booking_status(session, str(booking.id), BookingStatus.CANCELLED)
         return {
             "status": "error",
             "message": f"Error processing callback: {str(e)}",
@@ -255,7 +258,6 @@ async def pesapal_ipn_notification(
     Response Format (Required):
     {"orderNotificationType":"IPNCHANGE","orderTrackingId":"...","orderMerchantReference":"...","status":200}
     """
-    print("IPN IPN IPN IPN IPN IPN IPN IPN IPN IPN IPN IPN IPN IPN IPN IPN IPN IPN ")
     try:
         # Validate we have required parameters
         if not all([OrderTrackingId, OrderMerchantReference]):
@@ -293,15 +295,26 @@ async def pesapal_ipn_notification(
         payment_status_code = transaction_status.get("status_code")
 
         if payment_status_code == 1:  # COMPLETED
-            update_booking_status(session, str(booking.id), "paid")
-        elif payment_status_code in [2, 3]:  # FAILED or REVERSED
+            update_booking_status(session, str(booking.id), BookingStatus.PAID)
+        elif payment_status_code == 2:  # FAILED
             update_booking_status(
                 session,
                 str(booking.id),
-                "pending",  # Reset to pending
+                BookingStatus.FAILED,
+            )
+        elif payment_status_code == 3:  # REVERSED
+            update_booking_status(
+                session,
+                str(booking.id),
+                BookingStatus.REVERSED,
+            )
+        else:
+            update_booking_status(
+                session,
+                str(booking.id),
+                BookingStatus.PENDING,
             )
 
-        # Return success response (status 200 = processed)
         return {
             "orderNotificationType": "IPNCHANGE",
             "orderTrackingId": OrderTrackingId,
@@ -309,8 +322,12 @@ async def pesapal_ipn_notification(
             "status": 200,
         }
 
-    except Exception as e:
-        print(f"Error processing IPN: {str(e)}")
+    except Exception:
+        update_booking_status(
+            session,
+            str(booking.id),
+            BookingStatus.CANCELLED,
+        )
         return {
             "orderNotificationType": "IPNCHANGE",
             "orderTrackingId": OrderTrackingId or "",

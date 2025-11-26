@@ -133,7 +133,11 @@ async def flight_order(
         logger.debug(
             f"Saving booking record for user_id: {current_user.id}, flight_order_id: {flight_order_id}"
         )
-        booking = Booking(user_id=current_user.id, flight_order_id=flight_order_id)
+        booking = Booking(
+            user_id=current_user.id,
+            flight_order_id=flight_order_id,
+            amadeus_order_response=response,
+        )
         session.add(booking)
         session.commit()
 
