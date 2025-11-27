@@ -53,15 +53,18 @@ export default function PopularDestinationsSection({ setPrefillDestination }: Po
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchPopularDestinations("DXB", "2017-01")
+    const currentPeriod = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+
+    fetchPopularDestinations("DXB", currentPeriod)
       .then((data) => {
-        console.log("destination", data);
-        const destinationsData = data.data && data.data.length > 0 ? data.data : DEFAULT_DESTINATIONS;
-        setDestinations(destinationsData);
+        if (data && data.length > 0) {
+          setDestinations(data);
+        } else {
+          setDestinations(DEFAULT_DESTINATIONS);
+        }
         setLoading(false);
       })
       .catch((err) => {
-        console.log("erro fetchin destination", err);
         setError("Failed to load destinations");
         setLoading(false);
       });
