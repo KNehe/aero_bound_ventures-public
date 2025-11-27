@@ -253,7 +253,6 @@ async def get_flight_order(
             user_email=current_user.email,
             ticket_url=booking.ticket_url,
         )
-        print(f"booking.status: {booking.status}")
 
         logger.info(
             f"Successfully retrieved booking details for booking_id: {booking_id}"
@@ -406,5 +405,28 @@ async def get_user_bookings(
         redis_cache.set(key, flight_orders)
 
         return flight_orders
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/analytics/most-travelled-destinations")
+def get_most_travelled_destinations(origin_city_code: str, period: str):
+    try:
+        key = build_redis_key({"city_code_period": f"{origin_city_code}{period}"})
+        print("key", key)
+        destinations = redis_cache.get(key)
+        if destinations:
+            print("Returning from cache", destinations, key)
+            return destinations
+
+        response = amadeus_flight_service.get_most_travelled_destinations(
+            origin_city_code, period
+        )
+
+        if len(response) > 0:
+            redis_cache.set(key, response)
+        print("Returning from api", response, key)
+
+        return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -3,7 +3,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from 'next/navigation'
 import useFlights from "@/store/flights";
 
-export default function BookingForm() {
+interface BookingFormProps {
+  prefillDestination: string;
+}
+
+export default function BookingForm({ prefillDestination }: BookingFormProps) {
   const originRef = useRef<HTMLDivElement>(null);
   const destinationRef = useRef<HTMLDivElement>(null);
 
@@ -21,6 +25,19 @@ export default function BookingForm() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    if (prefillDestination) {
+      setForm(prev => ({
+        ...prev,
+        destinationLocationCode: prefillDestination
+      }));
+      setDisplayValues(prev => ({
+        ...prev,
+        destination: prefillDestination
+      }));
+    }
+  }, [prefillDestination]);
   const [form, setForm] = useState({
     originLocationCode: "",
     destinationLocationCode: "",

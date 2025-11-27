@@ -3,7 +3,11 @@ import BookingForm from "./BookingForm";
 
 const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
 
-export default function HeroSection() {
+interface HeroSectionProps {
+  prefillDestination: string;
+}
+
+export default function HeroSection({ prefillDestination }: HeroSectionProps) {
   return (
     <section className="relative flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-6 py-12 md:py-16 min-h-screen overflow-hidden" style={{ backgroundImage: 'url(/aeroplane.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       {/* Overlay for readability */}
@@ -16,7 +20,7 @@ export default function HeroSection() {
         <p className="text-base md:text-lg text-gray-100 mb-8 md:mb-8 drop-shadow">
           With Aero Bound Ventures, you can search and book flights instantly, or let our expert team handle your booking for a stress-free experience. Enjoy flexibility, great deals, and a personal touch every time you fly.
         </p>
-        <BookingForm />
+        <BookingForm prefillDestination={prefillDestination} />
         {whatsappNumber && (
           <a
             href={`https://wa.me/${whatsappNumber}`}

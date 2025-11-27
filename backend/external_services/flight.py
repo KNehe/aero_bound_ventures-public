@@ -184,5 +184,24 @@ class AmadeusFlightService:
         except ResponseError as error:
             raise error
 
+    def get_most_travelled_destinations(
+        self, origin_city_code: str, period: str
+    ) -> list[dict]:
+        """
+        Fetches the most travelled destinations from a given origin city and period using Amadeus API.
+        Args:
+            origin_city_code (str): IATA code of the origin city (e.g., 'MAD').
+            period (str): Period in 'YYYY-MM' format (e.g., '2017-01').
+        Returns:
+            list[dict]: List of destination data dictionaries.
+        """
+        try:
+            response = self.amadeus.travel.analytics.air_traffic.traveled.get(
+                originCityCode=origin_city_code, period=period
+            )
+            return response.data
+        except ResponseError as error:
+            raise error
+
 
 amadeus_flight_service = AmadeusFlightService()

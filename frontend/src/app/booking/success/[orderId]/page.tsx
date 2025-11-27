@@ -295,7 +295,7 @@ const BOOKING_STATUS = {
   };
 
   // Helper to check if booking is paid (for payment button)
-  const isPaid = bookingData.status === BOOKING_STATUS.CONFIRMED || bookingData.status === BOOKING_STATUS.PAID;
+  const isPaid = bookingData.status === BOOKING_STATUS.PAID;
   // Helper to check if ticket is available
   const hasTicket = Boolean((bookingData as any).ticket_url);
   // Show processing message only if status is PAID and ticket is not present
