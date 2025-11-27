@@ -42,6 +42,23 @@ const DEFAULT_DESTINATIONS: Destination[] = [
   }
 ];
 
+const IATA_TO_CITY: Record<string, string> = {
+  LON: "London, UK",
+  DXB: "Dubai, UAE",
+  PAR: "Paris, France",
+  GRU: "Sao Paulo, Brazil",
+  BCN: "Barcelona, Spain",
+  NYC: "New York, USA",
+  MAD: "Madrid, Spain",
+  MNL: "Manila, Philippines",
+  BKK: "Bangkok, Thailand",
+  SIN: "Singapore, Singapore",
+  CMB: "Colombo, Sri Lanka",
+  SYD: "Sydney, Australia",
+  KTM: "Kathmandu, Nepal",
+  // Add more as needed
+};
+
 
 interface PopularDestinationsSectionProps {
   setPrefillDestination: (destination: string) => void;
@@ -65,7 +82,6 @@ export default function PopularDestinationsSection({ setPrefillDestination }: Po
         setLoading(false);
       })
       .catch((err) => {
-        setError("Failed to load destinations");
         setLoading(false);
       });
   }, []);
@@ -88,7 +104,7 @@ export default function PopularDestinationsSection({ setPrefillDestination }: Po
               <div className="relative h-48 overflow-hidden">
                 <img
                   src="/aeroplane.jpg"
-                  alt={destination.destination}
+                  alt={IATA_TO_CITY[destination.destination] || destination.destination}
                   className="w-full h-full object-cover transition-transform hover:scale-110"
                 />
                 <div className="absolute bottom-3 left-3 bg-blue-600 text-white px-2 py-1 rounded-full text-sm font-semibold">
@@ -98,7 +114,7 @@ export default function PopularDestinationsSection({ setPrefillDestination }: Po
               <div className="p-6">
                 <div className="flex items-center mb-2">
                   <FaMapMarkerAlt className="text-blue-600 mr-2" />
-                  <h3 className="text-xl font-bold text-blue-900">{destination.destination}</h3>
+                  <h3 className="text-xl font-bold text-blue-900">{IATA_TO_CITY[destination.destination] || destination.destination}</h3>
                 </div>
                 <p className="text-gray-600 text-sm mb-4">Travelers Score: {destination.analytics.travelers.score}</p>
                 <button 
