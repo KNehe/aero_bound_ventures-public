@@ -1,30 +1,21 @@
 "use client";
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import useAuth from '@/store/auth';
 
 interface Booking {
   id: string;
-  bookingId: string;
-  pnr: string;
+  pnr: string | null;
   status: string;
-  ticketStatus: string;
-  origin: string;
-  destination: string;
-  departureDate: string;
-  returnDate: string | null;
-  airline: string;
-  flightNumber: string;
-  passengers: number;
-  total: string;
-  currency: string;
-  ticketUrl: string | null;
-  issuedAt: string | null;
-  passengerNames: string[];
+  created_at: string;
+  ticket_url: string | null;
 }
 
 export default function MyBookingsAndTicketsPage() {
   const token = useAuth((state) => state.token);
+  const logout = useAuth((state) => state.logout);
+  const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +24,6 @@ export default function MyBookingsAndTicketsPage() {
   
   const PAGE_SIZE = 10;
 
-  // Status constants to avoid hardcoded strings (matching backend BookingStatus class)
   const BOOKING_STATUS = {
     CONFIRMED: "confirmed",
     PAID: "paid",
@@ -46,12 +36,7 @@ export default function MyBookingsAndTicketsPage() {
 
   useEffect(() => {
     const fetchBookings = async () => {
-      if (!token) {
-        setError("No authentication token found");
-        setLoading(false);
-        return;
-      }
-
+      
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const response = await fetch(`${baseUrl}/bookings`, {
@@ -60,44 +45,18 @@ export default function MyBookingsAndTicketsPage() {
           },
         });
 
+        if (response.status === 401) {
+          logout();
+          router.push('/auth/login');
+          return;
+        }
+
         if (!response.ok) {
           throw new Error(`Failed to fetch bookings: ${response.status}`);
         }
 
         const data = await response.json();
-
-        // Transform API response to Booking format
-        const transformedBookings: Booking[] = data.map((order: any) => {
-          const flightOffer = order.flightOffers[0];
-          const itinerary = flightOffer.itineraries[0];
-          const firstSegment = itinerary.segments[0];
-          const lastSegment = itinerary.segments[itinerary.segments.length - 1];
-
-          const reference = order.associatedRecords[0]?.reference || 'N/A';
-          const creationDate = order.associatedRecords[1]?.creationDate || null;
-
-          return {
-            id: order.id,
-            bookingId: reference,
-            pnr: reference,
-            status: firstSegment.bookingStatus,
-            ticketStatus: firstSegment.bookingStatus === 'CONFIRMED' ? 'ready' : 'processing',
-            origin: firstSegment.departure.iataCode,
-            destination: lastSegment.arrival.iataCode,
-            departureDate: firstSegment.departure.at.split('T')[0],
-            returnDate: itinerary.segments.length > 1 ? lastSegment.arrival.at.split('T')[0] : null,
-            airline: flightOffer.validatingAirlineCodes[0],
-            flightNumber: `${firstSegment.carrierCode}${firstSegment.number}`,
-            passengers: order.travelers.length,
-            total: flightOffer.price.total,
-            currency: flightOffer.price.currency,
-            ticketUrl: firstSegment.bookingStatus === 'CONFIRMED' ? `/tickets/${reference}.pdf` : null,
-            issuedAt: creationDate ? creationDate.split('T')[0] : null,
-            passengerNames: order.travelers.map((t: any) => `${t.name.firstName} ${t.name.lastName}`),
-          };
-        });
-
-        setBookings(transformedBookings);
+        setBookings(data);
       } catch (err) {
         console.error('Error fetching bookings:', err);
         setError(err instanceof Error ? err.message : 'Failed to load bookings');
@@ -126,22 +85,7 @@ export default function MyBookingsAndTicketsPage() {
       case BOOKING_STATUS.REFUNDED:
         return "bg-blue-100 text-blue-800";
       default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getTicketStatusColor = (status: string) => {
-    switch (status) {
-      case "processing":
-        return "bg-blue-100 text-blue-800";
-      case "ready":
-        return "bg-green-100 text-green-800";
-      case "failed":
-        return "bg-red-100 text-red-800";
-      case "cancelled":
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-500 text-gray-800";
     }
   };
 
@@ -150,11 +94,8 @@ export default function MyBookingsAndTicketsPage() {
     if (!search.trim()) return bookings;
     const s = search.toLowerCase();
     return bookings.filter(b =>
-      b.bookingId.toLowerCase().includes(s) ||
-      b.pnr.toLowerCase().includes(s) ||
-      b.origin.toLowerCase().includes(s) ||
-      b.destination.toLowerCase().includes(s) ||
-      b.passengerNames.some((name: string) => name.toLowerCase().includes(s))
+      b.id.toLowerCase().includes(s) ||
+      (b.pnr && b.pnr.toLowerCase().includes(s))
     );
   }, [search, bookings]);
 
@@ -198,7 +139,7 @@ export default function MyBookingsAndTicketsPage() {
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Search by Booking ID, PNR, passenger, or route..."
+                placeholder="Search by Booking ID or PNR..."
                 className="w-full md:w-96 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700"
               />
               <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -218,52 +159,45 @@ export default function MyBookingsAndTicketsPage() {
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Booking ID</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">PNR</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Route</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dates</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Passengers</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Total</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Booking Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Ticket Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Created Date</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {paginated.map((booking: Booking) => (
                       <tr key={booking.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-mono text-sm text-gray-900">{booking.bookingId}</td>
-                        <td className="px-4 py-3 font-mono text-sm text-gray-900">{booking.pnr}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          {booking.origin} → {booking.destination}
-                          <div className="text-xs text-gray-500">{booking.airline} {booking.flightNumber}</div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          {booking.departureDate}
-                          {booking.returnDate && (
-                            <>
-                              <br />Return: {booking.returnDate}
-                            </>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          {booking.passengerNames.join(", ")}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 font-semibold">
-                          {booking.currency} {booking.total}
-                        </td>
+                        <td className="px-4 py-3 font-mono text-sm text-gray-900">{booking.id}</td>
+                        <td className="px-4 py-3 font-mono text-sm text-gray-900">{booking.pnr || 'N/A'}</td>
                         <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>{booking.status}</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
+                            {booking.status.toUpperCase()}
+                          </span>
                         </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTicketStatusColor(booking.ticketStatus)}`}>{booking.ticketStatus}</span>
-                          {booking.issuedAt && (
-                            <div className="text-xs text-gray-500 mt-1">Issued: {booking.issuedAt}</div>
-                          )}
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {new Date(booking.created_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col gap-2 min-w-[120px]">
-                            <Link href={`/booking/${booking.bookingId}`} className="text-blue-600 hover:underline text-xs font-medium">View Details</Link>
-                            {booking.ticketStatus === "ready" && booking.ticketUrl && (
-                              <a href={booking.ticketUrl} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline text-xs font-medium">Download Ticket</a>
+                            <Link href={`/booking/success/${booking.id}`} className="text-blue-600 hover:underline text-xs font-medium">View Details</Link>
+                            {booking.ticket_url ? (
+                              <a href={booking.ticket_url} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline text-xs font-medium flex items-center gap-1">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                Download Ticket
+                              </a>
+                            ) : (booking.status === BOOKING_STATUS.PAID) ? (
+                              <span className="text-amber-600 text-xs font-medium flex items-center gap-1" title="Your ticket is being generated">
+                                <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                Processing Ticket...
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 text-xs">Pay to get ticket</span>
                             )}
                           </div>
                         </td>

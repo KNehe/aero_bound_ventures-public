@@ -21,7 +21,7 @@ from backend.schemas.locations import (
     AirportCitySearchResponse,
 )
 from backend.models.bookings import Booking
-from backend.schemas.bookings import BookingResponse
+from backend.schemas.bookings import BookingResponse, UserBookingResponse
 from backend.crud.database import get_session
 from backend.utils.log_manager import get_app_logger
 from sqlmodel import Session, select
@@ -386,27 +386,59 @@ def _parse_amadeus_client_error(error: ClientError) -> str:
         return DEFAULT_MESSAGE
 
 
-@router.get("/bookings")
+@router.get("/bookings", response_model=list[UserBookingResponse])
 async def get_user_bookings(
     user: UserInDB = Depends(get_current_user), session: Session = Depends(get_session)
 ):
+    """
+    Get all bookings for the current user.
+    
+    Returns:
+        List of bookings with id, pnr, status, created_at, and ticket_url
+    """
     try:
-        order_ids = session.exec(
-            select(Booking.flight_order_id).where(Booking.user_id == user.id)
+        key = build_redis_key({"user_bookings": str(user.id)})
+        cached_bookings = redis_cache.get(key)
+        if cached_bookings:
+            logger.info(f"Returning cached bookings for user_id: {user.id}")
+            return cached_bookings
+
+        logger.info(f"Fetching bookings for user_id: {user.id}")
+        
+        bookings = session.exec(
+            select(Booking)
+            .where(Booking.user_id == user.id)
+            .order_by(Booking.created_at.desc())
         ).all()
-
-        key = build_redis_key({"order_ids": order_ids})
-        flight_orders = redis_cache.get(key)
-        if flight_orders:
-            return flight_orders
-
-        flight_orders = amadeus_flight_service.get_flight_orders(order_ids)
-
-        redis_cache.set(key, flight_orders)
-
-        return flight_orders
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        
+        response = []
+        for booking in bookings:
+            pnr = None
+            if booking.amadeus_order_response:
+                print(f"amadeus_order_response: {booking.amadeus_order_response}")
+                associated_records = booking.amadeus_order_response.get("associatedRecords", [])
+                if associated_records:
+                    pnr = associated_records[0].get("reference")
+            
+            response.append(
+                UserBookingResponse(
+                    id=booking.id,
+                    pnr=pnr,
+                    status=booking.status,
+                    created_at=booking.created_at,
+                    ticket_url=booking.ticket_url,
+                )
+            )
+        
+        response_data = [b.model_dump(mode='json') for b in response]
+        redis_cache.set(key, response_data)
+        
+        logger.info(f"Successfully fetched {len(response)} bookings for user_id: {user.id}")
+        return response
+        
+    except Exception:
+        logger.exception(f"Error fetching bookings for user_id: {user.id}")
+        raise HTTPException(status_code=500, detail="An error occurred while fetching bookings")
 
 
 @router.get("/analytics/most-travelled-destinations")
