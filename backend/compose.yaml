@@ -12,8 +12,8 @@ services:
       - db
       - redis
     volumes:
-      - .:/backend
-      - /backend/.venv  # Exclude virtual environment from volume mount
+      - .:/app/backend
+      - /app/backend/.venv  # Exclude virtual environment from volume mount
     command: ["uv", "run", "fastapi", "run", "main.py", "--port", "80", "--host", "0.0.0.0"]
   db:
     image: postgres:16

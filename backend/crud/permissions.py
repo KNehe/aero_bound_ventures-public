@@ -1,6 +1,6 @@
 from sqlmodel import Session, select
 import uuid
-from models.permissions import (
+from backend.models.permissions import (
     Permission,
     Group,
     UserPermission,

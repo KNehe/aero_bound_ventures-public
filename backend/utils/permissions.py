@@ -1,6 +1,6 @@
 from sqlmodel import Session
-from models.users import UserInDB
-from crud.permissions import UserPermissionCRUD
+from backend.models.users import UserInDB
+from backend.crud.permissions import UserPermissionCRUD
 
 
 class PermissionChecker:
