@@ -4,6 +4,8 @@ from sqlmodel import SQLModel, Field, Relationship
 from typing import TYPE_CHECKING, List, Optional
 from datetime import datetime
 
+from .permissions import Group, Permission, UserGroup, UserPermission
+
 if TYPE_CHECKING:
     from .bookings import Booking
 
@@ -14,6 +16,14 @@ class UserInDB(SQLModel, table=True):
     password: str
     reset_token: Optional[str] = Field(default=None, nullable=True)
     reset_token_expires: Optional[datetime] = Field(default=None, nullable=True)
+    is_active: bool = Field(default=True, nullable=False)
+    is_superuser: bool = Field(default=False, nullable=False)
 
     # Relationship to bookings
     bookings: List["Booking"] = Relationship(back_populates="user")
+
+    # Relationships for RBAC
+    groups: List["Group"] = Relationship(back_populates="users", link_model=UserGroup)
+    permissions: List["Permission"] = Relationship(
+        back_populates="users", link_model=UserPermission
+    )
