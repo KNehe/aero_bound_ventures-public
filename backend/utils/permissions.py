@@ -1,4 +1,3 @@
-from typing import List
 from sqlmodel import Session
 from models.users import UserInDB
 from crud.permissions import UserPermissionCRUD
@@ -37,7 +36,7 @@ class PermissionChecker:
 
     @staticmethod
     def has_perms(
-        session: Session, user: UserInDB, permission_codenames: List[str]
+        session: Session, user: UserInDB, permission_codenames: list[str]
     ) -> bool:
         """
         Check if user has all specified permissions.
@@ -66,7 +65,7 @@ class PermissionChecker:
 
     @staticmethod
     def has_any_perm(
-        session: Session, user: UserInDB, permission_codenames: List[str]
+        session: Session, user: UserInDB, permission_codenames: list[str]
     ) -> bool:
         """
         Check if user has any of the specified permissions.
@@ -121,7 +120,7 @@ class PermissionChecker:
         return any(group.name == group_name for group in user_groups)
 
     @staticmethod
-    def has_groups(session: Session, user: UserInDB, group_names: List[str]) -> bool:
+    def has_groups(session: Session, user: UserInDB, group_names: list[str]) -> bool:
         """
         Check if user belongs to all specified groups.
 
@@ -148,7 +147,7 @@ class PermissionChecker:
         )
 
     @staticmethod
-    def has_any_group(session: Session, user: UserInDB, group_names: List[str]) -> bool:
+    def has_any_group(session: Session, user: UserInDB, group_names: list[str]) -> bool:
         """
         Check if user belongs to any of the specified groups.
 
@@ -182,14 +181,14 @@ def user_has_perm(session: Session, user: UserInDB, permission_codename: str) ->
 
 
 def user_has_perms(
-    session: Session, user: UserInDB, permission_codenames: List[str]
+    session: Session, user: UserInDB, permission_codenames: list[str]
 ) -> bool:
     """Check if user has all specified permissions"""
     return PermissionChecker.has_perms(session, user, permission_codenames)
 
 
 def user_has_any_perm(
-    session: Session, user: UserInDB, permission_codenames: List[str]
+    session: Session, user: UserInDB, permission_codenames: list[str]
 ) -> bool:
     """Check if user has any of the specified permissions"""
     return PermissionChecker.has_any_perm(session, user, permission_codenames)
@@ -200,6 +199,6 @@ def user_in_group(session: Session, user: UserInDB, group_name: str) -> bool:
     return PermissionChecker.has_group(session, user, group_name)
 
 
-def user_in_groups(session: Session, user: UserInDB, group_name: str) -> bool:
-    """Check if user belongs to a specific group"""
-    return PermissionChecker.has_groups(session, user, group_name)
+def user_in_groups(session: Session, user: UserInDB, group_names: list[str]) -> bool:
+    """Check if user belongs to all specified groups"""
+    return PermissionChecker.has_groups(session, user, group_names)

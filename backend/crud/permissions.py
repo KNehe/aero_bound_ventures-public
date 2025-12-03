@@ -1,5 +1,4 @@
 from sqlmodel import Session, select
-from typing import List, Optional
 import uuid
 from models.permissions import (
     Permission,
@@ -15,7 +14,7 @@ class PermissionCRUD:
 
     @staticmethod
     def create_permission(
-        session: Session, name: str, codename: str, description: Optional[str] = None
+        session: Session, name: str, codename: str, description: str | None = None
     ) -> Permission:
         """Create a new permission"""
         permission = Permission(name=name, codename=codename, description=description)
@@ -27,20 +26,20 @@ class PermissionCRUD:
     @staticmethod
     def get_permission_by_id(
         session: Session, permission_id: uuid.UUID
-    ) -> Optional[Permission]:
+    ) -> Permission | None:
         """Get permission by ID"""
         return session.get(Permission, permission_id)
 
     @staticmethod
     def get_permission_by_codename(
         session: Session, codename: str
-    ) -> Optional[Permission]:
+    ) -> Permission | None:
         """Get permission by codename"""
         statement = select(Permission).where(Permission.codename == codename)
         return session.exec(statement).first()
 
     @staticmethod
-    def get_all_permissions(session: Session) -> List[Permission]:
+    def get_all_permissions(session: Session) -> list[Permission]:
         """Get all permissions"""
         statement = select(Permission)
         return list(session.exec(statement).all())
@@ -49,10 +48,10 @@ class PermissionCRUD:
     def update_permission(
         session: Session,
         permission_id: uuid.UUID,
-        name: Optional[str] = None,
-        codename: Optional[str] = None,
-        description: Optional[str] = None,
-    ) -> Optional[Permission]:
+        name: str | None = None,
+        codename: str | None = None,
+        description: str | None = None,
+    ) -> Permission | None:
         """Update permission"""
         permission = session.get(Permission, permission_id)
         if not permission:
@@ -87,7 +86,7 @@ class GroupCRUD:
 
     @staticmethod
     def create_group(
-        session: Session, name: str, description: Optional[str] = None
+        session: Session, name: str, description: str | None = None
     ) -> Group:
         """Create a new group"""
         group = Group(name=name, description=description)
@@ -97,18 +96,18 @@ class GroupCRUD:
         return group
 
     @staticmethod
-    def get_group_by_id(session: Session, group_id: uuid.UUID) -> Optional[Group]:
+    def get_group_by_id(session: Session, group_id: uuid.UUID) -> Group | None:
         """Get group by ID"""
         return session.get(Group, group_id)
 
     @staticmethod
-    def get_group_by_name(session: Session, name: str) -> Optional[Group]:
+    def get_group_by_name(session: Session, name: str) -> Group | None:
         """Get group by name"""
         statement = select(Group).where(Group.name == name)
         return session.exec(statement).first()
 
     @staticmethod
-    def get_all_groups(session: Session) -> List[Group]:
+    def get_all_groups(session: Session) -> list[Group]:
         """Get all groups"""
         statement = select(Group)
         return list(session.exec(statement).all())
@@ -117,9 +116,9 @@ class GroupCRUD:
     def update_group(
         session: Session,
         group_id: uuid.UUID,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-    ) -> Optional[Group]:
+        name: str | None = None,
+        description: str | None = None,
+    ) -> Group | None:
         """Update group"""
         group = session.get(Group, group_id)
         if not group:
@@ -187,7 +186,7 @@ class GroupCRUD:
     @staticmethod
     def get_group_permissions(
         session: Session, group_id: uuid.UUID
-    ) -> List[Permission]:
+    ) -> list[Permission]:
         """Get all permissions for a group"""
         statement = (
             select(Permission)
@@ -271,7 +270,7 @@ class UserPermissionCRUD:
         return True
 
     @staticmethod
-    def get_user_groups(session: Session, user_id: uuid.UUID) -> List[Group]:
+    def get_user_groups(session: Session, user_id: uuid.UUID) -> list[Group]:
         """Get all groups for a user"""
         statement = select(Group).join(UserGroup).where(UserGroup.user_id == user_id)
         return list(session.exec(statement).all())
@@ -279,7 +278,7 @@ class UserPermissionCRUD:
     @staticmethod
     def get_user_direct_permissions(
         session: Session, user_id: uuid.UUID
-    ) -> List[Permission]:
+    ) -> list[Permission]:
         """Get direct permissions assigned to a user (not through groups)"""
         statement = (
             select(Permission)
@@ -291,7 +290,7 @@ class UserPermissionCRUD:
     @staticmethod
     def get_user_all_permissions(
         session: Session, user_id: uuid.UUID
-    ) -> List[Permission]:
+    ) -> list[Permission]:
         """Get all permissions for a user (direct + from groups)"""
         # Get direct permissions
         direct_perms = UserPermissionCRUD.get_user_direct_permissions(session, user_id)

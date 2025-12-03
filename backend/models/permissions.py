@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel, Field, Relationship
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 import uuid
 from datetime import datetime
 
@@ -45,14 +45,14 @@ class Permission(SQLModel, table=True):
     codename: str = Field(
         unique=True, nullable=False, index=True
     )  # e.g., "flights.view_flight"
-    description: Optional[str] = Field(default=None, nullable=True)
+    description: str | None = Field(default=None, nullable=True)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
     # Relationships
-    groups: List["Group"] = Relationship(
+    groups: list["Group"] = Relationship(
         back_populates="permissions", link_model=GroupPermission
     )
-    users: List["UserInDB"] = Relationship(
+    users: list["UserInDB"] = Relationship(
         back_populates="permissions", link_model=UserPermission
     )
 
@@ -64,30 +64,13 @@ class Group(SQLModel, table=True):
     name: str = Field(
         unique=True, nullable=False, index=True
     )  # e.g., "Admin", "Flight Manager"
-    description: Optional[str] = Field(default=None, nullable=True)
+    description: str | None = Field(default=None, nullable=True)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
     # Relationships
-    permissions: List["Permission"] = Relationship(
+    permissions: list["Permission"] = Relationship(
         back_populates="groups", link_model=GroupPermission
     )
-    users: List["UserInDB"] = Relationship(
+    users: list["UserInDB"] = Relationship(
         back_populates="groups", link_model=UserGroup
     )
-
-
-# Define full link table implementations
-GroupPermission.id = Field(default_factory=uuid.uuid4, primary_key=True, nullable=False)
-GroupPermission.group_id = Field(foreign_key="group.id", nullable=False)
-GroupPermission.permission_id = Field(foreign_key="permission.id", nullable=False)
-GroupPermission.assigned_at = Field(default_factory=datetime.utcnow, nullable=False)
-
-UserGroup.id = Field(default_factory=uuid.uuid4, primary_key=True, nullable=False)
-UserGroup.user_id = Field(foreign_key="userindb.id", nullable=False)
-UserGroup.group_id = Field(foreign_key="group.id", nullable=False)
-UserGroup.assigned_at = Field(default_factory=datetime.utcnow, nullable=False)
-
-UserPermission.id = Field(default_factory=uuid.uuid4, primary_key=True, nullable=False)
-UserPermission.user_id = Field(foreign_key="userindb.id", nullable=False)
-UserPermission.permission_id = Field(foreign_key="permission.id", nullable=False)
-UserPermission.assigned_at = Field(default_factory=datetime.utcnow, nullable=False)
