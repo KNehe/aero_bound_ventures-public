@@ -21,6 +21,7 @@ export default function MyBookingsAndTicketsPage() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [isHydrated, setIsHydrated] = useState(false);
   
   const PAGE_SIZE = 10;
 
@@ -34,9 +35,21 @@ export default function MyBookingsAndTicketsPage() {
     REFUNDED: "refunded",
   } as const;
 
+  // Handle hydration
   useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    // Wait for hydration and check if user is authenticated
+    if (!isHydrated) return;
+    
+    if (!token) {
+      router.push('/auth/login?redirect=/my');
+      return;
+    }
+
     const fetchBookings = async () => {
-      
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const response = await fetch(`${baseUrl}/bookings`, {
@@ -47,7 +60,7 @@ export default function MyBookingsAndTicketsPage() {
 
         if (response.status === 401) {
           logout();
-          router.push('/auth/login');
+          router.push('/auth/login?redirect=/my');
           return;
         }
 
@@ -66,7 +79,7 @@ export default function MyBookingsAndTicketsPage() {
     };
 
     fetchBookings();
-  }, [token]);
+  }, [token, isHydrated, router, logout]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
