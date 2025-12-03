@@ -566,14 +566,14 @@ const BOOKING_STATUS = {
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Actions</h3>
               <div className="space-y-3">
-                {/* Show payment button only if not paid */}
-                {!(bookingData.status === BOOKING_STATUS.PAID || bookingData.status === BOOKING_STATUS.CONFIRMED) && (
+                {/* Show payment button if booking is confirmed but not yet paid */}
+                {bookingData.status === BOOKING_STATUS.CONFIRMED && (
                   <button
                     onClick={handlePayment}
                     disabled={isProcessingPayment}
                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors text-center"
                   >
-                    {isProcessingPayment ? 'Processing...' : 'Pay to Receive Ticket'}
+                    {isProcessingPayment ? 'Processing...' : 'Pay Now'}
                   </button>
                 )}
                 {/* Show download button if ticket is available */}
