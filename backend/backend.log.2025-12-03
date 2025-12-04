@@ -1,0 +1,830 @@
+2025-12-03 19:40:15,204 | INFO | root | 63 |Root logger configured successfully
+2025-12-03 19:41:34,235 | INFO | root | 63 |Root logger configured successfully
+2025-12-03 19:41:34,449 | INFO | uvicorn.error | 84 |Started server process [10]
+2025-12-03 19:41:34,450 | INFO | uvicorn.error | 48 |Waiting for application startup.
+2025-12-03 19:41:34,483 | INFO | sqlalchemy.engine.Engine | 1840 |select pg_catalog.version()
+2025-12-03 19:41:34,483 | INFO | sqlalchemy.engine.Engine | 1840 |[raw sql] {}
+2025-12-03 19:41:34,485 | INFO | sqlalchemy.engine.Engine | 1840 |select current_schema()
+2025-12-03 19:41:34,485 | INFO | sqlalchemy.engine.Engine | 1840 |[raw sql] {}
+2025-12-03 19:41:34,486 | INFO | sqlalchemy.engine.Engine | 1840 |show standard_conforming_strings
+2025-12-03 19:41:34,486 | INFO | sqlalchemy.engine.Engine | 1840 |[raw sql] {}
+2025-12-03 19:41:34,487 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:41:34,489 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-12-03 19:41:34,489 | INFO | sqlalchemy.engine.Engine | 1840 |[generated in 0.00021s] {'table_name': 'grouppermission', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-12-03 19:41:34,494 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-12-03 19:41:34,494 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 0.005106s ago] {'table_name': 'usergroup', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-12-03 19:41:34,495 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-12-03 19:41:34,495 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 0.006378s ago] {'table_name': 'userpermission', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-12-03 19:41:34,496 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-12-03 19:41:34,496 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 0.007485s ago] {'table_name': 'permission', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-12-03 19:41:34,497 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-12-03 19:41:34,498 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 0.008751s ago] {'table_name': 'group', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-12-03 19:41:34,499 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-12-03 19:41:34,500 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 0.01045s ago] {'table_name': 'userindb', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-12-03 19:41:34,501 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-12-03 19:41:34,501 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 0.01205s ago] {'table_name': 'booking', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-12-03 19:41:34,502 | INFO | sqlalchemy.engine.Engine | 2702 |COMMIT
+2025-12-03 19:41:34,502 | INFO | uvicorn.error | 62 |Application startup complete.
+2025-12-03 19:41:34,503 | INFO | uvicorn.error | 216 |Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
+2025-12-03 19:45:33,917 | INFO | uvicorn.error | 264 |Shutting down
+2025-12-03 19:45:34,023 | INFO | uvicorn.error | 67 |Waiting for application shutdown.
+2025-12-03 19:45:34,025 | INFO | uvicorn.error | 76 |Application shutdown complete.
+2025-12-03 19:45:34,026 | INFO | uvicorn.error | 94 |Finished server process [10]
+2025-12-03 19:45:46,098 | INFO | root | 63 |Root logger configured successfully
+2025-12-03 19:45:46,203 | INFO | uvicorn.error | 84 |Started server process [8]
+2025-12-03 19:45:46,204 | INFO | uvicorn.error | 48 |Waiting for application startup.
+2025-12-03 19:45:46,238 | INFO | sqlalchemy.engine.Engine | 1840 |select pg_catalog.version()
+2025-12-03 19:45:46,238 | INFO | sqlalchemy.engine.Engine | 1840 |[raw sql] {}
+2025-12-03 19:45:46,241 | INFO | sqlalchemy.engine.Engine | 1840 |select current_schema()
+2025-12-03 19:45:46,241 | INFO | sqlalchemy.engine.Engine | 1840 |[raw sql] {}
+2025-12-03 19:45:46,242 | INFO | sqlalchemy.engine.Engine | 1840 |show standard_conforming_strings
+2025-12-03 19:45:46,242 | INFO | sqlalchemy.engine.Engine | 1840 |[raw sql] {}
+2025-12-03 19:45:46,243 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:45:46,245 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-12-03 19:45:46,246 | INFO | sqlalchemy.engine.Engine | 1840 |[generated in 0.00049s] {'table_name': 'grouppermission', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-12-03 19:45:46,250 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-12-03 19:45:46,250 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 0.004514s ago] {'table_name': 'usergroup', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-12-03 19:45:46,251 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-12-03 19:45:46,251 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 0.005301s ago] {'table_name': 'userpermission', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-12-03 19:45:46,252 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-12-03 19:45:46,252 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 0.006728s ago] {'table_name': 'permission', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-12-03 19:45:46,253 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-12-03 19:45:46,253 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 0.007784s ago] {'table_name': 'group', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-12-03 19:45:46,254 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-12-03 19:45:46,254 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 0.008615s ago] {'table_name': 'userindb', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-12-03 19:45:46,255 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2025-12-03 19:45:46,256 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 0.01007s ago] {'table_name': 'booking', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2025-12-03 19:45:46,257 | INFO | sqlalchemy.engine.Engine | 2702 |COMMIT
+2025-12-03 19:45:46,258 | INFO | uvicorn.error | 62 |Application startup complete.
+2025-12-03 19:45:46,261 | INFO | uvicorn.error | 216 |Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
+2025-12-03 19:46:50,930 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 19:46:50,935 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[0:8]
+2025-12-03 19:46:50,935 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[9:35]
+2025-12-03 19:46:50,936 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 19:46:50,936 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 19:46:50,937 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[36:44]
+2025-12-03 19:46:50,937 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[45:55]
+2025-12-03 19:46:50,941 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 19:46:50,941 | DEBUG | python_multipart.multipart | 628 |Calling on_end with no data
+2025-12-03 19:46:50,962 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:46:50,984 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:46:50,985 | INFO | sqlalchemy.engine.Engine | 1840 |[generated in 0.00081s] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:46:50,998 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:46:56,993 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 19:46:56,993 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[0:8]
+2025-12-03 19:46:56,993 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[9:35]
+2025-12-03 19:46:56,994 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 19:46:56,994 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 19:46:56,995 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[36:44]
+2025-12-03 19:46:56,996 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[45:53]
+2025-12-03 19:46:56,996 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 19:46:56,997 | DEBUG | python_multipart.multipart | 628 |Calling on_end with no data
+2025-12-03 19:46:57,003 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:46:57,004 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:46:57,005 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 6.021s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:46:57,007 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:47:23,895 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:47:23,897 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:47:23,897 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 32.91s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:47:23,905 | DEBUG | passlib.handlers.bcrypt | 318 |trapped unexpected response from 'os_crypt' backend: verify('test', b'$2$04$5BJqKfqMQvV7nS.yUguNcuRfMMOXK0xPWavM7pOzjEi5ze5T1k8/S'):
+Traceback (most recent call last):
+  File "/app/backend/.venv/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 303, in safe_verify
+    return verify(secret, hash)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/app/backend/.venv/lib/python3.12/site-packages/passlib/utils/handlers.py", line 792, in verify
+    return consteq(self._calc_checksum(secret), chk)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/backend/.venv/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 837, in _calc_checksum
+    raise uh.exc.InternalBackendError(
+passlib.exc.InternalBackendError: crypt.crypt() failed for unknown reason; passlib recommends running `pip install bcrypt` for general bcrypt support.(config=<hash <class 'str'> value omitted>, secret=<hash <class 'bytes'> value omitted>)
+2025-12-03 19:47:23,907 | DEBUG | passlib.handlers.bcrypt | 406 |'os_crypt' backend lacks $2$ support, enabling workaround
+2025-12-03 19:47:24,247 | INFO | sqlalchemy.engine.Engine | 1840 |INSERT INTO userindb (id, email, password, reset_token, reset_token_expires, is_active, is_superuser) VALUES (%(id)s::UUID, %(email)s, %(password)s, %(reset_token)s, %(reset_token_expires)s, %(is_active)s, %(is_superuser)s)
+2025-12-03 19:47:24,249 | INFO | sqlalchemy.engine.Engine | 1840 |[generated in 0.00274s] {'id': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d'), 'email': 'kamolunehemiah@gmail.com', 'password': '$2b$12$LOA9RIe7LYgeLR2A/KFbu.A2qh2xp0BN33/w9Qgt3zPmKwtMTopba', 'reset_token': None, 'reset_token_expires': None, 'is_active': True, 'is_superuser': False}
+2025-12-03 19:47:24,285 | INFO | sqlalchemy.engine.Engine | 2702 |COMMIT
+2025-12-03 19:47:24,294 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:47:24,296 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.id = %(pk_1)s::UUID
+2025-12-03 19:47:24,296 | INFO | sqlalchemy.engine.Engine | 1840 |[generated in 0.00030s] {'pk_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 19:47:24,302 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:47:24,311 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 19:47:24,311 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[0:8]
+2025-12-03 19:47:24,312 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[9:35]
+2025-12-03 19:47:24,313 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 19:47:24,314 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 19:47:24,314 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[36:44]
+2025-12-03 19:47:24,316 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[45:54]
+2025-12-03 19:47:24,317 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 19:47:24,321 | DEBUG | python_multipart.multipart | 628 |Calling on_end with no data
+2025-12-03 19:47:24,325 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:47:24,326 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:47:24,327 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 33.34s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:47:24,624 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:47:32,645 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:47:32,646 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:47:32,646 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 41.66s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:47:32,650 | INFO | backend.routers.flights | 115 |Flight order creation initiated by user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:47:32,650 | DEBUG | backend.routers.flights | 118 |Preparing flight order request body for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:47:32,650 | INFO | backend.routers.flights | 123 |Creating flight order with Amadeus service for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:47:35,698 | ERROR | backend.routers.flights | 172 |ClientError during flight order creation for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d: [400]
+
+2025-12-03 19:47:35,700 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:48:49,948 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:48:49,952 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:48:49,953 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 119s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:48:49,958 | INFO | backend.routers.flights | 115 |Flight order creation initiated by user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:48:49,958 | DEBUG | backend.routers.flights | 118 |Preparing flight order request body for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:48:49,959 | INFO | backend.routers.flights | 123 |Creating flight order with Amadeus service for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:48:54,980 | INFO | backend.routers.flights | 129 |Flight order created successfully: eJzTd9e3DDMJdnMDAArQAkg for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:48:54,980 | DEBUG | backend.routers.flights | 133 |Saving booking record for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d, flight_order_id: eJzTd9e3DDMJdnMDAArQAkg
+2025-12-03 19:48:54,999 | INFO | sqlalchemy.engine.Engine | 1840 |INSERT INTO booking (id, user_id, flight_order_id, status, created_at, amadeus_order_response, ticket_url) VALUES (%(id)s::UUID, %(user_id)s::UUID, %(flight_order_id)s, %(status)s, %(created_at)s, %(amadeus_order_response)s::JSON, %(ticket_url)s)
+2025-12-03 19:48:54,999 | INFO | sqlalchemy.engine.Engine | 1840 |[generated in 0.00049s] {'id': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d'), 'flight_order_id': 'eJzTd9e3DDMJdnMDAArQAkg', 'status': 'confirmed', 'created_at': datetime.datetime(2025, 12, 3, 19, 48, 54, 991557), 'amadeus_order_response': '{"type": "flight-order", "id": "eJzTd9e3DDMJdnMDAArQAkg", "queuingOfficeId": "NCE4D31SB", "associatedRecords": [{"reference": "9V4SFF", "creationDate ... (3324 characters truncated) ... ngAgreement": {"option": "CONFIRM"}, "automatedProcess": [{"code": "IMMEDIATE", "queue": {"number": "0", "category": "0"}, "officeId": "NCE4D31SB"}]}', 'ticket_url': None}
+2025-12-03 19:48:55,009 | INFO | sqlalchemy.engine.Engine | 2702 |COMMIT
+2025-12-03 19:48:55,010 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:48:55,012 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id AS booking_id, booking.user_id AS booking_user_id, booking.flight_order_id AS booking_flight_order_id, booking.status AS booking_status, booking.created_at AS booking_created_at, booking.amadeus_order_response AS booking_amadeus_order_response, booking.ticket_url AS booking_ticket_url 
+FROM booking 
+WHERE booking.id = %(pk_1)s::UUID
+2025-12-03 19:48:55,012 | INFO | sqlalchemy.engine.Engine | 1840 |[generated in 0.00028s] {'pk_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d')}
+2025-12-03 19:48:55,014 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id AS userindb_id, userindb.email AS userindb_email, userindb.password AS userindb_password, userindb.reset_token AS userindb_reset_token, userindb.reset_token_expires AS userindb_reset_token_expires, userindb.is_active AS userindb_is_active, userindb.is_superuser AS userindb_is_superuser 
+FROM userindb 
+WHERE userindb.id = %(pk_1)s::UUID
+2025-12-03 19:48:55,014 | INFO | sqlalchemy.engine.Engine | 1840 |[generated in 0.00027s] {'pk_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 19:48:55,015 | INFO | backend.routers.flights | 159 |Booking record saved successfully for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d, flight_order_id: eJzTd9e3DDMJdnMDAArQAkg
+2025-12-03 19:48:55,015 | DEBUG | backend.routers.flights | 162 |Returning booking object: {'id': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'flight_order_id': 'eJzTd9e3DDMJdnMDAArQAkg', 'status': 'confirmed'}
+2025-12-03 19:48:55,015 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:48:56,006 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:48:56,007 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:48:56,008 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 125s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:48:56,031 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:48:56,033 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 19:48:56,033 | INFO | sqlalchemy.engine.Engine | 1840 |[generated in 0.00023s] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 19:48:56,035 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 19:48:56,036 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:49:10,853 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:49:10,859 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:49:10,860 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 139.9s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:49:10,873 | INFO | backend.routers.flights | 406 |Fetching bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:49:10,883 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.user_id = %(user_id_1)s::UUID ORDER BY booking.created_at DESC
+2025-12-03 19:49:10,883 | INFO | sqlalchemy.engine.Engine | 1840 |[generated in 0.00111s] {'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 19:49:10,890 | INFO | backend.routers.flights | 436 |Successfully fetched 1 bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:49:10,892 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:49:19,932 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 19:49:19,933 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[0:8]
+2025-12-03 19:49:19,933 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[9:35]
+2025-12-03 19:49:19,934 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 19:49:19,934 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 19:49:19,935 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[36:44]
+2025-12-03 19:49:19,935 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[45:55]
+2025-12-03 19:49:19,936 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 19:49:19,936 | DEBUG | python_multipart.multipart | 628 |Calling on_end with no data
+2025-12-03 19:49:19,939 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:49:19,940 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:49:19,940 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 149s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:49:20,235 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:49:24,517 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 19:49:24,518 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[0:8]
+2025-12-03 19:49:24,519 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[9:35]
+2025-12-03 19:49:24,519 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 19:49:24,520 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 19:49:24,520 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[36:44]
+2025-12-03 19:49:24,521 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[45:55]
+2025-12-03 19:49:24,521 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 19:49:24,522 | DEBUG | python_multipart.multipart | 628 |Calling on_end with no data
+2025-12-03 19:49:24,524 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:49:24,525 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:49:24,526 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 153.5s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:49:24,819 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:49:29,006 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 19:49:29,006 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[0:8]
+2025-12-03 19:49:29,006 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[9:35]
+2025-12-03 19:49:29,007 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 19:49:29,007 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 19:49:29,008 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[36:44]
+2025-12-03 19:49:29,009 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[45:54]
+2025-12-03 19:49:29,009 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 19:49:29,010 | DEBUG | python_multipart.multipart | 628 |Calling on_end with no data
+2025-12-03 19:49:29,012 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:49:29,014 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:49:29,014 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 158s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:49:29,308 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:49:31,758 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:49:31,759 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:49:31,760 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 160.8s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:49:31,763 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:49:31,765 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:49:31,771 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:49:31,772 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:49:31,772 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 160.8s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:49:31,775 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:49:31,776 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:49:37,029 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:49:37,030 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:49:37,031 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 166s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:49:37,034 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:49:37,035 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 19:49:37,035 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 41s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 19:49:37,037 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 19:49:37,038 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:54:42,684 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:54:42,688 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:54:42,689 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 471.7s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:54:42,704 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID
+2025-12-03 19:54:42,705 | INFO | sqlalchemy.engine.Engine | 1840 |[generated in 0.00068s] {'id_1': 'b59c7105-f2bf-4eff-bb0f-383dc32aa66d'}
+2025-12-03 19:54:42,722 | DEBUG | httpcore.connection | 87 |connect_tcp.started host='cybqa.pesapal.com' port=443 local_address=None timeout=5.0 socket_options=None
+2025-12-03 19:54:43,065 | DEBUG | httpcore.connection | 87 |connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0xffff9f79dd30>
+2025-12-03 19:54:43,066 | DEBUG | httpcore.connection | 87 |start_tls.started ssl_context=<ssl.SSLContext object at 0xffff9f7b6b50> server_hostname='cybqa.pesapal.com' timeout=5.0
+2025-12-03 19:54:43,585 | DEBUG | httpcore.connection | 87 |start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0xffff9f79f710>
+2025-12-03 19:54:43,588 | DEBUG | httpcore.http11 | 87 |send_request_headers.started request=<Request [b'POST']>
+2025-12-03 19:54:43,589 | DEBUG | httpcore.http11 | 87 |send_request_headers.complete
+2025-12-03 19:54:43,590 | DEBUG | httpcore.http11 | 87 |send_request_body.started request=<Request [b'POST']>
+2025-12-03 19:54:43,591 | DEBUG | httpcore.http11 | 87 |send_request_body.complete
+2025-12-03 19:54:43,591 | DEBUG | httpcore.http11 | 87 |receive_response_headers.started request=<Request [b'POST']>
+2025-12-03 19:54:43,968 | DEBUG | httpcore.http11 | 87 |receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Cache-Control', b'no-cache,no-store'), (b'Pragma', b'no-cache'), (b'Content-Type', b'application/json; charset=utf-8'), (b'Expires', b'-1'), (b'X-Powered-By', b'API3'), (b'Server', b'Pesapal'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'Strict-Transport-Security', b'max-age=31536000'), (b'Content-Security-Policy', b"default-src 'self'; script-src 'self' https://localhost:56522/swagger/v1/swagger.json; style-src 'self';"), (b'X-Content-Type-Options', b'nosniff'), (b'X-XSS-Protection', b'1; mode=block'), (b'Date', b'Wed, 03 Dec 2025 19:54:42 GMT'), (b'Content-Length', b'564')])
+2025-12-03 19:54:43,970 | INFO | httpx | 1740 |HTTP Request: POST https://cybqa.pesapal.com/pesapalv3/api/Auth/RequestToken "HTTP/1.1 200 OK"
+2025-12-03 19:54:43,971 | DEBUG | httpcore.http11 | 87 |receive_response_body.started request=<Request [b'POST']>
+2025-12-03 19:54:43,972 | DEBUG | httpcore.http11 | 87 |receive_response_body.complete
+2025-12-03 19:54:43,972 | DEBUG | httpcore.http11 | 87 |response_closed.started
+2025-12-03 19:54:43,973 | DEBUG | httpcore.http11 | 87 |response_closed.complete
+2025-12-03 19:54:43,974 | INFO | backend.external_services.pesapal | 65 |Pesapal Auth Response Status: 200
+2025-12-03 19:54:43,976 | DEBUG | backend.external_services.pesapal | 66 |Pesapal Auth Response Body: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3VzZXJkYXRhIjoiZDY1OWZmODItZWViYS00ZWFiLTk1ZDItZTA0MzliNWFhODFhIiwidWlkIjoiVERwaWdCT09ocyt6QWw4Y3dIMkZsODJqSkd5RDh4ZXYiLCJuYmYiOjE3NjQ3OTE2ODMsImV4cCI6MTc2NDc5NTI4MywiaWF0IjoxNzY0NzkxNjgzLCJpc3MiOiJodHRwOi8vY3licWEucGVzYXBhbC5jb20vIiwiYXVkIjoiaHR0cDovL2N5YnFhLnBlc2FwYWwuY29tLyJ9.eog5GtiWRl0Kr-d9PaEolCfZyRcFsZv1XzbLDLzkeXU","expiryDate":"2025-12-03T20:54:43.1576082Z","error":null,"status":"200","message":"Request processed successfully"}
+2025-12-03 19:54:43,976 | INFO | backend.external_services.pesapal | 90 |Pesapal authentication successful
+2025-12-03 19:54:43,978 | DEBUG | httpcore.connection | 87 |close.started
+2025-12-03 19:54:43,979 | DEBUG | httpcore.connection | 87 |close.complete
+2025-12-03 19:54:43,980 | INFO | backend.external_services.pesapal | 159 |Submitting order request for merchant_reference: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, amount: 512.63 USD
+2025-12-03 19:54:43,980 | DEBUG | backend.external_services.pesapal | 162 |Order payload: {'id': 'b59c7105-f2bf-4eff-bb0f-383dc32aa66d-1764791683979', 'currency': 'USD', 'amount': 512.63, 'description': 'Flight booking payment - b59c7105-f2bf-4eff-bb0f-383dc32aa66d', 'callback_url': 'http://localhost:3000/booking/payment/callback', 'notification_id': '8f9b111a-c350-443f-aba8-db13ea46cdf6', 'billing_address': {'email_address': 'kamolunehemiah@gmail.com', 'phone_number': 'N/A', 'country_code': '256', 'first_name': 'JORGE', 'middle_name': '', 'last_name': 'GONZALES', 'line_1': '', 'line_2': '', 'city': '', 'state': '', 'postal_code': '', 'zip_code': ''}}
+2025-12-03 19:54:43,980 | INFO | backend.external_services.pesapal | 163 |Using unique request ID: b59c7105-f2bf-4eff-bb0f-383dc32aa66d-1764791683979
+2025-12-03 19:54:43,993 | DEBUG | httpcore.connection | 87 |connect_tcp.started host='cybqa.pesapal.com' port=443 local_address=None timeout=5.0 socket_options=None
+2025-12-03 19:54:44,230 | DEBUG | httpcore.connection | 87 |connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0xffff9f7b3c80>
+2025-12-03 19:54:44,231 | DEBUG | httpcore.connection | 87 |start_tls.started ssl_context=<ssl.SSLContext object at 0xffff9f7b7bd0> server_hostname='cybqa.pesapal.com' timeout=5.0
+2025-12-03 19:54:44,725 | DEBUG | httpcore.connection | 87 |start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0xffff9f79ee40>
+2025-12-03 19:54:44,727 | DEBUG | httpcore.http11 | 87 |send_request_headers.started request=<Request [b'POST']>
+2025-12-03 19:54:44,728 | DEBUG | httpcore.http11 | 87 |send_request_headers.complete
+2025-12-03 19:54:44,729 | DEBUG | httpcore.http11 | 87 |send_request_body.started request=<Request [b'POST']>
+2025-12-03 19:54:44,730 | DEBUG | httpcore.http11 | 87 |send_request_body.complete
+2025-12-03 19:54:44,730 | DEBUG | httpcore.http11 | 87 |receive_response_headers.started request=<Request [b'POST']>
+2025-12-03 19:54:45,325 | DEBUG | httpcore.http11 | 87 |receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Cache-Control', b'no-cache,no-store'), (b'Pragma', b'no-cache'), (b'Content-Type', b'application/json; charset=utf-8'), (b'Expires', b'-1'), (b'X-Powered-By', b'API3'), (b'Server', b'Pesapal'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'Strict-Transport-Security', b'max-age=31536000'), (b'Content-Security-Policy', b"default-src 'self'; script-src 'self' https://localhost:56522/swagger/v1/swagger.json; style-src 'self';"), (b'X-Content-Type-Options', b'nosniff'), (b'X-XSS-Protection', b'1; mode=block'), (b'Date', b'Wed, 03 Dec 2025 19:54:43 GMT'), (b'Content-Length', b'293')])
+2025-12-03 19:54:45,326 | INFO | httpx | 1740 |HTTP Request: POST https://cybqa.pesapal.com/pesapalv3/api/Transactions/SubmitOrderRequest "HTTP/1.1 200 OK"
+2025-12-03 19:54:45,327 | DEBUG | httpcore.http11 | 87 |receive_response_body.started request=<Request [b'POST']>
+2025-12-03 19:54:45,328 | DEBUG | httpcore.http11 | 87 |receive_response_body.complete
+2025-12-03 19:54:45,328 | DEBUG | httpcore.http11 | 87 |response_closed.started
+2025-12-03 19:54:45,329 | DEBUG | httpcore.http11 | 87 |response_closed.complete
+2025-12-03 19:54:45,330 | INFO | backend.external_services.pesapal | 178 |Pesapal Submit Order Response Status: 200
+2025-12-03 19:54:45,331 | DEBUG | backend.external_services.pesapal | 179 |Pesapal Submit Order Response Body: {"order_tracking_id":"e9d2e2ba-c7c9-4522-b730-db04cdbc8e3d","merchant_reference":"b59c7105-f2bf-4eff-bb0f-383dc32aa66d-1764791683979","redirect_url":"https://cybqa.pesapal.com/pesapaliframe/PesapalIframe3/Index?OrderTrackingId=e9d2e2ba-c7c9-4522-b730-db04cdbc8e3d","error":null,"status":"200"}
+2025-12-03 19:54:45,331 | INFO | backend.external_services.pesapal | 194 |Order submitted successfully. Order tracking ID: e9d2e2ba-c7c9-4522-b730-db04cdbc8e3d
+2025-12-03 19:54:45,332 | DEBUG | httpcore.connection | 87 |close.started
+2025-12-03 19:54:45,333 | DEBUG | httpcore.connection | 87 |close.complete
+2025-12-03 19:54:45,335 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:55:52,184 | INFO | backend.external_services.pesapal | 237 |Fetching transaction status for order_tracking_id: e9d2e2ba-c7c9-4522-b730-db04cdbc8e3d
+2025-12-03 19:55:52,203 | DEBUG | httpcore.connection | 87 |connect_tcp.started host='cybqa.pesapal.com' port=443 local_address=None timeout=5.0 socket_options=None
+2025-12-03 19:55:52,466 | DEBUG | httpcore.connection | 87 |connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0xffff9f7b3410>
+2025-12-03 19:55:52,466 | DEBUG | httpcore.connection | 87 |start_tls.started ssl_context=<ssl.SSLContext object at 0xffff9f701650> server_hostname='cybqa.pesapal.com' timeout=5.0
+2025-12-03 19:55:52,942 | DEBUG | httpcore.connection | 87 |start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0xffff9f79e3f0>
+2025-12-03 19:55:52,944 | DEBUG | httpcore.http11 | 87 |send_request_headers.started request=<Request [b'GET']>
+2025-12-03 19:55:52,946 | DEBUG | httpcore.http11 | 87 |send_request_headers.complete
+2025-12-03 19:55:52,946 | DEBUG | httpcore.http11 | 87 |send_request_body.started request=<Request [b'GET']>
+2025-12-03 19:55:52,947 | DEBUG | httpcore.http11 | 87 |send_request_body.complete
+2025-12-03 19:55:52,947 | DEBUG | httpcore.http11 | 87 |receive_response_headers.started request=<Request [b'GET']>
+2025-12-03 19:55:53,285 | DEBUG | httpcore.http11 | 87 |receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Cache-Control', b'no-cache,no-store'), (b'Pragma', b'no-cache'), (b'Content-Type', b'application/json; charset=utf-8'), (b'Expires', b'-1'), (b'X-Powered-By', b'API3'), (b'Server', b'Pesapal'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'Strict-Transport-Security', b'max-age=31536000'), (b'Content-Security-Policy', b"default-src 'self'; script-src 'self' https://localhost:56522/swagger/v1/swagger.json; style-src 'self';"), (b'X-Content-Type-Options', b'nosniff'), (b'X-XSS-Protection', b'1; mode=block'), (b'Date', b'Wed, 03 Dec 2025 19:55:51 GMT'), (b'Content-Length', b'775')])
+2025-12-03 19:55:53,292 | INFO | httpx | 1740 |HTTP Request: GET https://cybqa.pesapal.com/pesapalv3/api/Transactions/GetTransactionStatus?orderTrackingId=e9d2e2ba-c7c9-4522-b730-db04cdbc8e3d "HTTP/1.1 200 OK"
+2025-12-03 19:55:53,293 | DEBUG | httpcore.http11 | 87 |receive_response_body.started request=<Request [b'GET']>
+2025-12-03 19:55:53,295 | DEBUG | httpcore.http11 | 87 |receive_response_body.complete
+2025-12-03 19:55:53,296 | DEBUG | httpcore.http11 | 87 |response_closed.started
+2025-12-03 19:55:53,297 | DEBUG | httpcore.http11 | 87 |response_closed.complete
+2025-12-03 19:55:53,298 | INFO | backend.external_services.pesapal | 254 |Transaction Status Response Status: 200
+2025-12-03 19:55:53,299 | DEBUG | backend.external_services.pesapal | 255 |Transaction Status Response Body: {"payment_method":"Visa","amount":512.63,"created_date":"2025-12-03T22:55:50.957","confirmation_code":"7647917494496064204604","order_tracking_id":"e9d2e2ba-c7c9-4522-b730-db04cdbc8e3d","payment_status_description":"Completed","description":"Transaction successfully processed.","message":"Request processed successfully","payment_account":"476173XXXXXX0010","call_back_url":"http://localhost:3000/booking/payment/callback?OrderTrackingId=e9d2e2ba-c7c9-4522-b730-db04cdbc8e3d&OrderMerchantReference=b59c7105-f2bf-4eff-bb0f-383dc32aa66d-1764791683979","status_code":1,"merchant_reference":"b59c7105-f2bf-4eff-bb0f-383dc32aa66d-1764791683979","account_number":null,"payment_status_code":"","currency":"USD","error":{"error_type":null,"code":null,"message":null},"status":"200"}
+2025-12-03 19:55:53,300 | INFO | backend.external_services.pesapal | 276 |Transaction status: Completed (code: 1)
+2025-12-03 19:55:53,300 | DEBUG | httpcore.connection | 87 |close.started
+2025-12-03 19:55:53,302 | DEBUG | httpcore.connection | 87 |close.complete
+2025-12-03 19:55:53,310 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:55:53,312 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID
+2025-12-03 19:55:53,312 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 70.61s ago] {'id_1': 'b59c7105-f2bf-4eff-bb0f-383dc32aa66d'}
+2025-12-03 19:55:53,320 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID
+2025-12-03 19:55:53,320 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 70.62s ago] {'id_1': 'b59c7105-f2bf-4eff-bb0f-383dc32aa66d'}
+2025-12-03 19:55:53,325 | INFO | sqlalchemy.engine.Engine | 1840 |UPDATE booking SET status=%(status)s WHERE booking.id = %(booking_id)s::UUID
+2025-12-03 19:55:53,326 | INFO | sqlalchemy.engine.Engine | 1840 |[generated in 0.00028s] {'status': 'paid', 'booking_id': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d')}
+2025-12-03 19:55:53,330 | INFO | sqlalchemy.engine.Engine | 2702 |COMMIT
+2025-12-03 19:55:53,332 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:55:53,333 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(pk_1)s::UUID
+2025-12-03 19:55:53,333 | INFO | sqlalchemy.engine.Engine | 1840 |[generated in 0.00017s] {'pk_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d')}
+2025-12-03 19:55:53,334 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:56:06,106 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:56:06,109 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID
+2025-12-03 19:56:06,110 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 83.41s ago] {'id_1': 'b59c7105-f2bf-4eff-bb0f-383dc32aa66d'}
+2025-12-03 19:56:06,117 | INFO | backend.external_services.pesapal | 237 |Fetching transaction status for order_tracking_id: e9d2e2ba-c7c9-4522-b730-db04cdbc8e3d
+2025-12-03 19:56:06,133 | DEBUG | httpcore.connection | 87 |connect_tcp.started host='cybqa.pesapal.com' port=443 local_address=None timeout=5.0 socket_options=None
+2025-12-03 19:56:06,382 | DEBUG | httpcore.connection | 87 |connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0xffff9f7eacf0>
+2025-12-03 19:56:06,382 | DEBUG | httpcore.connection | 87 |start_tls.started ssl_context=<ssl.SSLContext object at 0xffff9f7b48d0> server_hostname='cybqa.pesapal.com' timeout=5.0
+2025-12-03 19:56:06,873 | DEBUG | httpcore.connection | 87 |start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0xffff9f7eb0e0>
+2025-12-03 19:56:06,875 | DEBUG | httpcore.http11 | 87 |send_request_headers.started request=<Request [b'GET']>
+2025-12-03 19:56:06,876 | DEBUG | httpcore.http11 | 87 |send_request_headers.complete
+2025-12-03 19:56:06,877 | DEBUG | httpcore.http11 | 87 |send_request_body.started request=<Request [b'GET']>
+2025-12-03 19:56:06,878 | DEBUG | httpcore.http11 | 87 |send_request_body.complete
+2025-12-03 19:56:06,878 | DEBUG | httpcore.http11 | 87 |receive_response_headers.started request=<Request [b'GET']>
+2025-12-03 19:56:07,209 | DEBUG | httpcore.http11 | 87 |receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Cache-Control', b'no-cache,no-store'), (b'Pragma', b'no-cache'), (b'Content-Type', b'application/json; charset=utf-8'), (b'Expires', b'-1'), (b'X-Powered-By', b'API3'), (b'Server', b'Pesapal'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'Strict-Transport-Security', b'max-age=31536000'), (b'Content-Security-Policy', b"default-src 'self'; script-src 'self' https://localhost:56522/swagger/v1/swagger.json; style-src 'self';"), (b'X-Content-Type-Options', b'nosniff'), (b'X-XSS-Protection', b'1; mode=block'), (b'Date', b'Wed, 03 Dec 2025 19:56:06 GMT'), (b'Content-Length', b'775')])
+2025-12-03 19:56:07,211 | INFO | httpx | 1740 |HTTP Request: GET https://cybqa.pesapal.com/pesapalv3/api/Transactions/GetTransactionStatus?orderTrackingId=e9d2e2ba-c7c9-4522-b730-db04cdbc8e3d "HTTP/1.1 200 OK"
+2025-12-03 19:56:07,212 | DEBUG | httpcore.http11 | 87 |receive_response_body.started request=<Request [b'GET']>
+2025-12-03 19:56:07,213 | DEBUG | httpcore.http11 | 87 |receive_response_body.complete
+2025-12-03 19:56:07,213 | DEBUG | httpcore.http11 | 87 |response_closed.started
+2025-12-03 19:56:07,214 | DEBUG | httpcore.http11 | 87 |response_closed.complete
+2025-12-03 19:56:07,215 | INFO | backend.external_services.pesapal | 254 |Transaction Status Response Status: 200
+2025-12-03 19:56:07,215 | DEBUG | backend.external_services.pesapal | 255 |Transaction Status Response Body: {"payment_method":"Visa","amount":512.63,"created_date":"2025-12-03T22:55:50.957","confirmation_code":"7647917494496064204604","order_tracking_id":"e9d2e2ba-c7c9-4522-b730-db04cdbc8e3d","payment_status_description":"Completed","description":"Transaction successfully processed.","message":"Request processed successfully","payment_account":"476173XXXXXX0010","call_back_url":"http://localhost:3000/booking/payment/callback?OrderTrackingId=e9d2e2ba-c7c9-4522-b730-db04cdbc8e3d&OrderMerchantReference=b59c7105-f2bf-4eff-bb0f-383dc32aa66d-1764791683979","status_code":1,"merchant_reference":"b59c7105-f2bf-4eff-bb0f-383dc32aa66d-1764791683979","account_number":null,"payment_status_code":"","currency":"USD","error":{"error_type":null,"code":null,"message":null},"status":"200"}
+2025-12-03 19:56:07,216 | INFO | backend.external_services.pesapal | 276 |Transaction status: Completed (code: 1)
+2025-12-03 19:56:07,217 | DEBUG | httpcore.connection | 87 |close.started
+2025-12-03 19:56:07,217 | DEBUG | httpcore.connection | 87 |close.complete
+2025-12-03 19:56:07,219 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID
+2025-12-03 19:56:07,219 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 84.52s ago] {'id_1': 'b59c7105-f2bf-4eff-bb0f-383dc32aa66d'}
+2025-12-03 19:56:07,246 | INFO | sqlalchemy.engine.Engine | 2702 |COMMIT
+2025-12-03 19:56:07,248 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:56:07,248 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(pk_1)s::UUID
+2025-12-03 19:56:07,248 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 13.92s ago] {'pk_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d')}
+2025-12-03 19:56:07,250 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:56:12,479 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:56:12,480 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:56:12,480 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 561.5s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:56:12,483 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:56:12,483 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 19:56:12,484 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 436.5s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 19:56:12,485 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 19:56:12,486 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:57:12,092 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:57:12,094 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:57:12,095 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 621.1s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:57:12,105 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:57:12,107 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 19:57:12,107 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 496.1s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 19:57:12,110 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 19:57:12,114 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:57:17,521 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:57:17,523 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:57:17,524 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 626.5s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:57:17,528 | INFO | backend.routers.flights | 406 |Fetching bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:57:17,529 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.user_id = %(user_id_1)s::UUID ORDER BY booking.created_at DESC
+2025-12-03 19:57:17,529 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 486.6s ago] {'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 19:57:17,537 | INFO | backend.routers.flights | 436 |Successfully fetched 1 bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:57:17,539 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:57:25,750 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 19:57:25,751 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[0:8]
+2025-12-03 19:57:25,752 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[9:35]
+2025-12-03 19:57:25,752 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 19:57:25,753 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 19:57:25,753 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[36:44]
+2025-12-03 19:57:25,754 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[45:54]
+2025-12-03 19:57:25,754 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 19:57:25,755 | DEBUG | python_multipart.multipart | 628 |Calling on_end with no data
+2025-12-03 19:57:25,758 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:57:25,759 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:57:25,759 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 634.8s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:57:26,057 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:57:28,414 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:57:28,418 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:57:28,418 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 637.4s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:57:28,427 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:57:28,429 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:57:28,435 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:57:28,435 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:57:28,436 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 637.5s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:57:28,438 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:57:28,439 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:57:57,451 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:57:57,453 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:57:57,454 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 666.5s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:57:57,462 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:57:57,465 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:57:57,470 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:57:57,474 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:57:57,475 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 666.5s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:57:57,477 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:57:57,478 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 19:58:00,065 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 19:58:00,066 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 19:58:00,067 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 669.1s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 19:58:00,072 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 19:58:00,074 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:00:47,235 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:00:47,238 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:00:47,239 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 836.3s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:00:47,247 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:00:47,250 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:02:50,257 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 20:02:50,259 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[0:8]
+2025-12-03 20:02:50,259 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[9:35]
+2025-12-03 20:02:50,260 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 20:02:50,261 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 20:02:50,261 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[36:44]
+2025-12-03 20:02:50,262 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[45:55]
+2025-12-03 20:02:50,263 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 20:02:50,263 | DEBUG | python_multipart.multipart | 628 |Calling on_end with no data
+2025-12-03 20:02:50,271 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:02:50,274 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:02:50,274 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 959.3s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:02:50,569 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:06,291 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 20:03:06,293 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[0:8]
+2025-12-03 20:03:06,293 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[9:35]
+2025-12-03 20:03:06,294 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 20:03:06,295 | DEBUG | python_multipart.multipart | 628 |Calling on_field_start with no data
+2025-12-03 20:03:06,295 | DEBUG | python_multipart.multipart | 625 |Calling on_field_name with data[36:44]
+2025-12-03 20:03:06,296 | DEBUG | python_multipart.multipart | 625 |Calling on_field_data with data[45:54]
+2025-12-03 20:03:06,296 | DEBUG | python_multipart.multipart | 628 |Calling on_field_end with no data
+2025-12-03 20:03:06,297 | DEBUG | python_multipart.multipart | 628 |Calling on_end with no data
+2025-12-03 20:03:06,299 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:06,300 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:06,301 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 975.3s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:06,597 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:06,711 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:06,712 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:06,712 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 975.7s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:06,716 | INFO | backend.routers.flights | 406 |Fetching bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:06,718 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.user_id = %(user_id_1)s::UUID ORDER BY booking.created_at DESC
+2025-12-03 20:03:06,718 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 835.8s ago] {'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 20:03:06,721 | INFO | backend.routers.flights | 436 |Successfully fetched 1 bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:06,722 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:10,484 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:10,485 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:10,486 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 979.5s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:10,489 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:10,490 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 20:03:10,491 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 854.5s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 20:03:10,496 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 20:03:10,497 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:17,716 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:17,721 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:17,721 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 986.7s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:17,725 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:17,726 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:19,421 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:19,422 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:19,422 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 988.4s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:19,424 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:19,425 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:23,068 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:23,070 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:23,070 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 992.1s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:23,073 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:23,074 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 20:03:23,075 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 867s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 20:03:23,076 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 20:03:23,077 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:29,179 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:29,180 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:29,181 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 998.2s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:29,184 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:29,185 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:30,791 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:30,795 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:30,796 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 999.8s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:30,798 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:30,799 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 20:03:30,800 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 874.8s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 20:03:30,804 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 20:03:30,805 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:33,861 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:33,862 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:33,862 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1003s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:33,865 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:33,866 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:36,300 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:36,301 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:36,301 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1005s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:36,304 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:36,305 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 20:03:36,305 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 880.3s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 20:03:36,307 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 20:03:36,308 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:38,962 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:38,963 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:38,963 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1008s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:38,966 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:38,966 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:40,557 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:40,558 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:40,558 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1010s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:40,560 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:40,562 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 20:03:40,562 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 884.5s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 20:03:40,564 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 20:03:40,565 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:43,258 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:43,261 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:43,261 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1012s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:43,264 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:43,265 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:44,420 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:44,421 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:44,422 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1013s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:44,424 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:44,425 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 20:03:44,426 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 888.4s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 20:03:44,428 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 20:03:44,429 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:47,689 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:47,690 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:47,690 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1017s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:47,693 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:47,695 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:48,836 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:48,837 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:48,838 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1018s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:48,840 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:48,842 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 20:03:48,842 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 892.8s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 20:03:48,843 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 20:03:48,844 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:56,680 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:56,686 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:56,688 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1026s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:56,695 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:56,699 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:03:57,818 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:03:57,819 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:03:57,820 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1027s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:03:57,823 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:03:57,824 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 20:03:57,825 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 901.8s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 20:03:57,827 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 20:03:57,828 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:04:00,555 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:04:00,557 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:04:00,557 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1030s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:04:00,564 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:04:00,566 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:04:02,121 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:04:02,122 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:04:02,123 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1031s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:04:02,126 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:04:02,127 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 20:04:02,128 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 906.1s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 20:04:02,129 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 20:04:02,131 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:04:05,625 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:04:05,626 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:04:05,626 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1035s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:04:05,628 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:04:05,629 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:04:07,212 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:04:07,213 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:04:07,213 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1036s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:04:07,216 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:04:07,217 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 20:04:07,218 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 911.2s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 20:04:07,220 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 20:04:07,222 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:04:08,048 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:04:08,049 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:04:08,050 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1037s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:04:08,052 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:04:08,053 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:04:09,251 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:04:09,253 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:04:09,253 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1038s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:04:09,255 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:04:09,257 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 20:04:09,257 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 913.2s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 20:04:09,259 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 20:04:09,261 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:04:10,238 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:04:10,240 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:04:10,240 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1039s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:04:10,243 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:04:10,244 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:04:11,820 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:04:11,821 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:04:11,822 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1041s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:04:11,824 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:04:11,825 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 20:04:11,826 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 915.8s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 20:04:11,828 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 20:04:11,829 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:04:12,831 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:04:12,831 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:04:12,831 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1042s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:04:12,833 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:04:12,834 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:04:14,215 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:04:14,216 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:04:14,217 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1043s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:04:14,219 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:04:14,220 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 20:04:14,221 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 918.2s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 20:04:14,223 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 20:04:14,224 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:04:15,533 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:04:15,534 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:04:15,534 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1045s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:04:15,536 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:04:15,537 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:04:18,090 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:04:18,091 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:04:18,092 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1047s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:04:18,094 | INFO | backend.routers.flights | 222 |Fetching booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d, user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:04:18,095 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT booking.id, booking.user_id, booking.flight_order_id, booking.status, booking.created_at, booking.amadeus_order_response, booking.ticket_url 
+FROM booking 
+WHERE booking.id = %(id_1)s::UUID AND booking.user_id = %(user_id_1)s::UUID
+2025-12-03 20:04:18,095 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 922.1s ago] {'id_1': UUID('b59c7105-f2bf-4eff-bb0f-383dc32aa66d'), 'user_id_1': UUID('88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d')}
+2025-12-03 20:04:18,096 | INFO | backend.routers.flights | 257 |Successfully retrieved booking details for booking_id: b59c7105-f2bf-4eff-bb0f-383dc32aa66d
+2025-12-03 20:04:18,098 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:04:23,422 | INFO | sqlalchemy.engine.Engine | 2696 |BEGIN (implicit)
+2025-12-03 20:04:23,423 | INFO | sqlalchemy.engine.Engine | 1840 |SELECT userindb.id, userindb.email, userindb.password, userindb.reset_token, userindb.reset_token_expires, userindb.is_active, userindb.is_superuser 
+FROM userindb 
+WHERE userindb.email = %(email_1)s
+2025-12-03 20:04:23,423 | INFO | sqlalchemy.engine.Engine | 1840 |[cached since 1052s ago] {'email_1': 'kamolunehemiah@gmail.com'}
+2025-12-03 20:04:23,426 | INFO | backend.routers.flights | 403 |Returning cached bookings for user_id: 88acb0cd-cdd2-40fc-a1e7-4c68f66a3d0d
+2025-12-03 20:04:23,427 | INFO | sqlalchemy.engine.Engine | 2699 |ROLLBACK
+2025-12-03 20:09:25,580 | INFO | uvicorn.error | 264 |Shutting down
+2025-12-03 20:09:25,687 | INFO | uvicorn.error | 67 |Waiting for application shutdown.
+2025-12-03 20:09:25,689 | INFO | uvicorn.error | 76 |Application shutdown complete.
+2025-12-03 20:09:25,690 | INFO | uvicorn.error | 94 |Finished server process [8]

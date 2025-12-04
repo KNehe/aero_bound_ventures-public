@@ -4,6 +4,7 @@ from backend.routers import users
 from backend.crud.database import init_db
 from backend.routers import flights
 from backend.routers import payments
+from backend.routers import admin
 from dotenv import load_dotenv
 import os
 
@@ -30,6 +31,7 @@ def startup():
 app.include_router(users.router)
 app.include_router(flights.router)
 app.include_router(payments.router)
+app.include_router(admin.router, prefix="/admin", tags=["admin"])
 
 
 @app.get("/")
