@@ -1,0 +1,15 @@
+2025-12-03 22:23:00,538 | INFO | root | 63 |Root logger configured successfully
+2025-12-03 22:23:00,688 | DEBUG | asyncio | 64 |Using selector: KqueueSelector
+2025-12-03 22:23:00,689 | INFO | httpx | 1025 |HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+2025-12-03 22:24:02,526 | INFO | root | 63 |Root logger configured successfully
+2025-12-03 22:24:02,636 | DEBUG | asyncio | 64 |Using selector: KqueueSelector
+2025-12-03 22:24:02,638 | INFO | httpx | 1025 |HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+2025-12-03 22:48:35,061 | INFO | root | 63 |Root logger configured successfully
+2025-12-03 22:48:35,243 | DEBUG | asyncio | 64 |Using selector: KqueueSelector
+2025-12-03 22:48:35,245 | INFO | httpx | 1025 |HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+2025-12-03 22:59:55,170 | INFO | root | 63 |Root logger configured successfully
+2025-12-03 22:59:55,308 | DEBUG | asyncio | 64 |Using selector: KqueueSelector
+2025-12-03 22:59:55,310 | INFO | httpx | 1025 |HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+2025-12-03 23:12:51,663 | INFO | root | 63 |Root logger configured successfully
+2025-12-03 23:12:51,790 | DEBUG | asyncio | 64 |Using selector: KqueueSelector
+2025-12-03 23:12:51,792 | INFO | httpx | 1025 |HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"

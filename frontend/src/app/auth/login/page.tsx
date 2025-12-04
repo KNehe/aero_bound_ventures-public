@@ -3,11 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import useAuth from "@/store/auth";
-
-interface TokenResponse {
-  access_token: string;
-  token_type: string;
-}
+import { LoginResponse } from "@/types/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -58,15 +54,22 @@ export default function LoginPage() {
         throw new Error(errorData.detail || "Invalid email or password");
       }
 
-      const data: TokenResponse = await response.json();
+      const data: LoginResponse = await response.json();
       
-      // Store the access token and user email using Zustand store
-      // Note: Backend only returns {access_token, token_type}
-      // The email is stored from the form input (which is also encoded in the JWT token's 'sub' claim)
-      login(data.access_token, email);
+      // Store the access token and user info using Zustand store
+      login(data.access_token, data.user);
 
-      // Redirect to the original page or home
-      router.push(redirectTo);
+      // Check if user is admin and redirect accordingly
+      const isAdmin = data.user.groups.some(group => group.name.toLowerCase() === 'admin');
+      
+      // If redirect is specified, use it; otherwise redirect based on role
+      if (redirectTo && redirectTo !== '/') {
+        router.push(redirectTo);
+      } else if (isAdmin) {
+        router.push('/admin');
+      } else {
+        router.push('/');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed. Please try again.");
     } finally {

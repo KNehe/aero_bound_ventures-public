@@ -4,11 +4,13 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from sqlmodel import Session, select
 from backend.models.users import UserInDB
+from backend.models.permissions import Group
 import os
 from fastapi import Depends, HTTPException, status
 from jwt.exceptions import InvalidTokenError
 from backend.crud.database import get_session
 import secrets
+from sqlalchemy.orm import selectinload
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -58,7 +60,13 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
 
 
 def authenticate_user(session: Session, email: str, password: str):
-    user = session.exec(select(UserInDB).where(UserInDB.email == email)).first()
+    # Eager load groups and their permissions
+    statement = (
+        select(UserInDB)
+        .where(UserInDB.email == email)
+        .options(selectinload(UserInDB.groups).selectinload(Group.permissions))
+    )
+    user = session.exec(statement).first()
     if not user:
         return False
     if not verify_password(password, user.password):

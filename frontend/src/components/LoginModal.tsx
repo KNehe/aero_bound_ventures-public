@@ -1,5 +1,8 @@
 "use client";
 import React, { useState } from "react";
+import useAuth from "@/store/auth";
+import { LoginResponse } from "@/types/auth";
+import { useRouter } from "next/navigation";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -16,6 +19,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToSignu
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const login = useAuth((state) => state.login);
+  const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -55,12 +60,48 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToSignu
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      // Prepare form data for OAuth2 password flow
+      const formBody = new URLSearchParams();
+      formBody.append('username', formData.email); // OAuth2 uses 'username' field
+      formBody.append('password', formData.password);
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formBody.toString(),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setErrors({ general: errorData.detail || 'Login failed. Please check your credentials.' });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const data: LoginResponse = await response.json();
+      
+      // Store auth data
+      login(data.access_token, data.user);
+      
+      // Check if user is admin and redirect accordingly
+      const isAdmin = data.user.groups.some(group => group.name.toLowerCase() === 'admin');
+      
       onSuccess();
       onClose();
-    }, 1500);
+      
+      if (isAdmin) {
+        router.push('/admin');
+      } else {
+        router.push('/');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setErrors({ general: 'An unexpected error occurred. Please try again.' });
+      setIsSubmitting(false);
+    }
   };
 
   const handleSocialLogin = (provider: string) => {
@@ -130,6 +171,12 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToSignu
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {errors.general && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              {errors.general}
+            </div>
+          )}
+          
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Email Address

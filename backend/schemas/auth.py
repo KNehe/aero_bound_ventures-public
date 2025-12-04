@@ -1,9 +1,44 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
+import uuid
+
+
+class PermissionRead(BaseModel):
+    """Schema for reading permission data"""
+
+    name: str
+    codename: str
+    description: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class GroupRead(BaseModel):
+    """Schema for reading group data with permissions"""
+
+    name: str
+    description: str | None = None
+    permissions: list[PermissionRead] = []
+
+    class Config:
+        from_attributes = True
+
+
+class UserInfo(BaseModel):
+    """User information included in token response"""
+
+    id: uuid.UUID
+    email: str
+    groups: list[GroupRead] = []
+
+    class Config:
+        from_attributes = True
 
 
 class Token(BaseModel):
     access_token: str
     token_type: str
+    user: UserInfo
 
 
 class ForgotPasswordRequest(BaseModel):

@@ -18,6 +18,9 @@ from backend.schemas.auth import (
     ChangePasswordRequest,
     ChangePasswordResponse,
     Token,
+    UserInfo,
+    GroupRead,
+    PermissionRead,
     ForgotPasswordRequest,
     ResetPasswordRequest,
     ResetPasswordResponse,
@@ -78,7 +81,30 @@ async def login(
         )
     access_token = create_access_token(data={"sub": user.email})
 
-    return Token(access_token=access_token, token_type="bearer")
+    # Build user info with groups and permissions
+    groups_with_permissions = [
+        GroupRead(
+            name=group.name,
+            description=group.description,
+            permissions=[
+                PermissionRead(
+                    name=perm.name,
+                    codename=perm.codename,
+                    description=perm.description,
+                )
+                for perm in group.permissions
+            ],
+        )
+        for group in user.groups
+    ]
+
+    user_info = UserInfo(
+        id=user.id,
+        email=user.email,
+        groups=groups_with_permissions,
+    )
+
+    return Token(access_token=access_token, token_type="bearer", user=user_info)
 
 
 @router.post("/forgot-password/", response_model=ResetPasswordResponse)
