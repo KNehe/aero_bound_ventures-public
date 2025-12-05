@@ -74,6 +74,7 @@ dependencies = [
     { name = "redis" },
     { name = "requests" },
     { name = "sqlmodel" },
+    { name = "typer" },
 ]
 
 [package.metadata]
@@ -93,6 +94,7 @@ requires-dist = [
     { name = "redis", specifier = ">=6.4.0" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "sqlmodel", specifier = ">=0.0.24" },
+    { name = "typer", specifier = ">=0.16.0" },
 ]
 
 [[package]]

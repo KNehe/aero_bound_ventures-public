@@ -20,4 +20,5 @@ dependencies = [
     "redis>=6.4.0",
     "requests>=2.32.5",
     "sqlmodel>=0.0.24",
+    "typer>=0.16.0",
 ]
