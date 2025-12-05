@@ -78,3 +78,28 @@ async def send_password_reset_email(email: EmailStr, reset_token: str):
 
     fm = FastMail(conf)
     await fm.send_message(message)
+
+
+async def send_welcome_email(email: EmailStr):
+    """Send welcome email to new user."""
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+    subject = "Welcome to Aero Bound Ventures! ✈️"
+    recipients = [email]
+
+    # Read the HTML template
+    template_path = os.path.join(
+        os.path.dirname(__file__), "..", "templates", "welcome_email.html"
+    )
+    with open(template_path, "r", encoding="utf-8") as file:
+        html = file.read()
+
+    # Replace placeholders with actual values
+    html = html.replace("{{frontend_url}}", frontend_url)
+
+    message = MessageSchema(
+        subject=subject, recipients=recipients, body=html, subtype=MessageType.html
+    )
+
+    fm = FastMail(conf)
+    await fm.send_message(message)

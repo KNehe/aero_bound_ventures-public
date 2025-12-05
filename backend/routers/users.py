@@ -11,7 +11,10 @@ from backend.crud.users import (
     update_password_with_token,
 )
 from sqlmodel import Session
-from backend.external_services.email import send_email_async, send_password_reset_email
+from backend.external_services.email import (
+    send_password_reset_email,
+    send_welcome_email,
+)
 from fastapi import BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from backend.schemas.auth import (
@@ -55,10 +58,8 @@ async def register(
 
     user = create_user(session, email=user_in.email, password=user_in.password)
 
-    subject = "Welcome to Aero Bound Ventures!"
-    recipients = [user_in.email]
-    body_text = f"Hello {user_in.email}, thank you for registering with us. We are excited to have you on board!"
-    background_tasks.add_task(send_email_async, subject, recipients, body_text)
+    # Send welcome email
+    background_tasks.add_task(send_welcome_email, user_in.email)
 
     return user
 
