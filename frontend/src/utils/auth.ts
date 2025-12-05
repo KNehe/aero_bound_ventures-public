@@ -4,6 +4,7 @@
  */
 
 import { UserInfo } from '@/types/auth';
+import { ADMIN_GROUP_NAME } from '@/constants/auth';
 
 /**
  * Get authentication token from localStorage
@@ -41,7 +42,7 @@ export function getUserInfo(): UserInfo | null {
 export function isUserAdmin(): boolean {
   const userInfo = getUserInfo();
   if (!userInfo) return false;
-  return userInfo.groups?.some(group => group.name.toLowerCase() === 'admin') ?? false;
+  return userInfo.groups?.some(group => group.name === ADMIN_GROUP_NAME) ?? false;
 }
 
 /**

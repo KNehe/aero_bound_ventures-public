@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { MIN_PASSWORD_LENGTH } from "@/constants/auth";
 
 interface SignupModalProps {
   isOpen: boolean;
@@ -52,8 +53,8 @@ export default function SignupModal({ isOpen, onClose, onSuccess, bookingId }: S
 
     if (!formData.password) {
       newErrors.password = "Password is required";
-    } else if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters";
+    } else if (formData.password.length < MIN_PASSWORD_LENGTH) {
+      newErrors.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
     }
 
     if (formData.password !== formData.confirmPassword) {

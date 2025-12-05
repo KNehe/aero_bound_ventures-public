@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, ChangeEvent, FormEvent } from "react";
 import useAuth from '@/store/auth';
+import { MIN_PASSWORD_LENGTH } from '@/constants/auth';
 
 interface FormData {
   old_password: string;
@@ -43,7 +44,7 @@ export default function ProfilePage() {
     const newErrors: FormErrors = {};
     if (!formData.old_password) newErrors.old_password = "Old password is required";
     if (!formData.new_password) newErrors.new_password = "New password is required";
-    if (formData.new_password.length < 8) newErrors.new_password = "New password must be at least 8 characters";
+    if (formData.new_password.length < MIN_PASSWORD_LENGTH) newErrors.new_password = `New password must be at least ${MIN_PASSWORD_LENGTH} characters`;
     if (formData.new_password !== formData.confirm_password) newErrors.confirm_password = "Passwords do not match";
     return newErrors;
   };

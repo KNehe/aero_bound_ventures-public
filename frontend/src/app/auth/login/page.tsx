@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import useAuth from "@/store/auth";
 import { LoginResponse } from "@/types/auth";
+import { ADMIN_GROUP_NAME, MIN_PASSWORD_LENGTH } from "@/constants/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,9 +25,18 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.push(redirectTo);
+      const userInfo = useAuth.getState().userInfo;
+      const isAdmin = userInfo?.groups?.some(group => group.name === ADMIN_GROUP_NAME) ?? false;
+      
+      if (redirectTo && redirectTo !== '/') {
+        router.push(redirectTo);
+      } else if (isAdmin) {
+        router.push('/admin');
+      } else {
+        router.push('/');
+      }
     }
-  }, [isAuthenticated, redirectTo, router]);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,13 +66,10 @@ export default function LoginPage() {
 
       const data: LoginResponse = await response.json();
       
-      // Store the access token and user info using Zustand store
       login(data.access_token, data.user);
 
-      // Check if user is admin and redirect accordingly
-      const isAdmin = data.user.groups.some(group => group.name.toLowerCase() === 'admin');
+      const isAdmin = data.user.groups.some(group => group.name === ADMIN_GROUP_NAME);
       
-      // If redirect is specified, use it; otherwise redirect based on role
       if (redirectTo && redirectTo !== '/') {
         router.push(redirectTo);
       } else if (isAdmin) {
@@ -81,15 +88,13 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
 
-    // Validate passwords match
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
 
-    // Validate password strength
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long");
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long`);
       return;
     }
 

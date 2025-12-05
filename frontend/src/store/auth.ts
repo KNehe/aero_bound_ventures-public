@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { UserInfo } from '@/types/auth';
+import { ADMIN_GROUP_NAME } from '@/constants/auth';
 
 interface AuthState {
   token: string | null;
@@ -35,7 +36,7 @@ const useAuth = create<AuthState>()(
       },
       isAdmin: () => {
         const state = get();
-        return state.userInfo?.groups?.some(group => group.name.toLowerCase() === 'admin') ?? false;
+        return state.userInfo?.groups?.some(group => group.name === ADMIN_GROUP_NAME) ?? false;
       },
     }),
     {

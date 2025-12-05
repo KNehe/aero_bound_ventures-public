@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import useAuth from "@/store/auth";
 import { LoginResponse } from "@/types/auth";
 import { useRouter } from "next/navigation";
+import { ADMIN_GROUP_NAME } from "@/constants/auth";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -87,7 +88,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, onSwitchToSignu
       login(data.access_token, data.user);
       
       // Check if user is admin and redirect accordingly
-      const isAdmin = data.user.groups.some(group => group.name.toLowerCase() === 'admin');
+      const isAdmin = data.user.groups.some(group => group.name === ADMIN_GROUP_NAME);
       
       onSuccess();
       onClose();

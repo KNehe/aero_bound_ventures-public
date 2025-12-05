@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { MIN_PASSWORD_LENGTH } from "@/constants/auth";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -65,7 +66,7 @@ export default function ResetPasswordPage() {
     }
 
     let score = 0;
-    if (password.length >= 8) score++;
+    if (password.length >= MIN_PASSWORD_LENGTH) score++;
     if (password.length >= 12) score++;
     if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
     if (/\d/.test(password)) score++;
@@ -88,8 +89,8 @@ export default function ResetPasswordPage() {
     setError("");
 
     // Validation
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long.");
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`);
       return;
     }
 
