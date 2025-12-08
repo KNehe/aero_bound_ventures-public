@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, status
 from sqlmodel import Session
 from backend.crud.database import get_session
-from backend.models.users import UserInDB
+from backend.models.constants import ADMIN_GROUP_NAME
 from backend.external_services.cloudinary_service import (
     configure_cloudinary,
     upload_file,
@@ -14,15 +14,15 @@ import uuid
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
-# Configure Cloudinary on module load
 configure_cloudinary()
 
 
-@router.post("/upload/{booking_id}")
+@router.post(
+    "/upload/{booking_id}", dependencies=[Depends(GroupDependency(ADMIN_GROUP_NAME))]
+)
 async def upload_ticket(
     booking_id: uuid.UUID,
     file: UploadFile = File(...),
-    current_user: UserInDB = Depends(GroupDependency("Admins")),
     session: Session = Depends(get_session),
 ):
     """
@@ -54,7 +54,9 @@ async def upload_ticket(
         upload_result = upload_file(file.file, resource_type="auto")
 
         secure_url = upload_result["secure_url"]
-        updated_booking = update_booking_ticket_url(session, str(booking_id), secure_url)
+        updated_booking = update_booking_ticket_url(
+            session, str(booking_id), secure_url
+        )
 
         if not updated_booking:
             raise HTTPException(
@@ -74,5 +76,3 @@ async def upload_ticket(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to upload ticket: {str(e)}",
         )
-
-
