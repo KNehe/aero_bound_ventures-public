@@ -58,3 +58,26 @@ def update_booking_status(
         session.commit()
         session.refresh(booking)
     return booking
+
+
+def update_booking_ticket_url(
+    session: Session, booking_id: str, ticket_url: str
+) -> Booking | None:
+    """
+    Update the ticket URL of a booking
+
+    Args:
+        session: Database session
+        booking_id: Booking ID to update
+        ticket_url: URL of the uploaded ticket
+
+    Returns:
+        Updated booking object if found, None otherwise
+    """
+    booking = get_booking_by_id(session, booking_id)
+    if booking:
+        booking.ticket_url = ticket_url
+        session.add(booking) 
+        session.commit()
+        session.refresh(booking)
+    return booking

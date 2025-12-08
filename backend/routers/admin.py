@@ -130,3 +130,59 @@ async def get_all_bookings(
             status_code=500,
             detail="An error occurred while fetching bookings"
         )
+
+
+@router.get("/bookings/{booking_id}", response_model=AdminBookingResponse)
+async def get_booking(
+    booking_id: str,
+    session: Session = Depends(get_session),
+):
+    """
+    Get a single booking by ID for admin dashboard.
+    
+    Args:
+        booking_id: The UUID of the booking to fetch
+        
+    Returns:
+        Booking details with associated user data
+        
+    Raises:
+        HTTPException 404: If booking not found
+    """
+    logger.info(f"Fetching booking {booking_id} for admin")
+    
+    try:
+        statement = select(Booking).where(Booking.id == booking_id)
+        booking = session.exec(statement).first()
+        
+        if not booking:
+            logger.warning(f"Booking {booking_id} not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Booking not found"
+            )
+        
+        response = AdminBookingResponse(
+            id=booking.id,
+            flight_order_id=booking.flight_order_id,
+            status=booking.status,
+            created_at=booking.created_at,
+            ticket_url=booking.ticket_url,
+            user={
+                "id": booking.user.id,
+                "email": booking.user.email,
+            },
+            amadeus_order_response=booking.amadeus_order_response,
+        )
+        
+        logger.info(f"Successfully fetched booking {booking_id}")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception(f"Error fetching booking {booking_id}")
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred while fetching the booking"
+        )

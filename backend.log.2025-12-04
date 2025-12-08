@@ -1,6 +1,0 @@
-2025-12-04 09:35:32,443 | INFO | root | 63 |Root logger configured successfully
-2025-12-04 09:35:32,588 | DEBUG | asyncio | 64 |Using selector: KqueueSelector
-2025-12-04 09:35:32,589 | INFO | httpx | 1025 |HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
-2025-12-04 09:35:40,887 | INFO | root | 63 |Root logger configured successfully
-2025-12-04 09:35:40,990 | DEBUG | asyncio | 64 |Using selector: KqueueSelector
-2025-12-04 09:35:40,992 | INFO | httpx | 1025 |HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"

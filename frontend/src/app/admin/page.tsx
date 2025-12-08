@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { Booking, BookingStats } from "@/types/admin";
 
 // Status constants to avoid hardcoded strings (matching backend BookingStatus class)
 const BOOKING_STATUS = {
@@ -11,27 +12,6 @@ const BOOKING_STATUS = {
   FAILED: "failed",
   REFUNDED: "refunded",
 } as const;
-
-interface Booking {
-  id: string;
-  flight_order_id: string;
-  status: string;
-  created_at: string;
-  ticket_url: string | null;
-  user: {
-    id: string;
-    email: string;
-  };
-  amadeus_order_response: any;
-}
-
-interface BookingStats {
-  total_bookings: number;
-  total_revenue: number;
-  active_users: number;
-  bookings_today: number;
-  bookings_this_week: number;
-}
 
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -471,7 +451,7 @@ export default function AdminDashboard() {
                         <td className="px-6 py-4 whitespace-nowrap text-base font-medium">
                           <div className="flex gap-2">
                             <button
-                              onClick={() => handleViewDetails(booking.flight_order_id)}
+                              onClick={() => handleViewDetails(booking.id)}
                               className="text-blue-600 hover:text-blue-900"
                             >
                               View Details

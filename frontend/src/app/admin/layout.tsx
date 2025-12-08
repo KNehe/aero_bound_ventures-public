@@ -11,24 +11,24 @@ export default function AdminLayout({
   const router = useRouter();
   const { isAuthenticated, isAdmin } = useAuth();
 
-  useEffect(() => {
-    // Check if user is authenticated
-    if (!isAuthenticated) {
-      router.push('/auth/login?redirect=/admin');
-      return;
-    }
+  // useEffect(() => {
+  //   // Check if user is authenticated
+  //   if (!isAuthenticated) {
+  //     router.push('/auth/login?redirect=/admin');
+  //     return;
+  //   }
 
-    // Check if user is admin
-    if (!isAdmin()) {
-      router.push('/');
-      return;
-    }
-  }, [isAuthenticated, isAdmin, router]);
+  //   // Check if user is admin
+  //   if (!isAdmin()) {
+  //     router.push('/');
+  //     return;
+  //   }
+  // }, [isAuthenticated, isAdmin, router]);
 
-  // If not authenticated or not admin, don't render anything
-  if (!isAuthenticated || !isAdmin()) {
-    return null;
-  }
+  // // If not authenticated or not admin, don't render anything
+  // if (!isAuthenticated || !isAdmin()) {
+  //   return null;
+  // }
 
   return <>{children}</>;
 }
