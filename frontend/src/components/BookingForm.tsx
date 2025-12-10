@@ -89,10 +89,10 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
   }
 
   const debouncedSearchOrigin = useRef(
-    debounce((value: string)=> searchLocations("origin", value), 1000)
+    debounce((value: string)=> searchLocations("origin", value), 500)
   )
   const debouncedSearchDestination = useRef(
-    debounce((value: string)=> searchLocations("destination", value), 1000)
+    debounce((value: string)=> searchLocations("destination", value), 500)
   )
 
   const searchLocations = async (searchType: 'origin' | 'destination', query: string) => {
@@ -108,7 +108,6 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
       setLocationSearchResults(prev => ({ ...prev, [searchType]: locations }));
       setShowDropdown(prev => ({ ...prev, [searchType]: true }));
     } catch (error) {
-      console.error('Error fetching locations:', error);
       setLocationSearchResults(prev => ({ ...prev, [searchType]: [] }));
     } finally {
       setSearchLoading(prev => ({ ...prev, [searchType]: false }));
@@ -245,7 +244,9 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
               setForm(prev => ({ ...prev, originLocationCode: value }));
               debouncedSearchOrigin.current(value)
             }}
-            onFocus={() => setShowDropdown(prev => ({ ...prev, origin: true }))}
+            onFocus={(e) => {
+              if(e.target.value)setShowDropdown(prev => ({ ...prev, origin: true }))
+            }}
             onBlur={(e) => {
               // Only hide if the related target is not in the dropdown
               if (!originRef.current?.contains(e.relatedTarget)) {
@@ -307,7 +308,9 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
               setForm(prev => ({ ...prev, destinationLocationCode: value }));
               debouncedSearchDestination.current(value)
             }}
-            onFocus={() => setShowDropdown(prev => ({ ...prev, destination: true }))}
+            onFocus={(e) => {
+               if(e.target.value) setShowDropdown(prev => ({ ...prev, destination: true }))
+            }}
             onBlur={(e) => {
               // Only hide if the related target is not in the dropdown
               if (!destinationRef.current?.contains(e.relatedTarget)) {
