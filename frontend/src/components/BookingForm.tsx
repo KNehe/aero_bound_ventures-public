@@ -69,18 +69,34 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
     origin: false,
     destination: false
   });
-
   const router = useRouter();
 
   const updateFlights = useFlights((state) => state.updateFlights);
 
-  const BASE_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL
+  const BASE_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+
+  const debounce = (callback: any, delay: number) => {
+    let timer: any;
+    
+    return (...args: any[]) => {
+      window.clearTimeout(timer);
+      
+      timer = window.setTimeout(() => {
+        callback(...args);
+      }, delay);
+    };
+  }
+
+  const debouncedSearchOrigin = useRef(
+    debounce((value: string)=> searchLocations("origin", value), 1000)
+  )
+  const debouncedSearchDestination = useRef(
+    debounce((value: string)=> searchLocations("destination", value), 1000)
+  )
 
   const searchLocations = async (searchType: 'origin' | 'destination', query: string) => {
-    if (query.length < 2) {
-      setLocationSearchResults(prev => ({ ...prev, [searchType]: [] }));
-      return;
-    }
+    if (!query.trim()) return;
 
     setSearchLoading(prev => ({ ...prev, [searchType]: true }));
     try {
@@ -227,7 +243,7 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
               const value = e.target.value;
               setDisplayValues(prev => ({ ...prev, origin: value }));
               setForm(prev => ({ ...prev, originLocationCode: value }));
-              searchLocations('origin', value);
+              debouncedSearchOrigin.current(value)
             }}
             onFocus={() => setShowDropdown(prev => ({ ...prev, origin: true }))}
             onBlur={(e) => {
@@ -289,7 +305,7 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
               const value = e.target.value;
               setDisplayValues(prev => ({ ...prev, destination: value }));
               setForm(prev => ({ ...prev, destinationLocationCode: value }));
-              searchLocations('destination', value);
+              debouncedSearchDestination.current(value)
             }}
             onFocus={() => setShowDropdown(prev => ({ ...prev, destination: true }))}
             onBlur={(e) => {
