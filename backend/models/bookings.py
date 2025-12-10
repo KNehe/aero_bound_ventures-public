@@ -27,6 +27,7 @@ class Booking(SQLModel, table=True):
 
     status: str = Field(default=BookingStatus.CONFIRMED, nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    total_price: float = Field(default=0.0, nullable=False)
     user: "UserInDB" = Relationship(back_populates="bookings")
     amadeus_order_response: dict | None = Field(default=None, sa_column=Column(JSON))
     ticket_url: str | None = Field(default=None, nullable=True)

@@ -34,30 +34,16 @@ async def get_booking_stats(
     logger.info("Calculating booking statistics")
 
     try:
-        # Get all bookings
         bookings = session.exec(select(Booking)).all()
 
-        # Calculate total bookings
         total_bookings = len(bookings)
 
-        # Calculate total revenue
-        total_revenue = 0.0
-        for booking in bookings:
-            if booking.amadeus_order_response:
-                travelers_pricing = booking.amadeus_order_response.get("travelers", [])
-                for traveler in travelers_pricing:
-                    price_info = traveler.get("price", {})
-                    total_str = price_info.get("total", "0")
-                    try:
-                        total_revenue += float(total_str)
-                    except (ValueError, TypeError):
-                        continue
+        total_revenue = sum(booking.total_price for booking in bookings)
 
         # Calculate active users (unique users who have made bookings)
         unique_user_ids = set(booking.user_id for booking in bookings)
         active_users = len(unique_user_ids)
 
-        # Calculate bookings today
         now = datetime.utcnow()
         today_start = datetime(now.year, now.month, now.day)
         bookings_today = sum(

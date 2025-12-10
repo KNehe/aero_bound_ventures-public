@@ -133,23 +133,37 @@ async def flight_order(
         logger.debug(
             f"Saving booking record for user_id: {current_user.id}, flight_order_id: {flight_order_id}"
         )
+        print(f"Flight order response: {response}")
+
+        total_price = 0.0
+        if response:
+            flight_offers = response.get("flightOffers", [])
+            if flight_offers:
+                price_info = flight_offers[0].get("price", {})
+                grand_total = price_info.get("grandTotal", "0")
+                try:
+                    total_price = float(grand_total)
+                except (ValueError, TypeError):
+                    logger.warning(f"Failed to parse grandTotal: {grand_total}")
+                    total_price = 0.0
+
+        logger.info(f"Extracted total_price: {total_price} for booking")
+
         booking = Booking(
             user_id=current_user.id,
             flight_order_id=flight_order_id,
             amadeus_order_response=response,
+            total_price=total_price,
         )
         session.add(booking)
         session.commit()
 
-        # Access all attributes we need before detaching from session
         booking_id = booking.id
         booking_flight_order_id = booking.flight_order_id
         booking_status = booking.status
 
-        # Detach booking from session to prevent lazy loading on cleanup
         session.expunge(booking)
 
-        # Create response object with only the fields we want to return
         response = BookingResponse(
             id=booking_id,
             flight_order_id=booking_flight_order_id,
@@ -392,7 +406,7 @@ async def get_user_bookings(
 ):
     """
     Get all bookings for the current user.
-    
+
     Returns:
         List of bookings with id, pnr, status, created_at, and ticket_url
     """
@@ -404,22 +418,24 @@ async def get_user_bookings(
             return cached_bookings
 
         logger.info(f"Fetching bookings for user_id: {user.id}")
-        
+
         bookings = session.exec(
             select(Booking)
             .where(Booking.user_id == user.id)
             .order_by(Booking.created_at.desc())
         ).all()
-        
+
         response = []
         for booking in bookings:
             pnr = None
             if booking.amadeus_order_response:
                 print(f"amadeus_order_response: {booking.amadeus_order_response}")
-                associated_records = booking.amadeus_order_response.get("associatedRecords", [])
+                associated_records = booking.amadeus_order_response.get(
+                    "associatedRecords", []
+                )
                 if associated_records:
                     pnr = associated_records[0].get("reference")
-            
+
             response.append(
                 UserBookingResponse(
                     id=booking.id,
@@ -429,16 +445,20 @@ async def get_user_bookings(
                     ticket_url=booking.ticket_url,
                 )
             )
-        
-        response_data = [b.model_dump(mode='json') for b in response]
+
+        response_data = [b.model_dump(mode="json") for b in response]
         redis_cache.set(key, response_data)
-        
-        logger.info(f"Successfully fetched {len(response)} bookings for user_id: {user.id}")
+
+        logger.info(
+            f"Successfully fetched {len(response)} bookings for user_id: {user.id}"
+        )
         return response
-        
+
     except Exception:
         logger.exception(f"Error fetching bookings for user_id: {user.id}")
-        raise HTTPException(status_code=500, detail="An error occurred while fetching bookings")
+        raise HTTPException(
+            status_code=500, detail="An error occurred while fetching bookings"
+        )
 
 
 @router.get("/analytics/most-travelled-destinations")
