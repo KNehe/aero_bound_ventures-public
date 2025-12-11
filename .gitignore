@@ -18,3 +18,4 @@ terraform/terraform.tfvars.json
 
 # Logs
 backend.log
+security.log
