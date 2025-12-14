@@ -1,8 +1,17 @@
 """Ticket upload endpoints"""
 
-from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    UploadFile,
+    HTTPException,
+    status,
+    BackgroundTasks,
+)
 from sqlmodel import Session
 from backend.crud.database import get_session
+from backend.external_services.email import send_email
 from backend.models.constants import ADMIN_GROUP_NAME
 from backend.external_services.cloudinary_service import (
     configure_cloudinary,
@@ -21,6 +30,7 @@ configure_cloudinary()
     "/upload/{booking_id}", dependencies=[Depends(GroupDependency(ADMIN_GROUP_NAME))]
 )
 async def upload_ticket(
+    background_tasks: BackgroundTasks,
     booking_id: uuid.UUID,
     file: UploadFile = File(...),
     session: Session = Depends(get_session),
@@ -63,6 +73,18 @@ async def upload_ticket(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to update booking with ticket URL",
             )
+
+        background_tasks.add_task(
+            send_email,
+            booking.user.email,
+            subject="Ticket Uploaded Successfully : Aero Bound Ventures",
+            template_name="ticket_upload_success.html",
+            extra={
+                "pnr": booking.amadeus_order_response.get("associatedRecords", [{}])[
+                    0
+                ].get("reference", "N/A")
+            },
+        )
 
         return {
             "message": "Ticket uploaded successfully",

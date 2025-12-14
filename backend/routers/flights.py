@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query, Depends, Path
+from fastapi import APIRouter, HTTPException, Query, Depends, Path, BackgroundTasks
 from backend.external_services.flight import amadeus_flight_service
 from backend.schemas.flights import (
     FlightSearchResponse,
@@ -25,6 +25,7 @@ from backend.schemas.bookings import BookingResponse, UserBookingResponse
 from backend.crud.database import get_session
 from backend.utils.log_manager import get_app_logger
 from sqlmodel import Session, select
+from backend.external_services.email import send_email
 
 
 logger = get_app_logger(__name__)
@@ -100,6 +101,7 @@ async def confirm_price(request: FlightOffer):
 
 @router.post("/booking/flight-orders", response_model=BookingResponse)
 async def flight_order(
+    background_tasks: BackgroundTasks,
     request: FlightOrderRequestBody,
     current_user: UserInDB = Depends(get_current_user),
     session: Session = Depends(get_session),
@@ -163,6 +165,18 @@ async def flight_order(
         booking_status = booking.status
 
         session.expunge(booking)
+
+        background_tasks.add_task(
+            send_email,
+            email=current_user.email,
+            subject="Your Booking Order Received : Aero Bound Ventures",
+            template_name="order_confirmation.html",
+            extra={
+                "pnr": response.get("associatedRecords", [{}])[0].get(
+                    "reference", "N/A"
+                )
+            },
+        )
 
         response = BookingResponse(
             id=booking_id,

@@ -1,7 +1,7 @@
 """Payment endpoints for Pesapal integration"""
 
 import os
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, BackgroundTasks
 from sqlmodel import Session
 
 from backend.crud.database import get_session
@@ -16,6 +16,7 @@ from backend.utils.security import get_current_user
 from backend.models.users import UserInDB
 from backend.crud.bookings import get_booking_by_id, update_booking_status
 from backend.utils.log_manager import get_app_logger
+from backend.external_services.email import send_email
 
 
 logger = get_app_logger(__name__)
@@ -127,6 +128,7 @@ async def initiate_pesapal_payment(
 
 @router.get("/pesapal/callback")
 async def pesapal_payment_callback(
+    background_tasks: BackgroundTasks,
     OrderTrackingId: str,
     OrderMerchantReference: str,
     session: Session = Depends(get_session),
@@ -190,6 +192,18 @@ async def pesapal_payment_callback(
         if payment_status_code == 1:  # COMPLETED
             update_booking_status(session, str(booking.id), BookingStatus.PAID)
 
+            background_tasks.add_task(
+                send_email,
+                booking.user.email,
+                subject="Payment Successful : Aero Bound Ventures",
+                template_name="payment_success.html",
+                extra={
+                    "pnr": booking.amadeus_order_response.get(
+                        "associatedRecords", [{}]
+                    )[0].get("reference", "N/A")
+                },
+            )
+
             return {
                 "status": "success",
                 "message": "Payment completed successfully",
@@ -245,6 +259,7 @@ async def pesapal_payment_callback(
 
 @router.get("/pesapal/ipn")
 async def pesapal_ipn_notification(
+    background_tasks: BackgroundTasks,
     OrderTrackingId: str | None = None,
     OrderMerchantReference: str | None = None,
     OrderNotificationType: str | None = None,
@@ -302,6 +317,12 @@ async def pesapal_ipn_notification(
 
         if payment_status_code == 1:  # COMPLETED
             update_booking_status(session, str(booking.id), BookingStatus.PAID)
+            background_tasks.add_task(
+                send_email,
+                booking.user.email,
+                subject="Payment Successful : Aero Bound Ventures",
+                template_name="payment_success.html",
+            )
         elif payment_status_code == 2:  # FAILED
             update_booking_status(
                 session,
