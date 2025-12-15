@@ -201,7 +201,8 @@ async def pesapal_payment_callback(
                 extra={
                     "pnr": booking.amadeus_order_response.get(
                         "associatedRecords", [{}]
-                    )[0].get("reference", "N/A")
+                    )[0].get("reference", "N/A"),
+                    "booking_id": str(booking.id),
                 },
             )
 

@@ -173,7 +173,8 @@ async def flight_order(
             extra={
                 "pnr": response.get("associatedRecords", [{}])[0].get(
                     "reference", "N/A"
-                )
+                ),
+                "booking_id": str(booking_id),
             },
         )
 

@@ -82,7 +82,8 @@ async def upload_ticket(
             extra={
                 "pnr": booking.amadeus_order_response.get("associatedRecords", [{}])[
                     0
-                ].get("reference", "N/A")
+                ].get("reference", "N/A"),
+                "booking_id": str(booking.id),
             },
         )
 
