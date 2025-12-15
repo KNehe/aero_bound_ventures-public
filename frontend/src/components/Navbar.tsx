@@ -20,7 +20,7 @@ export default function Navbar() {
   const [activeSection, setActiveSection] = useState("");
   
   // Use Zustand store for auth state
-  const { isAuthenticated, userEmail, logout } = useAuth();
+  const { isAuthenticated, userEmail, logout, isAdmin } = useAuth();
 
   // Handle active section tracking (only on home page)
   useEffect(() => {
@@ -111,13 +111,22 @@ export default function Navbar() {
             </button>
           );
         })}
-        {/* My Bookings Link */}
-        <Link
-          href="/my"
-          className="font-medium text-gray-800 hover:text-blue-600 transition-colors px-3 py-1 rounded-lg border border-blue-100 bg-blue-50 hover:bg-blue-100 ml-2"
-        >
-          My Bookings
-        </Link>
+        {/* Bookings/Dashboard Link */}
+        {isAdmin() ? (
+          <Link
+            href="/admin"
+            className="font-medium text-gray-800 hover:text-blue-600 transition-colors px-3 py-1 rounded-lg border border-blue-100 bg-blue-50 hover:bg-blue-100 ml-2"
+          >
+            Admin Dashboard
+          </Link>
+        ) : (
+          <Link
+            href="/my"
+            className="font-medium text-gray-800 hover:text-blue-600 transition-colors px-3 py-1 rounded-lg border border-blue-100 bg-blue-50 hover:bg-blue-100 ml-2"
+          >
+            My Bookings
+          </Link>
+        )}
         {/* Auth Links */}
         {isAuthenticated ? (
           <div className="flex items-center gap-3 ml-2">
@@ -179,13 +188,22 @@ export default function Navbar() {
             </button>
           );
         })}
-        {/* My Bookings Link */}
-        <Link
-          href="/my"
-          className="font-medium text-lg text-gray-800 hover:text-blue-600 transition-colors px-3 py-1 rounded-lg border border-blue-100 bg-blue-50 hover:bg-blue-100"
-        >
-          My Bookings
-        </Link>
+        {/* Bookings/Dashboard Link */}
+        {isAdmin() ? (
+          <Link
+            href="/admin"
+            className="font-medium text-lg text-gray-800 hover:text-blue-600 transition-colors px-3 py-1 rounded-lg border border-blue-100 bg-blue-50 hover:bg-blue-100"
+          >
+            Admin Dashboard
+          </Link>
+        ) : (
+          <Link
+            href="/my"
+            className="font-medium text-lg text-gray-800 hover:text-blue-600 transition-colors px-3 py-1 rounded-lg border border-blue-100 bg-blue-50 hover:bg-blue-100"
+          >
+            My Bookings
+          </Link>
+        )}
         {/* Auth Links */}
         {isAuthenticated ? (
           <div className="flex flex-col gap-3">
