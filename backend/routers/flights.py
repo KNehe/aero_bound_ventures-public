@@ -26,6 +26,7 @@ from backend.crud.database import get_session
 from backend.utils.log_manager import get_app_logger
 from sqlmodel import Session, select
 from backend.external_services.email import send_email
+from backend.crud.users import get_admin_emails
 
 
 logger = get_app_logger(__name__)
@@ -135,8 +136,6 @@ async def flight_order(
         logger.debug(
             f"Saving booking record for user_id: {current_user.id}, flight_order_id: {flight_order_id}"
         )
-        print(f"Flight order response: {response}")
-
         total_price = 0.0
         if response:
             flight_offers = response.get("flightOffers", [])
@@ -168,13 +167,29 @@ async def flight_order(
 
         background_tasks.add_task(
             send_email,
-            email=current_user.email,
+            recipients=[current_user.email],
             subject="Your Booking Order Received : Aero Bound Ventures",
             template_name="order_confirmation.html",
             extra={
                 "pnr": response.get("associatedRecords", [{}])[0].get(
                     "reference", "N/A"
                 )
+            },
+        )
+
+        # Notify all admins
+        admin_emails = get_admin_emails(session)
+        background_tasks.add_task(
+            send_email,
+            recipients=admin_emails,
+            subject="[ADMIN] New Booking Order Placed",
+            template_name="admin_order_notification.html",
+            extra={
+                "pnr": response.get("associatedRecords", [{}])[0].get(
+                    "reference", "N/A"
+                ),
+                "user_email": current_user.email,
+                "booking_id": str(booking_id),
             },
         )
 
@@ -187,7 +202,6 @@ async def flight_order(
         logger.info(
             f"Booking record saved successfully for user_id: {current_user.id}, flight_order_id: {flight_order_id}"
         )
-        logger.debug(f"Returning booking object: {response.model_dump()}")
         return response
 
     except ValueError as e:
@@ -479,10 +493,8 @@ async def get_user_bookings(
 def get_most_travelled_destinations(origin_city_code: str, period: str):
     try:
         key = build_redis_key({"city_code_period": f"{origin_city_code}{period}"})
-        print("key", key)
         destinations = redis_cache.get(key)
         if destinations:
-            print("Returning from cache", destinations, key)
             return destinations
 
         response = amadeus_flight_service.get_most_travelled_destinations(
@@ -491,7 +503,6 @@ def get_most_travelled_destinations(origin_city_code: str, period: str):
 
         if len(response) > 0:
             redis_cache.set(key, response)
-        print("Returning from api", response, key)
 
         return response
     except Exception as e:

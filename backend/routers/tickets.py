@@ -76,7 +76,7 @@ async def upload_ticket(
 
         background_tasks.add_task(
             send_email,
-            booking.user.email,
+            recipients=[booking.user.email],
             subject="Ticket Uploaded Successfully : Aero Bound Ventures",
             template_name="ticket_upload_success.html",
             extra={

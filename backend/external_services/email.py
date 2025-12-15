@@ -103,10 +103,10 @@ async def send_welcome_email(email: EmailStr):
     await fm.send_message(message)
 
 
-async def send_email(email: str, subject: str, template_name: str, extra: dict = {}):
+async def send_email(
+    recipients: list[EmailStr], subject: str, template_name: str, extra: dict = {}
+):
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-
-    recipients = [email]
 
     template_path = os.path.join(
         os.path.dirname(__file__), "..", "templates", template_name

@@ -17,6 +17,7 @@ from backend.models.users import UserInDB
 from backend.crud.bookings import get_booking_by_id, update_booking_status
 from backend.utils.log_manager import get_app_logger
 from backend.external_services.email import send_email
+from backend.crud.users import get_admin_emails
 
 
 logger = get_app_logger(__name__)
@@ -194,13 +195,29 @@ async def pesapal_payment_callback(
 
             background_tasks.add_task(
                 send_email,
-                booking.user.email,
+                recipients=[booking.user.email],
                 subject="Payment Successful : Aero Bound Ventures",
                 template_name="payment_success.html",
                 extra={
                     "pnr": booking.amadeus_order_response.get(
                         "associatedRecords", [{}]
                     )[0].get("reference", "N/A")
+                },
+            )
+
+            # Notify all admins
+            admin_emails = get_admin_emails(session)
+            background_tasks.add_task(
+                send_email,
+                recipients=admin_emails,
+                subject="[ADMIN] Payment Completed for Booking",
+                template_name="admin_payment_notification.html",
+                extra={
+                    "pnr": booking.amadeus_order_response.get(
+                        "associatedRecords", [{}]
+                    )[0].get("reference", "N/A"),
+                    "user_email": booking.user.email,
+                    "booking_id": str(booking.id),
                 },
             )
 
@@ -319,7 +336,7 @@ async def pesapal_ipn_notification(
             update_booking_status(session, str(booking.id), BookingStatus.PAID)
             background_tasks.add_task(
                 send_email,
-                booking.user.email,
+                recipients=[booking.user.email],
                 subject="Payment Successful : Aero Bound Ventures",
                 template_name="payment_success.html",
             )

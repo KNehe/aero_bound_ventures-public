@@ -1,5 +1,7 @@
 from sqlmodel import Session, select
 from backend.models.users import UserInDB
+from backend.models.permissions import Group
+from backend.models.constants import ADMIN_GROUP_NAME
 from backend.utils.security import (
     hash_password,
     generate_reset_token,
@@ -7,7 +9,7 @@ from backend.utils.security import (
     verify_reset_token,
 )
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 
 
 def get_user_by_email(session: Session, email: str):
@@ -97,3 +99,13 @@ def invalidate_reset_token(session: Session, user_id: str):
         user.reset_token_expires = None
         session.add(user)
         session.commit()
+
+
+def get_admin_emails(session: Session) -> List[str]:
+    """Return a list of emails for all users in the admin group."""
+    admin_group = session.exec(
+        select(Group).where(Group.name == ADMIN_GROUP_NAME)
+    ).first()
+    if not admin_group:
+        return []
+    return [user.email for user in admin_group.users if user.is_active]
