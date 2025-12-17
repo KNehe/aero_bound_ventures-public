@@ -82,6 +82,43 @@ export default function Navbar() {
     setMenuOpen(false);
   };
 
+  const markNotificationAsRead = async (notificationId: string) => {
+    // For SSE notifications (temporary IDs), just update local state
+    if (notificationId.toString().length > 10) { // Temporary ID from Date.now()
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      setRecentNotifications(prev => prev.filter(n => n.id !== notificationId));
+      return;
+    }
+
+    // For database notifications, mark as read via API
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/notifications/${notificationId}/read`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        // Update unread count
+        setUnreadCount(prev => Math.max(0, prev - 1));
+        // Remove from recent notifications
+        setRecentNotifications(prev => prev.filter(n => n.id !== notificationId));
+      }
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
+  const handleNotificationClick = () => {
+    setNotificationsOpen(!notificationsOpen);
+  };
+
   return (
     <nav className="sticky top-0 z-50 w-full bg-white shadow flex items-center justify-between px-6 py-3">
       {/* Left: Logo and Name */}

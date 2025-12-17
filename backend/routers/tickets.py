@@ -20,6 +20,9 @@ from backend.external_services.cloudinary_service import (
 from backend.crud.bookings import get_booking_by_id, update_booking_ticket_url
 from backend.utils.dependencies import GroupDependency
 import uuid
+from backend.utils.redis import redis
+import json
+from backend.crud.users import get_admin_users
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -86,6 +89,18 @@ async def upload_ticket(
                 "booking_id": str(booking.id),
             },
         )
+        data = {
+            "user_id": str(booking.user.id),
+            "text": "Your ticket has been uploaded successfully.",
+        }
+        await redis.publish(f"notifications:{booking.user.id}", json.dumps(data))
+        admin_users = get_admin_users(session)
+        for admin in admin_users:
+            data = {
+                "user_id": str(admin.id),
+                "text": f"Ticket uploaded for booking {booking.id}.",
+            }
+            await redis.publish(f"notifications:{admin.id}", json.dumps(data))
 
         return {
             "message": "Ticket uploaded successfully",

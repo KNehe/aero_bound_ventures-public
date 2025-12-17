@@ -17,7 +17,7 @@ const BOOKING_STATUS = {
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { token, logout } = useAuth();
+  const { token, logout, userInfo } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState<"all" | "processing" | "ready" | "failed">("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -191,6 +191,20 @@ export default function AdminDashboard() {
     fetchBookings();
   }, [token, logout, router]);
 
+  useEffect(() => {
+    const url  = `${process.env.NEXT_PUBLIC_API_BASE_URL}/notifications/${userInfo?.id}`;
+    const sse = new EventSource(url)
+
+    sse.onmessage = (event) => {
+      console.log(event.data)
+    }
+
+    sse.onerror = (error) => {
+      console.error("SSE connection error", error);
+      sse.close();
+    }
+
+  }, [])
   // Use API stats only - no fallback to mock data
   const totalBookings = stats?.total_bookings;
   const totalRevenue = stats?.total_revenue;

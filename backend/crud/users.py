@@ -1,6 +1,6 @@
 from sqlmodel import Session, select
 from backend.models.users import UserInDB
-from backend.models.permissions import Group
+from backend.models.permissions import Group, UserGroup
 from backend.models.constants import ADMIN_GROUP_NAME
 from backend.utils.security import (
     hash_password,
@@ -109,3 +109,14 @@ def get_admin_emails(session: Session) -> List[str]:
     if not admin_group:
         return []
     return [user.email for user in admin_group.users if user.is_active]
+
+
+def get_admin_users(session: Session):
+    """ " Get all users who belong to the admin group"""
+    statement = (
+        select(UserInDB)
+        .join(UserGroup)
+        .join(Group)
+        .where(Group.name == ADMIN_GROUP_NAME)
+    )
+    return session.exec(statement).all()
