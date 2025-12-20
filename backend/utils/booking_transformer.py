@@ -53,7 +53,7 @@ def transform_amadeus_to_booking_success(
     return {
         "orderId": booking_id,
         "pnr": pnr,
-        "bookingDate": booking_date.isoformat(),
+        "bookingDate": booking_date.isoformat().replace("+00:00", "Z"),
         "status": booking_status,
         "flightDetails": flight_details,
         "passengers": passengers,

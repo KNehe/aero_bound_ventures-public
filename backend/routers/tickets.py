@@ -13,15 +13,15 @@ from sqlmodel import Session
 from backend.crud.database import get_session
 from backend.external_services.email import send_email
 from backend.models.constants import ADMIN_GROUP_NAME
+from backend.models.notifications import NotificationType
 from backend.external_services.cloudinary_service import (
     configure_cloudinary,
     upload_file,
 )
 from backend.crud.bookings import get_booking_by_id, update_booking_ticket_url
 from backend.utils.dependencies import GroupDependency
+from backend.utils.notification_service import create_and_publish_notification
 import uuid
-from backend.utils.redis import redis
-import json
 from backend.crud.users import get_admin_users
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
@@ -62,6 +62,8 @@ async def upload_ticket(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Booking not found",
         )
+   
+    pnr = booking.amadeus_order_response.get("associatedRecords", [{}])[0].get("reference", "N/A")
 
     try:
         upload_result = upload_file(file.file, resource_type="auto")
@@ -77,30 +79,35 @@ async def upload_ticket(
                 detail="Failed to update booking with ticket URL",
             )
 
+        # Send email notification
         background_tasks.add_task(
             send_email,
             recipients=[booking.user.email],
             subject="Ticket Uploaded Successfully : Aero Bound Ventures",
             template_name="ticket_upload_success.html",
             extra={
-                "pnr": booking.amadeus_order_response.get("associatedRecords", [{}])[
-                    0
-                ].get("reference", "N/A"),
+                "pnr":pnr,
                 "booking_id": str(booking.id),
             },
         )
-        data = {
-            "user_id": str(booking.user.id),
-            "text": "Your ticket has been uploaded successfully.",
-        }
-        await redis.publish(f"notifications:{booking.user.id}", json.dumps(data))
+
+        # Send in-app notification to the user (persisted to DB + real-time via SSE)
+        await create_and_publish_notification(
+            db=session,
+            user_id=booking.user.id,
+            message=f"Your ticket for flight with PNR: {pnr} has been uploaded successfully.",
+            notification_type=NotificationType.TICKET_UPLOADED,
+        )
+
+        # Send in-app notifications to all admins
         admin_users = get_admin_users(session)
         for admin in admin_users:
-            data = {
-                "user_id": str(admin.id),
-                "text": f"Ticket uploaded for booking {booking.id}.",
-            }
-            await redis.publish(f"notifications:{admin.id}", json.dumps(data))
+            await create_and_publish_notification(
+                db=session,
+                user_id=admin.id,
+                message=f"Ticket uploaded for flight with PNR: {pnr}.",
+                notification_type=NotificationType.TICKET_UPLOADED,
+            )
 
         return {
             "message": "Ticket uploaded successfully",
@@ -114,3 +121,4 @@ async def upload_ticket(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to upload ticket: {str(e)}",
         )
+

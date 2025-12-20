@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import useAuth from "@/store/auth";
+import NotificationBell from "./NotificationBell";
 
 const navLinks = [
   { name: "Home", href: "#" },
@@ -18,14 +19,14 @@ export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("");
-  
+
   // Use Zustand store for auth state
   const { isAuthenticated, userEmail, logout, isAdmin } = useAuth();
 
   // Handle active section tracking (only on home page)
   useEffect(() => {
     if (pathname !== "/") return;
-    
+
     const handleScroll = () => {
       const sections = navLinks.map(link => link.href.replace('#', ''));
       const current = sections.find(section => {
@@ -46,7 +47,7 @@ export default function Navbar() {
   // Smart navigation handler
   const handleNavigation = (href: string) => {
     const sectionId = href.replace('#', '');
-    
+
     if (pathname === "/") {
       // On home page, scroll to section
       if (sectionId === '') {
@@ -72,7 +73,7 @@ export default function Navbar() {
         }
       }, 100);
     }
-    
+
     setMenuOpen(false);
   };
 
@@ -80,43 +81,6 @@ export default function Navbar() {
     logout();
     router.push("/");
     setMenuOpen(false);
-  };
-
-  const markNotificationAsRead = async (notificationId: string) => {
-    // For SSE notifications (temporary IDs), just update local state
-    if (notificationId.toString().length > 10) { // Temporary ID from Date.now()
-      setUnreadCount(prev => Math.max(0, prev - 1));
-      setRecentNotifications(prev => prev.filter(n => n.id !== notificationId));
-      return;
-    }
-
-    // For database notifications, mark as read via API
-    if (!token) return;
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/notifications/${notificationId}/read`,
-        {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        // Update unread count
-        setUnreadCount(prev => Math.max(0, prev - 1));
-        // Remove from recent notifications
-        setRecentNotifications(prev => prev.filter(n => n.id !== notificationId));
-      }
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
-    }
-  };
-
-  const handleNotificationClick = () => {
-    setNotificationsOpen(!notificationsOpen);
   };
 
   return (
@@ -127,19 +91,18 @@ export default function Navbar() {
         <span className="text-2xl font-extrabold text-blue-700 tracking-wide">Aero Bound Ventures</span>
       </Link>
       {/* Desktop Nav Links */}
-      <div className="hidden md:flex gap-8">
+      <div className="hidden md:flex gap-8 items-center">
         {navLinks.map((link) => {
-          const isActive = pathname === "/" && (activeSection === link.href.replace('#', '') || 
-                          (link.href === '#' && activeSection === ''));
+          const isActive = pathname === "/" && (activeSection === link.href.replace('#', '') ||
+            (link.href === '#' && activeSection === ''));
           return (
-            <button 
-              key={link.name} 
+            <button
+              key={link.name}
               onClick={() => handleNavigation(link.href)}
-              className={`font-medium transition-all duration-200 relative ${
-                isActive 
-                  ? 'text-blue-600' 
+              className={`font-medium transition-all duration-200 relative ${isActive
+                  ? 'text-blue-600'
                   : 'text-gray-800 hover:text-blue-600'
-              }`}
+                }`}
             >
               {link.name}
               {isActive && (
@@ -167,6 +130,7 @@ export default function Navbar() {
         {/* Auth Links */}
         {isAuthenticated ? (
           <div className="flex items-center gap-3 ml-2">
+            <NotificationBell />
             <button
               onClick={() => router.push('/profile')}
               className="text-sm text-gray-600 hover:text-blue-600 transition-colors"
@@ -209,17 +173,16 @@ export default function Navbar() {
           &times;
         </button>
         {navLinks.map((link) => {
-          const isActive = pathname === "/" && (activeSection === link.href.replace('#', '') || 
-                          (link.href === '#' && activeSection === ''));
+          const isActive = pathname === "/" && (activeSection === link.href.replace('#', '') ||
+            (link.href === '#' && activeSection === ''));
           return (
             <button
               key={link.name}
               onClick={() => handleNavigation(link.href)}
-              className={`font-medium text-lg transition-all duration-200 ${
-                isActive 
-                  ? 'text-blue-600' 
+              className={`font-medium text-lg transition-all duration-200 ${isActive
+                  ? 'text-blue-600'
                   : 'text-gray-800 hover:text-blue-600'
-              }`}
+                }`}
             >
               {link.name}
             </button>
@@ -244,6 +207,11 @@ export default function Navbar() {
         {/* Auth Links */}
         {isAuthenticated ? (
           <div className="flex flex-col gap-3">
+            {/* Notification Bell for Mobile */}
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              <span className="text-sm text-gray-600">Notifications</span>
+            </div>
             <button
               onClick={() => router.push('/profile')}
               className="text-sm text-gray-600 hover:text-blue-600 transition-colors"
@@ -268,4 +236,4 @@ export default function Navbar() {
       </div>
     </nav>
   );
-} 
+}

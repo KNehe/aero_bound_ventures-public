@@ -18,6 +18,8 @@ from backend.crud.bookings import get_booking_by_id, update_booking_status
 from backend.utils.log_manager import get_app_logger
 from backend.external_services.email import send_email
 from backend.crud.users import get_admin_emails
+from backend.models.notifications import NotificationType
+from backend.utils.notification_service import create_and_publish_notification
 
 
 logger = get_app_logger(__name__)
@@ -167,7 +169,8 @@ async def pesapal_payment_callback(
                 "message": "Booking not found",
                 "order_tracking_id": OrderTrackingId,
             }
-
+        
+        pnr = booking.amadeus_order_response.get("associatedRecords", [{}])[0].get("reference", "N/A")
         # 2. Fetch transaction status from Pesapal
         try:
             transaction_status = await pesapal_client.get_transaction_status(
@@ -205,8 +208,8 @@ async def pesapal_payment_callback(
                     "booking_id": str(booking.id),
                 },
             )
-
-            # Notify all admins
+               
+           # Notify all admins
             admin_emails = get_admin_emails(session)
             background_tasks.add_task(
                 send_email,
@@ -214,12 +217,18 @@ async def pesapal_payment_callback(
                 subject="[ADMIN] Payment Completed for Booking",
                 template_name="admin_payment_notification.html",
                 extra={
-                    "pnr": booking.amadeus_order_response.get(
-                        "associatedRecords", [{}]
-                    )[0].get("reference", "N/A"),
+                    "pnr": pnr,
                     "user_email": booking.user.email,
                     "booking_id": str(booking.id),
                 },
+            )
+
+            # Send in-app notification for payment success
+            await create_and_publish_notification(
+                db=session,
+                user_id=booking.user_id,
+                message=f"Payment successful for flight with PNR {pnr}",
+                notification_type=NotificationType.PAYMENT_SUCCESS,
             )
 
             return {
@@ -233,6 +242,15 @@ async def pesapal_payment_callback(
 
         elif payment_status_code == 2:  # FAILED
             update_booking_status(session, str(booking.id), BookingStatus.FAILED)
+
+            # Send in-app notification for payment failure
+            await create_and_publish_notification(
+                db=session,
+                user_id=booking.user_id,
+                message=f"Payment failed for flight with PNR {pnr}. Please try again.",
+                notification_type=NotificationType.PAYMENT_FAILED,
+            )
+
             return {
                 "status": "failed",
                 "message": f"Payment failed: {transaction_status.get('description', 'Unknown error')}",

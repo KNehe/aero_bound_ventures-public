@@ -91,3 +91,35 @@ def get_current_user(token: str = Depends(oauth2_scheme), session=Depends(get_se
     except InvalidTokenError:
         raise credentials_exception
     return user
+
+
+def get_user_from_token(token: str, session: Session) -> UserInDB:
+    """
+    Validate a JWT token and return the user.
+    Used for SSE endpoints where token is passed as query param.
+    
+    Args:
+        token: JWT access token
+        session: Database session
+        
+    Returns:
+        UserInDB if valid
+        
+    Raises:
+        HTTPException 401 if token is invalid
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+        user = session.exec(select(UserInDB).where(UserInDB.email == email)).first()
+        if user is None:
+            raise credentials_exception
+    except InvalidTokenError:
+        raise credentials_exception
+    return user

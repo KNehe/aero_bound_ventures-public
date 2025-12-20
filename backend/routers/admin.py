@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from backend.crud.database import get_session
 from backend.models.bookings import Booking
 from backend.models.constants import ADMIN_GROUP_NAME
@@ -44,8 +44,8 @@ async def get_booking_stats(
         unique_user_ids = set(booking.user_id for booking in bookings)
         active_users = len(unique_user_ids)
 
-        now = datetime.utcnow()
-        today_start = datetime(now.year, now.month, now.day)
+        now = datetime.now(timezone.utc)
+        today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
         bookings_today = sum(
             1 for booking in bookings if booking.created_at >= today_start
         )

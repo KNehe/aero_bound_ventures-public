@@ -8,7 +8,7 @@ from backend.utils.security import (
     hash_reset_token,
     verify_reset_token,
 )
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 
 
@@ -38,8 +38,8 @@ def create_password_reset_token(session: Session, email: str) -> Optional[str]:
     plain_token = generate_reset_token()
     hashed_token = hash_reset_token(plain_token)
 
-    # Set expiration to 1 hour from now (timezone-naive for PostgreSQL TIMESTAMP compatibility)
-    expires_at = datetime.now() + timedelta(hours=1)
+    # Set expiration to 1 hour from now
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
 
     # Update user with reset token
     user.reset_token = hashed_token
@@ -63,7 +63,7 @@ def verify_password_reset_token(session: Session, token: str) -> Optional[UserIn
     for user in users:
         # Check if token matches and hasn't expired
         if user.reset_token and verify_reset_token(token, user.reset_token):
-            if user.reset_token_expires and user.reset_token_expires > datetime.now():
+            if user.reset_token_expires and user.reset_token_expires > datetime.now(timezone.utc):
                 return user
 
     return None

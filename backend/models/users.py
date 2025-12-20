@@ -1,6 +1,7 @@
 from pydantic import EmailStr
 import uuid
 from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy import Column, DateTime
 from typing import TYPE_CHECKING
 from datetime import datetime
 
@@ -8,6 +9,7 @@ from .permissions import Group, Permission, UserGroup, UserPermission
 
 if TYPE_CHECKING:
     from .bookings import Booking
+    from .notifications import Notification
 
 
 class UserInDB(SQLModel, table=True):
@@ -15,15 +17,15 @@ class UserInDB(SQLModel, table=True):
     email: EmailStr = Field(index=True, unique=True)
     password: str
     reset_token: str | None = Field(default=None, nullable=True)
-    reset_token_expires: datetime | None = Field(default=None, nullable=True)
+    reset_token_expires: datetime | None = Field(
+        sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+
     is_active: bool = Field(default=True, nullable=False)
     is_superuser: bool = Field(default=False, nullable=False)
-
-    # Relationship to bookings
     bookings: list["Booking"] = Relationship(back_populates="user")
-
-    # Relationships for RBAC
     groups: list["Group"] = Relationship(back_populates="users", link_model=UserGroup)
     permissions: list["Permission"] = Relationship(
         back_populates="users", link_model=UserPermission
     )
+    notifications: list["Notification"] = Relationship(back_populates="user")

@@ -27,6 +27,8 @@ from backend.utils.log_manager import get_app_logger
 from sqlmodel import Session, select
 from backend.external_services.email import send_email
 from backend.crud.users import get_admin_emails
+from backend.models.notifications import NotificationType
+from backend.utils.notification_service import create_and_publish_notification
 
 
 logger = get_app_logger(__name__)
@@ -118,24 +120,10 @@ async def flight_order(
     logger.info(f"Flight order creation initiated by user_id: {current_user.id}")
 
     try:
-        logger.debug(
-            f"Preparing flight order request body for user_id: {current_user.id}"
-        )
         request_body = request.model_dump(by_alias=True)
 
-        logger.info(
-            f"Creating flight order with Amadeus service for user_id: {current_user.id}"
-        )
         response = amadeus_flight_service.create_flight_order(request_body)
         flight_order_id = response.get("id")
-
-        logger.info(
-            f"Flight order created successfully: {flight_order_id} for user_id: {current_user.id}"
-        )
-
-        logger.debug(
-            f"Saving booking record for user_id: {current_user.id}, flight_order_id: {flight_order_id}"
-        )
         total_price = 0.0
         if response:
             flight_offers = response.get("flightOffers", [])
@@ -147,8 +135,6 @@ async def flight_order(
                 except (ValueError, TypeError):
                     logger.warning(f"Failed to parse grandTotal: {grand_total}")
                     total_price = 0.0
-
-        logger.info(f"Extracted total_price: {total_price} for booking")
 
         booking = Booking(
             user_id=current_user.id,
@@ -165,15 +151,15 @@ async def flight_order(
 
         session.expunge(booking)
 
+        pnr = response.get("associatedRecords", [{}])[0].get("reference", "N/A")
+
         background_tasks.add_task(
             send_email,
             recipients=[current_user.email],
             subject="Your Booking Order Received : Aero Bound Ventures",
             template_name="order_confirmation.html",
             extra={
-                "pnr": response.get("associatedRecords", [{}])[0].get(
-                    "reference", "N/A"
-                ),
+                "pnr": pnr,
                 "booking_id": str(booking_id),
             },
         )
@@ -186,9 +172,7 @@ async def flight_order(
             subject="[ADMIN] New Booking Order Placed",
             template_name="admin_order_notification.html",
             extra={
-                "pnr": response.get("associatedRecords", [{}])[0].get(
-                    "reference", "N/A"
-                ),
+                "pnr": pnr,
                 "user_email": current_user.email,
                 "booking_id": str(booking_id),
             },
@@ -198,6 +182,14 @@ async def flight_order(
             id=booking_id,
             flight_order_id=booking_flight_order_id,
             status=booking_status,
+        )
+
+        # Send in-app notification for booking confirmation
+        await create_and_publish_notification(
+            db=session,
+            user_id=current_user.id,
+            message=f"Your flight booking has been confirmed. PNR: {pnr}",
+            notification_type=NotificationType.BOOKING_CONFIRMED,
         )
 
         logger.info(

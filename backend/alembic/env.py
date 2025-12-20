@@ -8,16 +8,20 @@ from sqlalchemy import pool
 
 from alembic import context
 
-# Import all models for autogenerate support
-from sqlmodel import SQLModel
-
-# Add the backend directory to the path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# Add the parent directory (containing 'backend' package) to the path
+# This must happen BEFORE importing backend modules
+backend_dir = Path(__file__).resolve().parent.parent  # /app/backend
+project_root = backend_dir.parent  # /app (contains 'backend' package)
+sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(backend_dir))
 
 # Load environment variables
 from dotenv import load_dotenv
-
 load_dotenv()
+
+# Import all models for autogenerate support (AFTER path is set)
+from backend.models import *  # noqa: F401,F403
+from sqlmodel import SQLModel
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
