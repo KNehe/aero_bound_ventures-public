@@ -10,7 +10,39 @@ from guard.models import SecurityConfig
 
 load_dotenv()
 
-app = FastAPI()
+from contextlib import asynccontextmanager
+import asyncio
+from backend.utils.kafka import kafka_producer
+from backend.utils.consumer import notification_consumer
+from backend.consumers.user_notifications import process_user_notifications
+from backend.consumers.booking_notifications import process_booking_notifications
+from backend.consumers.payment_notifications import process_payment_notifications
+from backend.consumers.ticket_notifications import process_ticket_notifications
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    init_db()
+    kafka_producer.start()
+    
+    # Register handlers for the unified notification consumer
+    notification_consumer.register_handler("user.events", process_user_notifications)
+    notification_consumer.register_handler("booking.events", process_booking_notifications)
+    notification_consumer.register_handler("payment.events", process_payment_notifications)
+    notification_consumer.register_handler("ticket.events", process_ticket_notifications)
+    
+    # Start the single unified consumer thread
+    loop = asyncio.get_running_loop()
+    notification_consumer.start(loop)
+    
+    yield
+    
+    # Shutdown
+    notification_consumer.stop()
+    kafka_producer.stop()
+
+
+app = FastAPI(lifespan=lifespan)
 
 security_config = SecurityConfig(
     rate_limit=int(os.getenv("RATE_LIMIT", 100)),
@@ -25,7 +57,7 @@ security_config = SecurityConfig(
     passive_mode=bool(os.getenv("PASSIVE_MODE", True)),
 )
 
-origins = os.getenv("CORS_ORIGINS", "").split(",")
+origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,11 +68,6 @@ app.add_middleware(
 )
 
 app.add_middleware(SecurityMiddleware, config=security_config)
-
-
-@app.on_event("startup")
-def startup():
-    init_db()
 
 
 app.include_router(users.router)
