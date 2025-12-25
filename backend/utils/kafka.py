@@ -1,22 +1,23 @@
-import asyncio
 import json
 import logging
 import os
-import threading
-from typing import Any, Callable, Dict
-from confluent_kafka import Producer, Consumer, KafkaError, Message
+from typing import Any, Dict
+from confluent_kafka import Producer
 
 logger = logging.getLogger(__name__)
 
+
 class KafkaProducer:
     _instance = None
-    
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(KafkaProducer, cls).__new__(cls)
             cls._instance.producer = None
             # Use 'kafka:29092' for internal docker comms by default
-            cls._instance.bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:29092")
+            cls._instance.bootstrap_servers = os.getenv(
+                "KAFKA_BOOTSTRAP_SERVERS", "kafka:29092"
+            )
         return cls._instance
 
     def start(self):
@@ -24,8 +25,8 @@ class KafkaProducer:
             return
 
         conf = {
-            'bootstrap.servers': self.bootstrap_servers,
-            'client.id': 'fastapi-producer',
+            "bootstrap.servers": self.bootstrap_servers,
+            "client.id": "fastapi-producer",
         }
         try:
             self.producer = Producer(conf)
@@ -43,7 +44,7 @@ class KafkaProducer:
 
     def _delivery_report(self, err, msg):
         if err:
-             logger.error(f"Message delivery failed: {err}")
+            logger.error(f"Message delivery failed: {err}")
         else:
             logger.debug(f"Message delivered to {msg.topic()} [{msg.partition()}]")
 
@@ -53,19 +54,20 @@ class KafkaProducer:
         We call poll(0) to trigger callbacks.
         """
         if not self.producer:
-            logger.warning(f"Kafka producer is not initialized. Message to {topic} skipped.")
+            logger.warning(
+                f"Kafka producer is not initialized. Message to {topic} skipped."
+            )
             return
-        
+
         try:
             value = json.dumps(message).encode("utf-8")
             self.producer.produce(
-                topic=topic,
-                value=value,
-                callback=self._delivery_report
+                topic=topic, value=value, callback=self._delivery_report
             )
             # Serves delivery reports from previous produce() calls.
             self.producer.poll(0)
         except Exception as e:
             logger.error(f"Failed to send message to {topic}: {e}")
+
 
 kafka_producer = KafkaProducer()

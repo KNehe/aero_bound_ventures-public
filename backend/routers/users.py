@@ -10,12 +10,9 @@ from backend.crud.users import (
     verify_password_reset_token,
     update_password_with_token,
 )
+from backend.models.kafka_topics import KafkaTopics, KafkaEvents
 from sqlmodel import Session
-from backend.external_services.email import (
-    send_password_reset_email,
-    send_welcome_email,
-)
-from fastapi import BackgroundTasks
+from backend.utils.kafka import kafka_producer
 from fastapi.security import OAuth2PasswordRequestForm
 from backend.schemas.auth import (
     ChangePasswordRequest,
@@ -46,7 +43,6 @@ logger = get_app_logger(__name__)
 
 @router.post("/register/", response_model=UserRead)
 async def register(
-    background_tasks: BackgroundTasks,
     user_in: UserCreate,
     session: Session = Depends(get_session),
 ):
@@ -58,8 +54,15 @@ async def register(
 
     user = create_user(session, email=user_in.email, password=user_in.password)
 
-    # Send welcome email
-    background_tasks.add_task(send_welcome_email, user_in.email)
+    # Send welcome email via Kafka
+    kafka_producer.send(
+        KafkaTopics.USER_EVENTS,
+        {
+            "event_type": KafkaEvents.USER_REGISTERED,
+            "email": user.email,
+            "user_id": str(user.id),
+        },
+    )
 
     return user
 
@@ -110,7 +113,6 @@ async def login(
 
 @router.post("/forgot-password/", response_model=ResetPasswordResponse)
 async def forgot_password(
-    background_tasks: BackgroundTasks,
     request: ForgotPasswordRequest,
     session: Session = Depends(get_session),
 ):
@@ -122,12 +124,17 @@ async def forgot_password(
         # Create reset token
         reset_token = create_password_reset_token(session, request.email)
 
-        # Send email only if user exists
+        # Send email only if user exists via Kafka
         if reset_token:
-            background_tasks.add_task(
-                send_password_reset_email, request.email, reset_token
+            kafka_producer.send(
+                KafkaTopics.USER_EVENTS,
+                {
+                    "event_type": KafkaEvents.PASSWORD_RESET_REQUESTED,
+                    "email": request.email,
+                    "reset_token": reset_token,
+                },
             )
-            logger.info(f"Password reset email sent to {request.email}")
+            logger.info(f"Password reset email event sent for {request.email}")
         else:
             # Log attempt for non-existent email but don't reveal this to user
             logger.warning(

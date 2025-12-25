@@ -5,9 +5,11 @@ from backend.crud.database import engine
 from backend.external_services.email import send_email
 from backend.crud.users import get_admin_emails
 from backend.models.notifications import NotificationType
+from backend.models.kafka_topics import KafkaEvents
 from backend.utils.notification_service import create_and_publish_notification
 
 logger = logging.getLogger(__name__)
+
 
 async def process_booking_notifications(message: dict):
     """Handler for booking.events topic"""
@@ -24,13 +26,14 @@ async def process_booking_notifications(message: dict):
     logger.info(f"Processing booking event: {event_type} for booking {booking_id}")
 
     try:
-        if event_type == "booking_created":
+        if event_type == KafkaEvents.BOOKING_CREATED:
             await _handle_booking_created(booking_id, pnr, user_email, user_id)
         else:
             logger.warning(f"Unknown booking event type: {event_type}")
 
     except Exception as e:
         logger.error(f"Failed to process booking event {event_type}: {e}")
+
 
 async def _handle_booking_created(booking_id, pnr, user_email, user_id):
     # 1. Send Customer Confirmation Email
@@ -60,7 +63,7 @@ async def _handle_booking_created(booking_id, pnr, user_email, user_id):
                 },
             )
             logger.info(f"Admin notification email sent to {len(admin_emails)} admins")
-        
+
         # 3. Create In-App Notification (if user_id provided)
         if user_id:
             try:
@@ -73,5 +76,6 @@ async def _handle_booking_created(booking_id, pnr, user_email, user_id):
                 )
                 logger.info("In-app notification created for booking confirmation")
             except Exception as e:
-                logger.error(f"Failed to create inside consumer in-app notification: {e}")
-
+                logger.error(
+                    f"Failed to create inside consumer in-app notification: {e}"
+                )

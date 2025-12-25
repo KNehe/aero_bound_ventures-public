@@ -5,9 +5,11 @@ from backend.crud.database import engine
 from backend.external_services.email import send_email
 from backend.crud.users import get_admin_users
 from backend.models.notifications import NotificationType
+from backend.models.kafka_topics import KafkaEvents
 from backend.utils.notification_service import create_and_publish_notification
 
 logger = logging.getLogger(__name__)
+
 
 async def process_ticket_notifications(message: dict):
     """Handler for ticket.events topic"""
@@ -25,7 +27,7 @@ async def process_ticket_notifications(message: dict):
     logger.info(f"Processing ticket event: {event_type} for booking {booking_id}")
 
     try:
-        if event_type == "ticket_uploaded":
+        if event_type == KafkaEvents.TICKET_UPLOADED:
             await _handle_ticket_uploaded(pnr, booking_id, user_id, user_email)
         else:
             logger.warning(f"Unknown ticket event type: {event_type}")
@@ -33,10 +35,11 @@ async def process_ticket_notifications(message: dict):
     except Exception as e:
         logger.error(f"Failed to process ticket event {event_type}: {e}")
 
+
 async def _handle_ticket_uploaded(pnr, booking_id, user_id, user_email):
     # 1. Send Email to User
     if user_email:
-         await send_email(
+        await send_email(
             recipients=[user_email],
             subject="Ticket Uploaded Successfully : Aero Bound Ventures",
             template_name="ticket_upload_success.html",
@@ -45,7 +48,7 @@ async def _handle_ticket_uploaded(pnr, booking_id, user_id, user_email):
                 "booking_id": booking_id,
             },
         )
-         logger.info(f"Ticket upload email sent to {user_email}")
+        logger.info(f"Ticket upload email sent to {user_email}")
 
     with Session(engine) as session:
         # 2. In-App Notification for User

@@ -3,16 +3,19 @@ import json
 import logging
 import os
 import threading
-from typing import Any, Callable, Dict, List
+from typing import Callable, Dict
 from confluent_kafka import Consumer, KafkaError
+from backend.models.kafka_topics import KAFKA_GROUP_ID
 
 logger = logging.getLogger(__name__)
+
 
 class EventConsumer:
     """
     Unified Kafka Consumer that subscribes to multiple topics and dispatches
     events to registered handlers. Runs in a single background thread.
     """
+
     def __init__(self, group_id: str):
         self.group_id = group_id
         self.bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:29092")
@@ -34,18 +37,18 @@ class EventConsumer:
 
         self.loop = loop
         topics = list(self.handlers.keys())
-        
+
         conf = {
-            'bootstrap.servers': self.bootstrap_servers,
-            'group.id': self.group_id,
-            'auto.offset.reset': 'earliest'
+            "bootstrap.servers": self.bootstrap_servers,
+            "group.id": self.group_id,
+            "auto.offset.reset": "earliest",
         }
 
         try:
             self.consumer = Consumer(conf)
             self.consumer.subscribe(topics)
             self.running = True
-            
+
             self.thread = threading.Thread(target=self._run, daemon=True)
             self.thread.start()
             logger.info(f"Unified EventConsumer started for topics: {topics}")
@@ -57,7 +60,7 @@ class EventConsumer:
         self.running = False
         if self.thread:
             self.thread.join(timeout=5.0)
-        
+
         if self.consumer:
             self.consumer.close()
             logger.info("Unified EventConsumer stopped")
@@ -80,7 +83,7 @@ class EventConsumer:
 
             try:
                 data = json.loads(msg.value().decode("utf-8"))
-                
+
                 # Dispatch to main event loop safely
                 if self.loop and not self.loop.is_closed():
                     future = asyncio.run_coroutine_threadsafe(handler(data), self.loop)
@@ -89,5 +92,6 @@ class EventConsumer:
             except Exception as e:
                 logger.error(f"Error processing message from {topic}: {e}")
 
+
 # Global instance for easy access
-notification_consumer = EventConsumer(group_id="notification_service_group")
+notification_consumer = EventConsumer(group_id=KAFKA_GROUP_ID)

@@ -1,8 +1,10 @@
 """Payment endpoints for Pesapal integration"""
 
 import os
-from fastapi import APIRouter, HTTPException, Depends, status, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, status
 from sqlmodel import Session
+from backend.utils.kafka import kafka_producer
+from backend.models.kafka_topics import KafkaTopics, KafkaEvents
 
 from backend.crud.database import get_session
 from backend.external_services.pesapal import pesapal_client
@@ -16,10 +18,6 @@ from backend.utils.security import get_current_user
 from backend.models.users import UserInDB
 from backend.crud.bookings import get_booking_by_id, update_booking_status
 from backend.utils.log_manager import get_app_logger
-from backend.external_services.email import send_email
-from backend.crud.users import get_admin_emails
-from backend.models.notifications import NotificationType
-from backend.utils.notification_service import create_and_publish_notification
 
 
 logger = get_app_logger(__name__)
@@ -131,7 +129,6 @@ async def initiate_pesapal_payment(
 
 @router.get("/pesapal/callback")
 async def pesapal_payment_callback(
-    background_tasks: BackgroundTasks,
     OrderTrackingId: str,
     OrderMerchantReference: str,
     session: Session = Depends(get_session),
@@ -169,8 +166,10 @@ async def pesapal_payment_callback(
                 "message": "Booking not found",
                 "order_tracking_id": OrderTrackingId,
             }
-        
-        pnr = booking.amadeus_order_response.get("associatedRecords", [{}])[0].get("reference", "N/A")
+
+        pnr = booking.amadeus_order_response.get("associatedRecords", [{}])[0].get(
+            "reference", "N/A"
+        )
         # 2. Fetch transaction status from Pesapal
         try:
             transaction_status = await pesapal_client.get_transaction_status(
@@ -196,39 +195,16 @@ async def pesapal_payment_callback(
         if payment_status_code == 1:  # COMPLETED
             update_booking_status(session, str(booking.id), BookingStatus.PAID)
 
-            background_tasks.add_task(
-                send_email,
-                recipients=[booking.user.email],
-                subject="Payment Successful : Aero Bound Ventures",
-                template_name="payment_success.html",
-                extra={
-                    "pnr": booking.amadeus_order_response.get(
-                        "associatedRecords", [{}]
-                    )[0].get("reference", "N/A"),
+            # Trigger Payment Success Event via Kafka
+            kafka_producer.send(
+                KafkaTopics.PAYMENT_EVENTS,
+                {
+                    "event_type": KafkaEvents.PAYMENT_SUCCESSFUL,
                     "booking_id": str(booking.id),
-                },
-            )
-               
-           # Notify all admins
-            admin_emails = get_admin_emails(session)
-            background_tasks.add_task(
-                send_email,
-                recipients=admin_emails,
-                subject="[ADMIN] Payment Completed for Booking",
-                template_name="admin_payment_notification.html",
-                extra={
                     "pnr": pnr,
                     "user_email": booking.user.email,
-                    "booking_id": str(booking.id),
+                    "user_id": str(booking.user_id),
                 },
-            )
-
-            # Send in-app notification for payment success
-            await create_and_publish_notification(
-                db=session,
-                user_id=booking.user_id,
-                message=f"Payment successful for flight with PNR {pnr}",
-                notification_type=NotificationType.PAYMENT_SUCCESS,
             )
 
             return {
@@ -243,12 +219,16 @@ async def pesapal_payment_callback(
         elif payment_status_code == 2:  # FAILED
             update_booking_status(session, str(booking.id), BookingStatus.FAILED)
 
-            # Send in-app notification for payment failure
-            await create_and_publish_notification(
-                db=session,
-                user_id=booking.user_id,
-                message=f"Payment failed for flight with PNR {pnr}. Please try again.",
-                notification_type=NotificationType.PAYMENT_FAILED,
+            # Trigger Payment Failure Event via Kafka
+            kafka_producer.send(
+                KafkaTopics.PAYMENT_EVENTS,
+                {
+                    "event_type": KafkaEvents.PAYMENT_FAILED,
+                    "booking_id": str(booking.id),
+                    "pnr": pnr,
+                    "user_id": str(booking.user_id),
+                    "reason": transaction_status.get("description", "Unknown error"),
+                },
             )
 
             return {
@@ -295,7 +275,6 @@ async def pesapal_payment_callback(
 
 @router.get("/pesapal/ipn")
 async def pesapal_ipn_notification(
-    background_tasks: BackgroundTasks,
     OrderTrackingId: str | None = None,
     OrderMerchantReference: str | None = None,
     OrderNotificationType: str | None = None,
@@ -352,12 +331,18 @@ async def pesapal_ipn_notification(
         payment_status_code = transaction_status.get("status_code")
 
         if payment_status_code == 1:  # COMPLETED
-            update_booking_status(session, str(booking.id), BookingStatus.PAID)
-            background_tasks.add_task(
-                send_email,
-                recipients=[booking.user.email],
-                subject="Payment Successful : Aero Bound Ventures",
-                template_name="payment_success.html",
+            # Trigger Payment Success Event via Kafka
+            kafka_producer.send(
+                KafkaTopics.PAYMENT_EVENTS,
+                {
+                    "event_type": KafkaEvents.PAYMENT_SUCCESSFUL,
+                    "booking_id": str(booking.id),
+                    "pnr": booking.amadeus_order_response.get(
+                        "associatedRecords", [{}]
+                    )[0].get("reference", "N/A"),
+                    "user_email": booking.user.email,
+                    "user_id": str(booking.user_id),
+                },
             )
         elif payment_status_code == 2:  # FAILED
             update_booking_status(

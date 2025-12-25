@@ -1,42 +1,50 @@
+import os
+import asyncio
+from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.routers import users
+from backend.routers import users, flights, payments, admin, tickets, notifications
 from backend.crud.database import init_db
-from backend.routers import flights, payments, admin, tickets, notifications
-from dotenv import load_dotenv
-import os
 from guard.middleware import SecurityMiddleware
 from guard.models import SecurityConfig
-
-load_dotenv()
-
-from contextlib import asynccontextmanager
-import asyncio
 from backend.utils.kafka import kafka_producer
 from backend.utils.consumer import notification_consumer
 from backend.consumers.user_notifications import process_user_notifications
 from backend.consumers.booking_notifications import process_booking_notifications
 from backend.consumers.payment_notifications import process_payment_notifications
 from backend.consumers.ticket_notifications import process_ticket_notifications
+from backend.models.kafka_topics import KafkaTopics
+
+load_dotenv()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     init_db()
     kafka_producer.start()
-    
+
     # Register handlers for the unified notification consumer
-    notification_consumer.register_handler("user.events", process_user_notifications)
-    notification_consumer.register_handler("booking.events", process_booking_notifications)
-    notification_consumer.register_handler("payment.events", process_payment_notifications)
-    notification_consumer.register_handler("ticket.events", process_ticket_notifications)
-    
+    notification_consumer.register_handler(
+        KafkaTopics.USER_EVENTS, process_user_notifications
+    )
+    notification_consumer.register_handler(
+        KafkaTopics.BOOKING_EVENTS, process_booking_notifications
+    )
+    notification_consumer.register_handler(
+        KafkaTopics.PAYMENT_EVENTS, process_payment_notifications
+    )
+    notification_consumer.register_handler(
+        KafkaTopics.TICKET_EVENTS, process_ticket_notifications
+    )
+
     # Start the single unified consumer thread
     loop = asyncio.get_running_loop()
     notification_consumer.start(loop)
-    
+
     yield
-    
+
     # Shutdown
     notification_consumer.stop()
     kafka_producer.stop()
@@ -57,7 +65,9 @@ security_config = SecurityConfig(
     passive_mode=bool(os.getenv("PASSIVE_MODE", True)),
 )
 
-origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+origins = os.getenv(
+    "CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+).split(",")
 
 app.add_middleware(
     CORSMiddleware,

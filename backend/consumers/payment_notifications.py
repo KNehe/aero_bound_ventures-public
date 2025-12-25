@@ -5,9 +5,11 @@ from backend.crud.database import engine
 from backend.external_services.email import send_email
 from backend.crud.users import get_admin_emails
 from backend.models.notifications import NotificationType
+from backend.models.kafka_topics import KafkaEvents
 from backend.utils.notification_service import create_and_publish_notification
 
 logger = logging.getLogger(__name__)
+
 
 async def process_payment_notifications(message: dict):
     """Handler for payment.events topic"""
@@ -24,10 +26,12 @@ async def process_payment_notifications(message: dict):
     logger.info(f"Processing payment event: {event_type} for booking {booking_id}")
 
     try:
-         with Session(engine) as session:
-            if event_type == "payment_successful":
-                await _handle_payment_success(session, booking_id, pnr, user_email, user_id)
-            elif event_type == "payment_failed":
+        with Session(engine) as session:
+            if event_type == KafkaEvents.PAYMENT_SUCCESSFUL:
+                await _handle_payment_success(
+                    session, booking_id, pnr, user_email, user_id
+                )
+            elif event_type == KafkaEvents.PAYMENT_FAILED:
                 reason = message.get("reason", "Unknown")
                 await _handle_payment_failure(session, pnr, user_id, reason)
             else:
@@ -35,6 +39,7 @@ async def process_payment_notifications(message: dict):
 
     except Exception as e:
         logger.error(f"Failed to process payment event {event_type}: {e}")
+
 
 async def _handle_payment_success(session, booking_id, pnr, user_email, user_id):
     # 1. Send Customer Email
@@ -64,7 +69,7 @@ async def _handle_payment_success(session, booking_id, pnr, user_email, user_id)
             },
         )
         logger.info(f"Admin payment notification sent to {len(admin_emails)} admins")
-    
+
     # 3. In-App Notification
     if user_id:
         try:
@@ -76,11 +81,12 @@ async def _handle_payment_success(session, booking_id, pnr, user_email, user_id)
                 notification_type=NotificationType.PAYMENT_SUCCESS,
             )
         except Exception as e:
-             logger.error(f"Failed to create success in-app notification: {e}")
+            logger.error(f"Failed to create success in-app notification: {e}")
+
 
 async def _handle_payment_failure(session, pnr, user_id, reason):
-     # In-App Notification for Failure
-     if user_id:
+    # In-App Notification for Failure
+    if user_id:
         try:
             user_uuid = uuid.UUID(user_id)
             await create_and_publish_notification(
@@ -91,5 +97,4 @@ async def _handle_payment_failure(session, pnr, user_id, reason):
             )
             logger.info(f"Payment failure notification created for user {user_id}")
         except Exception as e:
-             logger.error(f"Failed to create failure in-app notification: {e}")
-
+            logger.error(f"Failed to create failure in-app notification: {e}")
