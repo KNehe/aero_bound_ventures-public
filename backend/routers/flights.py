@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Query, Depends, Path, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Query, Depends, Path
+
 from backend.external_services.flight import amadeus_flight_service
 from backend.schemas.flights import (
     FlightSearchResponse,
@@ -25,10 +26,9 @@ from backend.schemas.bookings import BookingResponse, UserBookingResponse
 from backend.crud.database import get_session
 from backend.utils.log_manager import get_app_logger
 from sqlmodel import Session, select
-from backend.external_services.email import send_email
-from backend.crud.users import get_admin_emails
-from backend.models.notifications import NotificationType
-from backend.utils.notification_service import create_and_publish_notification
+from backend.utils.kafka import kafka_producer
+
+from backend.utils.constants import KafkaTopics, KafkaEventTypes
 
 
 logger = get_app_logger(__name__)
@@ -104,7 +104,6 @@ async def confirm_price(request: FlightOffer):
 
 @router.post("/booking/flight-orders", response_model=BookingResponse)
 async def flight_order(
-    background_tasks: BackgroundTasks,
     request: FlightOrderRequestBody,
     current_user: UserInDB = Depends(get_current_user),
     session: Session = Depends(get_session),
@@ -153,28 +152,14 @@ async def flight_order(
 
         pnr = response.get("associatedRecords", [{}])[0].get("reference", "N/A")
 
-        background_tasks.add_task(
-            send_email,
-            recipients=[current_user.email],
-            subject="Your Booking Order Received : Aero Bound Ventures",
-            template_name="order_confirmation.html",
-            extra={
-                "pnr": pnr,
+        kafka_producer.send(
+            KafkaTopics.BOOKING_EVENTS,
+            {
+                "event_type": KafkaEventTypes.BOOKING_CREATED,
                 "booking_id": str(booking_id),
-            },
-        )
-
-        # Notify all admins
-        admin_emails = get_admin_emails(session)
-        background_tasks.add_task(
-            send_email,
-            recipients=admin_emails,
-            subject="[ADMIN] New Booking Order Placed",
-            template_name="admin_order_notification.html",
-            extra={
+                "user_id": str(current_user.id),
                 "pnr": pnr,
                 "user_email": current_user.email,
-                "booking_id": str(booking_id),
             },
         )
 
@@ -182,14 +167,6 @@ async def flight_order(
             id=booking_id,
             flight_order_id=booking_flight_order_id,
             status=booking_status,
-        )
-
-        # Send in-app notification for booking confirmation
-        await create_and_publish_notification(
-            db=session,
-            user_id=current_user.id,
-            message=f"Your flight booking has been confirmed. PNR: {pnr}",
-            notification_type=NotificationType.BOOKING_CONFIRMED,
         )
 
         logger.info(

@@ -11,6 +11,13 @@ from backend.crud.database import get_session
 from backend.utils.security import get_current_user
 from backend.models.users import UserInDB
 from backend.utils.permissions import PermissionChecker
+from backend.utils.consumer import EventConsumer
+from backend.utils.constants import KAFKA_GROUP_ID
+
+# Create a single global instance for the application lifespan
+# This follows the Dependency Injection pattern where we configure it once
+# and pass it to the lifespan handler.
+notification_consumer = EventConsumer(group_id=KAFKA_GROUP_ID)
 
 
 # FastAPI dependency classes for route protection

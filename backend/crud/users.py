@@ -63,7 +63,9 @@ def verify_password_reset_token(session: Session, token: str) -> Optional[UserIn
     for user in users:
         # Check if token matches and hasn't expired
         if user.reset_token and verify_reset_token(token, user.reset_token):
-            if user.reset_token_expires and user.reset_token_expires > datetime.now(timezone.utc):
+            if user.reset_token_expires and user.reset_token_expires > datetime.now(
+                timezone.utc
+            ):
                 return user
 
     return None
@@ -112,7 +114,7 @@ def get_admin_emails(session: Session) -> List[str]:
 
 
 def get_admin_users(session: Session):
-    """ " Get all users who belong to the admin group"""
+    """Get all users who belong to the admin group"""
     statement = (
         select(UserInDB)
         .join(UserGroup)

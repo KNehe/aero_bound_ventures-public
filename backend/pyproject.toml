@@ -8,6 +8,7 @@ dependencies = [
     "alembic>=1.17.2",
     "amadeus>=12.0.0",
     "cloudinary>=1.44.1",
+    "confluent-kafka>=2.12.2",
     "email-validator>=2.2.0",
     "fastapi-guard>=4.2.2",
     "fastapi-mail>=1.5.0",
