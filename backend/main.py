@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.routers import users
 from backend.crud.database import init_db
-from backend.routers import flights, payments, admin, tickets, notifications
+from backend.routers import flights, payments, admin, tickets, notifications, health
 from dotenv import load_dotenv
 import os
 from guard.middleware import SecurityMiddleware
@@ -84,6 +84,7 @@ app.include_router(payments.router)
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
 app.include_router(tickets.router)
 app.include_router(notifications.router)
+app.include_router(health.router)
 
 
 @app.get("/")
