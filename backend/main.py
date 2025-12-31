@@ -16,6 +16,7 @@ from backend.consumers.payment_notifications import process_payment_notification
 from backend.consumers.ticket_notifications import process_ticket_notifications
 from backend.utils.constants import KafkaTopics
 import asyncio
+from prometheus_fastapi_instrumentator import Instrumentator
 
 load_dotenv()
 
@@ -52,6 +53,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+Instrumentator().instrument(app).expose(app)
 
 security_config = SecurityConfig(
     rate_limit=int(os.getenv("RATE_LIMIT", 100)),
