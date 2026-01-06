@@ -122,3 +122,33 @@ def get_admin_users(session: Session):
         .where(Group.name == ADMIN_GROUP_NAME)
     )
     return session.exec(statement).all()
+
+
+def get_user_by_google_id(session: Session, google_id: str) -> Optional[UserInDB]:
+    """Find a user by their Google ID."""
+    return session.exec(select(UserInDB).where(UserInDB.google_id == google_id)).first()
+
+
+def create_google_user(session: Session, email: str, google_id: str) -> UserInDB:
+    """Create a new user from Google OAuth."""
+    user = UserInDB(
+        email=email,
+        google_id=google_id,
+        auth_provider="google",
+        password=None,
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
+def link_google_account(session: Session, user: UserInDB, google_id: str) -> UserInDB:
+    """Link a Google account to an existing user."""
+    user.google_id = google_id
+    if user.auth_provider == "email":
+        user.auth_provider = "google"
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user

@@ -24,12 +24,35 @@ class GroupRead(BaseModel):
         from_attributes = True
 
 
+class GroupResponse(BaseModel):
+    id: str
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
 class UserInfo(BaseModel):
     """User information included in token response"""
 
     id: uuid.UUID
     email: str
+    auth_provider: str = "email"
     groups: list[GroupRead] = []
+
+    class Config:
+        from_attributes = True
+
+
+class UserResponse(BaseModel):
+    """User response schema"""
+
+    id: str
+    email: str
+    is_active: bool
+    is_superuser: bool
+    auth_provider: str
+    groups: list[GroupResponse]
 
     class Config:
         from_attributes = True

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import SignupModal from "../../components/SignupModal";
-import LoginModal from "../../components/LoginModal";
 import UserAccount from "../../components/UserAccount";
 
 // Sample user data
@@ -53,8 +53,8 @@ const sampleBookings = [
 ];
 
 export default function AuthDemoPage() {
+  const router = useRouter();
   const [showSignup, setShowSignup] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const handleSignupSuccess = () => {
@@ -62,9 +62,8 @@ export default function AuthDemoPage() {
     alert("Account created successfully! You are now logged in.");
   };
 
-  const handleLoginSuccess = () => {
-    setIsLoggedIn(true);
-    alert("Logged in successfully!");
+  const handleLoginClick = () => {
+    router.push("/auth/login");
   };
 
   const handleLogout = () => {
@@ -110,7 +109,7 @@ export default function AuthDemoPage() {
             <h1 className="text-xl font-semibold text-gray-900">Aero Bound Ventures</h1>
             <div className="flex space-x-4">
               <button
-                onClick={() => setShowLogin(true)}
+                onClick={() => handleLoginClick()}
                 className="text-gray-600 hover:text-gray-800 font-medium"
               >
                 Sign In
@@ -170,7 +169,7 @@ export default function AuthDemoPage() {
                 Access your existing account to view bookings and manage your profile.
               </p>
               <button
-                onClick={() => setShowLogin(true)}
+                onClick={() => handleLoginClick()}
                 className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 font-medium"
               >
                 Sign In
@@ -222,12 +221,7 @@ export default function AuthDemoPage() {
         bookingId="DEMO123"
       />
 
-      <LoginModal
-        isOpen={showLogin}
-        onClose={() => setShowLogin(false)}
-        onSuccess={handleLoginSuccess}
-        onSwitchToSignup={handleSwitchToSignup}
-      />
+
     </div>
   );
 } 

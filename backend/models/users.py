@@ -15,7 +15,9 @@ if TYPE_CHECKING:
 class UserInDB(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, nullable=False)
     email: EmailStr = Field(index=True, unique=True)
-    password: str
+    password: str | None = Field(default=None, nullable=True)
+    google_id: str | None = Field(default=None, nullable=True, index=True, unique=True)
+    auth_provider: str = Field(default="email")
     reset_token: str | None = Field(default=None, nullable=True)
     reset_token_expires: datetime | None = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True)
