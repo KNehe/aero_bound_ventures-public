@@ -15,8 +15,8 @@ from backend.consumers.booking_notifications import process_booking_notification
 from backend.consumers.payment_notifications import process_payment_notifications
 from backend.consumers.ticket_notifications import process_ticket_notifications
 from backend.utils.constants import KafkaTopics
-import asyncio
 from prometheus_fastapi_instrumentator import Instrumentator
+import asyncio
 
 load_dotenv()
 
@@ -65,7 +65,7 @@ security_config = SecurityConfig(
     auto_ban_threshold=int(os.getenv("AUTO_BAN_THRESHOLD", 5)),
     auto_ban_duration=int(os.getenv("AUTO_BAN_DURATION", 86400)),
     enable_penetration_detection=bool(os.getenv("ENABLE_PENETRATION_DETECTION", True)),
-    custom_log_file=os.getenv("CUSTOM_LOG_FILE", "security.log"),
+    custom_log_file=None,
     # Log suspicious activity but don't block for testing
     passive_mode=bool(os.getenv("PASSIVE_MODE", True)),
 )

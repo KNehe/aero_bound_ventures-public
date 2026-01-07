@@ -17,5 +17,4 @@ terraform/terraform.tfvars.json
 .github/copilot-instructions.md
 
 # Logs
-backend.log
-security.log
+.logs/

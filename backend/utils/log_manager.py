@@ -1,9 +1,10 @@
 import logging
 import sys
 from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
 from typing import Optional
 
-DEFAULT_LOG_FILE = "backend.log"
+DEFAULT_LOG_FILE = "./.logs/backend.log"
 DEFAULT_LOG_LEVEL = logging.DEBUG
 DEFAULT_LOG_FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(lineno)d |%(message)s"
 
@@ -29,6 +30,11 @@ class LogManager:
         """
         Initializes and configures the main global settings for all loggers
         """
+        # Ensure log file exists for Promtail to track
+        log_path = Path(DEFAULT_LOG_FILE)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.touch(exist_ok=True)
+
         root_logger = logging.getLogger()
         root_logger.setLevel(DEFAULT_LOG_LEVEL)
 
@@ -73,6 +79,20 @@ class LogManager:
 
         return self._loggers[name]
 
+    def setup_security_logger(self) -> None:
+        """
+        Configures the `fastapi_guard` logger.
+        Security logs propagate to root logger which writes to backend.log.
+        """
+        logger = logging.getLogger("fastapi_guard")
+        logger.setLevel(DEFAULT_LOG_LEVEL)
+
+        # Allow propagation to root logger so security logs go to backend.log
+        logger.propagate = True
+
+        self._loggers["fastapi_guard"] = logger
+        logger.info("Security logger configured successfully")
+
 
 log_manager = LogManager()
 
@@ -81,4 +101,5 @@ def get_app_logger(name: str = __name__) -> logging.Logger:
     """
     Public convenience function. All other files call this to get their logger
     """
+    log_manager.setup_security_logger()
     return log_manager.get_logger(name)
