@@ -7,12 +7,15 @@ from datetime import datetime, timezone
 if TYPE_CHECKING:
     from .users import UserInDB
 
+
 class NotificationType:
     TICKET_UPLOADED = "ticket_uploaded"
     PAYMENT_SUCCESS = "payment_success"
     PAYMENT_FAILED = "payment_failed"
     BOOKING_CONFIRMED = "booking_confirmed"
+    PASSWORD_CHANGED = "password_changed"
     GENERAL = "general"
+
 
 class Notification(SQLModel, table=True):
     """Notification model - represents notifications sent to users"""
@@ -23,8 +26,10 @@ class Notification(SQLModel, table=True):
     message: str = Field(nullable=False)
     is_read: bool = Field(default=False, nullable=False)
     created_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            default=lambda: datetime.now(timezone.utc),
+        )
     )
     user: "UserInDB" = Relationship(back_populates="notifications")
-
-    
