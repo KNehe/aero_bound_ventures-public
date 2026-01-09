@@ -246,8 +246,8 @@ class TestResetPasswordEndpoint:
             "/reset-password/",
             json={
                 "token": token,
-                "new_password": "newpassword123",
-                "confirm_password": "newpassword123",
+                "new_password": "NewPassword123!",
+                "confirm_password": "NewPassword123!",
             },
         )
 
@@ -257,7 +257,7 @@ class TestResetPasswordEndpoint:
 
         # Verify password was changed
         session.refresh(user)
-        assert verify_password("newpassword123", user.password)
+        assert verify_password("NewPassword123!", user.password)
 
     def test_reset_password_with_invalid_token(self, client):
         """Should return 400 for invalid token."""
@@ -265,8 +265,8 @@ class TestResetPasswordEndpoint:
             "/reset-password/",
             json={
                 "token": "invalid_token",
-                "new_password": "newpassword123",
-                "confirm_password": "newpassword123",
+                "new_password": "NewPassword123!",
+                "confirm_password": "NewPassword123!",
             },
         )
 
@@ -286,8 +286,8 @@ class TestResetPasswordEndpoint:
             "/reset-password/",
             json={
                 "token": token,
-                "new_password": "newpassword123",
-                "confirm_password": "differentpassword",
+                "new_password": "NewPassword123!",
+                "confirm_password": "DifferentPass456@",
             },
         )
 
@@ -306,6 +306,74 @@ class TestResetPasswordEndpoint:
 
         assert response.status_code == 422  # Validation error
 
+    def test_reset_password_missing_uppercase(self, client, session: Session):
+        """Should reject password without uppercase letter."""
+        create_user(session, "nouppercase@example.com", "oldpassword")
+        token = create_password_reset_token(session, "nouppercase@example.com")
+
+        response = client.post(
+            "/reset-password/",
+            json={
+                "token": token,
+                "new_password": "password123!",
+                "confirm_password": "password123!",
+            },
+        )
+
+        assert response.status_code == 422
+        assert "uppercase" in response.json()["detail"][0]["msg"].lower()
+
+    def test_reset_password_missing_lowercase(self, client, session: Session):
+        """Should reject password without lowercase letter."""
+        create_user(session, "nolowercase@example.com", "oldpassword")
+        token = create_password_reset_token(session, "nolowercase@example.com")
+
+        response = client.post(
+            "/reset-password/",
+            json={
+                "token": token,
+                "new_password": "PASSWORD123!",
+                "confirm_password": "PASSWORD123!",
+            },
+        )
+
+        assert response.status_code == 422
+        assert "lowercase" in response.json()["detail"][0]["msg"].lower()
+
+    def test_reset_password_missing_digit(self, client, session: Session):
+        """Should reject password without digit."""
+        create_user(session, "nodigit@example.com", "oldpassword")
+        token = create_password_reset_token(session, "nodigit@example.com")
+
+        response = client.post(
+            "/reset-password/",
+            json={
+                "token": token,
+                "new_password": "Password!!",
+                "confirm_password": "Password!!",
+            },
+        )
+
+        assert response.status_code == 422
+        assert "digit" in response.json()["detail"][0]["msg"].lower()
+
+    def test_reset_password_missing_special_char(self, client, session: Session):
+        """Should reject password without special character."""
+        create_user(session, "nospecial@example.com", "oldpassword")
+        token = create_password_reset_token(session, "nospecial@example.com")
+
+        response = client.post(
+            "/reset-password/",
+            json={
+                "token": token,
+                "new_password": "Password123",
+                "confirm_password": "Password123",
+            },
+        )
+
+        assert response.status_code == 422
+        assert "special" in response.json()["detail"][0]["msg"].lower()
+
     def test_reset_password_token_invalidated_after_use(self, client, session: Session):
         """Token should be invalidated after successful password reset."""
         # Create user and token
@@ -317,8 +385,8 @@ class TestResetPasswordEndpoint:
             "/reset-password/",
             json={
                 "token": token,
-                "new_password": "newpassword123",
-                "confirm_password": "newpassword123",
+                "new_password": "NewPassword123!",
+                "confirm_password": "NewPassword123!",
             },
         )
         assert response1.status_code == 200
@@ -328,8 +396,8 @@ class TestResetPasswordEndpoint:
             "/reset-password/",
             json={
                 "token": token,
-                "new_password": "anotherpassword",
-                "confirm_password": "anotherpassword",
+                "new_password": "AnotherPass456@",
+                "confirm_password": "AnotherPass456@",
             },
         )
         assert response2.status_code == 400
@@ -373,8 +441,8 @@ class TestPasswordResetFlow:
             "/reset-password/",
             json={
                 "token": reset_token,
-                "new_password": "newpassword456",
-                "confirm_password": "newpassword456",
+                "new_password": "NewPassword456!",
+                "confirm_password": "NewPassword456!",
             },
         )
         assert reset_response.status_code == 200
@@ -382,7 +450,7 @@ class TestPasswordResetFlow:
         # 5. Login with new password should work
         login_response = client.post(
             "/token",
-            data={"username": "flow_test@example.com", "password": "newpassword456"},
+            data={"username": "flow_test@example.com", "password": "NewPassword456!"},
         )
         assert login_response.status_code == 200
 

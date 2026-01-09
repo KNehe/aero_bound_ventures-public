@@ -229,7 +229,7 @@ async def fetch_current_user(
 ):
     """
     Get current authenticated user's information.
-    
+
     This endpoint is used by the frontend to check authentication status
     and retrieve user info (since HTTP-only cookies can't be read by JavaScript).
     """
@@ -249,7 +249,7 @@ async def fetch_current_user(
         )
         for group in current_user.groups
     ]
-    
+
     return UserInfo(
         id=current_user.id,
         email=current_user.email,
@@ -259,8 +259,9 @@ async def fetch_current_user(
 
 
 @router.post("/change-password/", response_model=ChangePasswordResponse)
-def change_password(
+async def change_password(
     password_data: ChangePasswordRequest,
+    response: Response,
     user: UserInDB = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -273,6 +274,28 @@ def change_password(
     session.add(user)
     session.commit()
 
+    # Send password changed notification via Kafka
+    kafka_producer.send(
+        KafkaTopics.USER_EVENTS,
+        {
+            "event_type": KafkaEventTypes.PASSWORD_CHANGED,
+            "email": user.email,
+            "user_id": str(user.id),
+        },
+    )
+
+    # Invalidate current session by clearing auth cookie
+    cookie_settings = get_cookie_settings()
+    response.delete_cookie(
+        key="access_token",
+        path="/",
+        domain=get_cookie_domain() if is_production() else None,
+        secure=cookie_settings["secure"],
+        httponly=cookie_settings["httponly"],
+        samesite=cookie_settings["samesite"],
+    )
+
     return ChangePasswordResponse(
-        success=True, message="Password has been changed successfully"
+        success=True,
+        message="Password has been changed successfully. Please log in again.",
     )

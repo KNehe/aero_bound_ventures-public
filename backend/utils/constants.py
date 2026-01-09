@@ -14,6 +14,7 @@ KAFKA_GROUP_ID = "notification_service_group"
 class KafkaEventTypes:
     USER_REGISTERED = "user_registered"
     PASSWORD_RESET_REQUESTED = "password_reset_requested"
+    PASSWORD_CHANGED = "password_changed"
     BOOKING_CREATED = "booking_created"
     PAYMENT_SUCCESSFUL = "payment_successful"
     PAYMENT_FAILED = "payment_failed"

@@ -42,3 +42,8 @@ class UserRegisteredEvent(BaseEvent):
 class PasswordResetRequestedEvent(BaseEvent):
     email: EmailStr
     reset_token: str
+
+
+class PasswordChangedEvent(BaseEvent):
+    email: EmailStr
+    user_id: uuid.UUID

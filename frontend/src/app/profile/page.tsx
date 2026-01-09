@@ -46,8 +46,19 @@ export default function ProfilePage() {
   const validateForm = (): FormErrors => {
     const newErrors: FormErrors = {};
     if (!formData.old_password) newErrors.old_password = "Old password is required";
-    if (!formData.new_password) newErrors.new_password = "New password is required";
-    if (formData.new_password.length < MIN_PASSWORD_LENGTH) newErrors.new_password = `New password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+    if (!formData.new_password) {
+      newErrors.new_password = "New password is required";
+    } else if (formData.new_password.length < MIN_PASSWORD_LENGTH) {
+      newErrors.new_password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+    } else if (!/[A-Z]/.test(formData.new_password)) {
+      newErrors.new_password = "Password must contain at least one uppercase letter";
+    } else if (!/[a-z]/.test(formData.new_password)) {
+      newErrors.new_password = "Password must contain at least one lowercase letter";
+    } else if (!/[0-9]/.test(formData.new_password)) {
+      newErrors.new_password = "Password must contain at least one digit";
+    } else if (!/[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(formData.new_password)) {
+      newErrors.new_password = "Password must contain at least one special character";
+    }
     if (formData.new_password !== formData.confirm_password) newErrors.confirm_password = "Passwords do not match";
     return newErrors;
   };
@@ -68,9 +79,15 @@ export default function ProfilePage() {
         confirm_password: formData.confirm_password,
       });
 
-      setMessage("Password changed successfully!");
+      setMessage("Password changed successfully! Redirecting to login...");
       setMessageType('success');
       setFormData({ old_password: "", new_password: "", confirm_password: "" });
+      
+      // Session is invalidated by the backend, logout and redirect
+      setTimeout(async () => {
+        await logout();
+        router.push('/auth/login');
+      }, 2000);
     } catch (error) {
       console.error('Password change error:', error);
       if (isUnauthorizedError(error)) {
