@@ -11,8 +11,17 @@ class BookingResponse(BaseModel):
 
 class UserBookingResponse(BaseModel):
     """Response model for user's booking list"""
+
     id: uuid.UUID
     pnr: str | None
     status: str
     created_at: datetime
     ticket_url: str | None
+
+
+class BookingCancellationResponse(BaseModel):
+    """Response model for booking cancellation"""
+
+    id: uuid.UUID
+    status: str
+    message: str

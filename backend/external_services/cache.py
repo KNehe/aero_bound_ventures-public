@@ -24,6 +24,22 @@ class RedisCache:
             print(f"Redis connection error: {e}")
             return None
 
+    def delete(self, key: str) -> bool:
+        """
+        Delete a key from Redis cache
+
+        Args:
+            key: The cache key to delete
+
+        Returns:
+            True if key was deleted, False otherwise
+        """
+        try:
+            return self.r.delete(key) > 0
+        except redis.exceptions.ConnectionError as e:
+            print(f"Redis connection error: {e}")
+            return False
+
 
 host = os.getenv("REDIS_HOST", "redis")
 port = os.getenv("REDIS_PORT", 6379)

@@ -16,6 +16,7 @@ class KafkaEventTypes:
     PASSWORD_RESET_REQUESTED = "password_reset_requested"
     PASSWORD_CHANGED = "password_changed"
     BOOKING_CREATED = "booking_created"
+    BOOKING_CANCELLED = "booking_cancelled"
     PAYMENT_SUCCESSFUL = "payment_successful"
     PAYMENT_FAILED = "payment_failed"
     TICKET_UPLOADED = "ticket_uploaded"

@@ -13,6 +13,13 @@ class BookingCreatedEvent(BaseEvent):
     pnr: str
 
 
+class BookingCancelledEvent(BaseEvent):
+    booking_id: uuid.UUID
+    user_id: uuid.UUID
+    user_email: EmailStr
+    pnr: str | None
+
+
 class PaymentSuccessEvent(BaseEvent):
     booking_id: uuid.UUID
     user_id: uuid.UUID

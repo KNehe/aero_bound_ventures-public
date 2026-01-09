@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Booking Cancellation Alert</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background-color: #fff3cd; padding: 20px; border-radius: 10px; border: 1px solid #ffc107;">
+        <h1 style="color: #856404; margin-bottom: 20px;">⚠️ Booking Cancellation Alert</h1>
+        
+        <p>A booking has been cancelled by a customer.</p>
+        
+        <div style="background-color: #fff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p><strong>Booking Reference (PNR):</strong> {{ pnr }}</p>
+            <p><strong>Booking ID:</strong> {{ booking_id }}</p>
+            <p><strong>Customer Email:</strong> {{ user_email }}</p>
+        </div>
+        
+        <p>Please review this cancellation and process any applicable refunds.</p>
+        
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+        
+        <p style="color: #666; font-size: 14px;">
+            This is an automated notification from<br>
+            <strong>Aero Bound Ventures System</strong>
+        </p>
+    </div>
+</body>
+</html>
