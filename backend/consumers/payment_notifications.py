@@ -37,31 +37,37 @@ async def process_payment_notifications(message: dict):
 async def _handle_payment_success(session, event: PaymentSuccessEvent):
     # 1. Send Customer Email
     if event.user_email:
-        await send_email(
-            recipients=[event.user_email],
-            subject="Payment Successful : Aero Bound Ventures",
-            template_name="payment_success.html",
-            extra={
-                "pnr": event.pnr,
-                "booking_id": str(event.booking_id),
-            },
-        )
-        logger.info(f"Payment success email sent to {event.user_email}")
+        try:
+            await send_email(
+                recipients=[event.user_email],
+                subject="Payment Successful : Aero Bound Ventures",
+                template_name="payment_success.html",
+                extra={
+                    "pnr": event.pnr,
+                    "booking_id": str(event.booking_id),
+                },
+            )
+            logger.info(f"Payment success email sent to {event.user_email}")
+        except Exception as e:
+            logger.error(f"Failed to send payment success email: {e}")
 
     # 2. Notify Admins
     admin_emails = get_admin_emails(session)
     if admin_emails:
-        await send_email(
-            recipients=admin_emails,
-            subject="[ADMIN] Payment Completed for Booking",
-            template_name="admin_payment_notification.html",
-            extra={
-                "pnr": event.pnr,
-                "user_email": event.user_email,
-                "booking_id": str(event.booking_id),
-            },
-        )
-        logger.info(f"Admin payment notification sent to {len(admin_emails)} admins")
+        try:
+            await send_email(
+                recipients=admin_emails,
+                subject="[ADMIN] Payment Completed for Booking",
+                template_name="admin_payment_notification.html",
+                extra={
+                    "pnr": event.pnr,
+                    "user_email": event.user_email,
+                    "booking_id": str(event.booking_id),
+                },
+            )
+            logger.info(f"Admin payment notification sent to {len(admin_emails)} admins")
+        except Exception as e:
+            logger.error(f"Failed to send admin payment notification email: {e}")
 
     # 3. In-App Notification
     if event.user_id:

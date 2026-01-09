@@ -31,16 +31,19 @@ async def process_ticket_notifications(message: dict):
 async def _handle_ticket_uploaded(event: TicketUploadedEvent):
     # 1. Send Email to User
     if event.user_email:
-        await send_email(
-            recipients=[event.user_email],
-            subject="Ticket Uploaded Successfully : Aero Bound Ventures",
-            template_name="ticket_upload_success.html",
-            extra={
-                "pnr": event.pnr,
-                "booking_id": event.booking_id,
-            },
-        )
-        logger.info(f"Ticket upload email sent to {event.user_email}")
+        try:
+            await send_email(
+                recipients=[event.user_email],
+                subject="Ticket Uploaded Successfully : Aero Bound Ventures",
+                template_name="ticket_upload_success.html",
+                extra={
+                    "pnr": event.pnr,
+                    "booking_id": str(event.booking_id),
+                },
+            )
+            logger.info(f"Ticket upload email sent to {event.user_email}")
+        except Exception as e:
+            logger.error(f"Failed to send ticket upload email: {e}")
 
     with Session(engine) as session:
         # 2. In-App Notification for User

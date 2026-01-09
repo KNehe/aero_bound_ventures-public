@@ -33,32 +33,38 @@ async def process_booking_notifications(message: dict):
 
 async def _handle_booking_created(event: BookingCreatedEvent):
     # 1. Send Customer Confirmation Email
-    await send_email(
-        recipients=[event.user_email],
-        subject="Your Booking Order Received : Aero Bound Ventures",
-        template_name="order_confirmation.html",
-        extra={
-            "pnr": event.pnr,
-            "booking_id": str(event.booking_id),
-        },
-    )
-    logger.info(f"Booking confirmation email sent to {event.user_email}")
+    try:
+        await send_email(
+            recipients=[event.user_email],
+            subject="Your Booking Order Received : Aero Bound Ventures",
+            template_name="order_confirmation.html",
+            extra={
+                "pnr": event.pnr,
+                "booking_id": str(event.booking_id),
+            },
+        )
+        logger.info(f"Booking confirmation email sent to {event.user_email}")
+    except Exception as e:
+        logger.error(f"Failed to send booking confirmation email: {e}")
 
     # 2. Notify Admins
     with Session(engine) as session:
         admin_emails = get_admin_emails(session)
         if admin_emails:
-            await send_email(
-                recipients=admin_emails,
-                subject="[ADMIN] New Booking Order Placed",
-                template_name="admin_order_notification.html",
-                extra={
-                    "pnr": event.pnr,
-                    "user_email": event.user_email,
-                    "booking_id": str(event.booking_id),
-                },
-            )
-            logger.info(f"Admin notification email sent to {len(admin_emails)} admins")
+            try:
+                await send_email(
+                    recipients=admin_emails,
+                    subject="[ADMIN] New Booking Order Placed",
+                    template_name="admin_order_notification.html",
+                    extra={
+                        "pnr": event.pnr,
+                        "user_email": event.user_email,
+                        "booking_id": str(event.booking_id),
+                    },
+                )
+                logger.info(f"Admin notification email sent to {len(admin_emails)} admins")
+            except Exception as e:
+                logger.error(f"Failed to send admin notification email: {e}")
 
         # 3. Create In-App Notification (if user_id provided)
         if event.user_id:
