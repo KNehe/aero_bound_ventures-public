@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useAuth from '@/store/auth';
+import { apiClient, isUnauthorizedError } from '@/lib/api';
 
 interface Booking {
   id: string;
@@ -13,7 +14,7 @@ interface Booking {
 }
 
 export default function MyBookingsAndTicketsPage() {
-  const token = useAuth((state) => state.token);
+  const isAuthenticated = useAuth((state) => state.isAuthenticated);
   const logout = useAuth((state) => state.logout);
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -77,34 +78,22 @@ export default function MyBookingsAndTicketsPage() {
     // Wait for hydration and check if user is authenticated
     if (!isHydrated) return;
     
-    if (!token) {
+    if (!isAuthenticated) {
       router.push('/auth/login?redirect=/my');
       return;
     }
 
     const fetchBookings = async () => {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const response = await fetch(`${baseUrl}/bookings`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (response.status === 401) {
-          logout();
-          router.push('/auth/login?redirect=/my');
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch bookings: ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = await apiClient.get<Booking[]>('/bookings');
         setBookings(data);
       } catch (err) {
         console.error('Error fetching bookings:', err);
+        if (isUnauthorizedError(err)) {
+          await logout();
+          router.push('/auth/login?redirect=/my');
+          return;
+        }
         setError(err instanceof Error ? err.message : 'Failed to load bookings');
       } finally {
         setLoading(false);
@@ -112,7 +101,7 @@ export default function MyBookingsAndTicketsPage() {
     };
 
     fetchBookings();
-  }, [token, isHydrated, router, logout]);
+  }, [isAuthenticated, isHydrated, router, logout]);
 
   const getStatusColor = (status: string) => {
     switch (status) {

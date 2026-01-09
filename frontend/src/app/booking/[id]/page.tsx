@@ -6,6 +6,7 @@ import type { Traveler as ApiTraveler, FlightBookingData, FlightOffer } from "@/
 import useFlights from "@/store/flights";
 import useAuth from "@/store/auth";
 import countryCodes from "@/data/countryCodes.json";
+import { apiClient, isUnauthorizedError, ApiClientError } from "@/lib/api";
 
 // Local interface for form state - simplified for the booking form
 interface BookingTraveler {
@@ -90,7 +91,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Use Zustand stores
-  const { token, isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const selectedFlight = useFlights((state) => state.selectedFlight?.data?.flightOffers[0]) as FlightOffer | null;
 
   // console.log("Selected Flight in Booking Page:", selectedFlight?.data.flightOffers[0]);
@@ -235,35 +236,16 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
       console.log("Booking Payload:", bookingPayload);
 
-      // Get the base URL from environment variables
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-      // Get auth token from Zustand store (should always exist due to mount check, but double-check)
-      if (!token) {
-        // If no token, redirect to login with current page as redirect target
+      // Check authentication before submitting
+      if (!isAuthenticated) {
+        // If not authenticated, redirect to login with current page as redirect target
         const currentPath = `/booking/${resolvedParams.id}`;
         router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
         return;
       }
 
-      // Send booking request to API
-      const response = await fetch(`${baseUrl}/booking/flight-orders`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(bookingPayload),
-      });
-            
-      if (response.status === 401) logout()
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to create booking');
-      }
-
-      const bookingResult = await response.json();
+      // Send booking request to API using centralized client
+      const bookingResult = await apiClient.post<{ id: string }>('/booking/flight-orders', bookingPayload);
 
       console.log("Booking Result:", bookingResult);
 
@@ -271,7 +253,17 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
     } catch (error) {
       console.error("Booking error:", error);
-      alert(error instanceof Error ? error.message : 'An error occurred while creating your booking. Please try again.');
+      if (isUnauthorizedError(error)) {
+        await logout();
+        const currentPath = `/booking/${resolvedParams.id}`;
+        router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
+        return;
+      }
+      if (error instanceof ApiClientError) {
+        alert(error.detail || 'Failed to create booking');
+      } else {
+        alert(error instanceof Error ? error.message : 'An error occurred while creating your booking. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }

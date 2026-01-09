@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.responses import StreamingResponse
 from backend.utils.redis import notification_streamer, unread_count_streamer
 from backend.utils.notification_service import get_and_publish_unread_count
@@ -22,7 +22,8 @@ router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 @router.get("/stream")
 async def notification_stream(
-    token: str = Query(..., description="JWT access token for authentication"),
+    request: Request,
+    token: str | None = Query(None, description="JWT access token for authentication"),
     db: Session = Depends(get_session),
 ):
     """
@@ -31,7 +32,8 @@ async def notification_stream(
     This endpoint establishes a Server-Sent Events connection that streams
     notifications to the authenticated user in real-time.
     
-    Note: Token is passed as query param because EventSource doesn't support headers.
+    Authentication: Token can be passed as query param or via HTTP-only cookie.
+    Query param takes precedence for backward compatibility.
     
     The stream includes:
     - Connected event on initial connection (with current unread count)
@@ -42,7 +44,7 @@ async def notification_stream(
     Returns:
         StreamingResponse with SSE content type
     """
-    current_user = get_user_from_token(token, db)
+    current_user = get_user_from_token(token, db, request)
     
     initial_count = get_unread_notifications_count(db, current_user.id)
     
@@ -59,7 +61,8 @@ async def notification_stream(
 
 @router.get("/unread-count/stream")
 async def unread_count_stream(
-    token: str = Query(..., description="JWT access token for authentication"),
+    request: Request,
+    token: str | None = Query(None, description="JWT access token for authentication"),
     db: Session = Depends(get_session),
 ):
     """
@@ -69,7 +72,8 @@ async def unread_count_stream(
     Use this when you only need to display the unread count (e.g., in a header badge)
     without receiving the full notification content.
     
-    Note: Token is passed as query param because EventSource doesn't support headers.
+    Authentication: Token can be passed as query param or via HTTP-only cookie.
+    Query param takes precedence for backward compatibility.
     
     The stream includes:
     - Initial count event on connection
@@ -79,7 +83,7 @@ async def unread_count_stream(
     Returns:
         StreamingResponse with SSE content type
     """
-    current_user = get_user_from_token(token, db)
+    current_user = get_user_from_token(token, db, request)
     
     initial_count = get_unread_notifications_count(db, current_user.id)
     

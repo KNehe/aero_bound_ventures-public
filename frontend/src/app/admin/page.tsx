@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import useAuth from "@/store/auth";
 import { Booking, BookingStats } from "@/types/admin";
+import { apiClient, isUnauthorizedError, getApiBaseUrl } from "@/lib/api";
 
 // Status constants to avoid hardcoded strings (matching backend BookingStatus class)
 const BOOKING_STATUS = {
@@ -17,7 +18,7 @@ const BOOKING_STATUS = {
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { token, logout, userInfo } = useAuth();
+  const { logout, userInfo, isAuthenticated } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState<"all" | "processing" | "ready" | "failed">("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -119,29 +120,15 @@ export default function AdminDashboard() {
         setIsLoadingStats(true);
         setStatsError(null);
         
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/stats/bookings`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.status === 401) {
-          logout();
-          router.push('/auth/login?redirect=/admin');
-          return;
-        }
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch stats: ${response.status}`);
-        }
-        
-        const data: BookingStats = await response.json();
+        const data = await apiClient.get<BookingStats>('/admin/stats/bookings');
         setStats(data);
       } catch (error) {
         console.error("Error fetching booking stats:", error);
+        if (isUnauthorizedError(error)) {
+          await logout();
+          router.push('/auth/login?redirect=/admin');
+          return;
+        }
         setStatsError(error instanceof Error ? error.message : "Failed to load statistics");
       } finally {
         setIsLoadingStats(false);
@@ -149,7 +136,7 @@ export default function AdminDashboard() {
     };
     
     fetchStats();
-  }, [token, logout, router]);
+  }, [logout, router]);
 
   // Fetch all bookings from API
   useEffect(() => {
@@ -159,29 +146,15 @@ export default function AdminDashboard() {
         setIsLoadingBookings(true);
         setBookingsError(null);
         
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/bookings`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.status === 401) {
-          logout();
-          router.push('/auth/login?redirect=/admin');
-          return;
-        }
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch bookings: ${response.status}`);
-        }
-        
-        const data: Booking[] = await response.json();
+        const data = await apiClient.get<Booking[]>('/admin/bookings');
         setBookings(data);
       } catch (error) {
         console.error("Error fetching bookings:", error);
+        if (isUnauthorizedError(error)) {
+          await logout();
+          router.push('/auth/login?redirect=/admin');
+          return;
+        }
         setBookingsError(error instanceof Error ? error.message : "Failed to load bookings");
       } finally {
         setIsLoadingBookings(false);
@@ -189,11 +162,11 @@ export default function AdminDashboard() {
     };
     
     fetchBookings();
-  }, [token, logout, router]);
+  }, [logout, router]);
 
   useEffect(() => {
-    const url  = `${process.env.NEXT_PUBLIC_API_BASE_URL}/notifications/${userInfo?.id}`;
-    const sse = new EventSource(url)
+    const url  = `${getApiBaseUrl()}/notifications/${userInfo?.id}`;
+    const sse = new EventSource(url, { withCredentials: true });
 
     sse.onmessage = (event) => {
       console.log(event.data)

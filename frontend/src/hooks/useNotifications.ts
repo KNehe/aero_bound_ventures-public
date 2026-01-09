@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import useAuth from "@/store/auth";
 import { Notification } from "@/types/notifications";
+import { apiClient, getApiBaseUrl } from "@/lib/api";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = getApiBaseUrl();
 
 interface UseNotificationsReturn {
     notifications: Notification[];
@@ -19,7 +20,7 @@ interface UseNotificationsReturn {
 }
 
 export function useNotifications(): UseNotificationsReturn {
-    const { token, isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isConnected, setIsConnected] = useState(false);
@@ -32,19 +33,11 @@ export function useNotifications(): UseNotificationsReturn {
     const maxReconnectAttempts = 5;
 
     const fetchNotifications = useCallback(async () => {
-        if (!token) return;
+        if (!isAuthenticated) return;
 
         setIsLoading(true);
         try {
-            const response = await fetch(`${API_BASE_URL}/notifications/?limit=20`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            if (!response.ok) throw new Error("Failed to fetch notifications");
-
-            const data = await response.json();
+            const data = await apiClient.get<Notification[]>('/notifications/?limit=20');
             setNotifications(data);
             setError(null);
         } catch (err) {
@@ -52,10 +45,10 @@ export function useNotifications(): UseNotificationsReturn {
         } finally {
             setIsLoading(false);
         }
-    }, [token]);
+    }, [isAuthenticated]);
 
     const connectSSE = useCallback(() => {
-        if (!token || !isAuthenticated) return;
+        if (!isAuthenticated) return;
 
         if (eventSourceRef.current) {
             eventSourceRef.current.close();
@@ -65,8 +58,8 @@ export function useNotifications(): UseNotificationsReturn {
             clearTimeout(reconnectTimeoutRef.current);
         }
 
-        const sseUrl = `${API_BASE_URL}/notifications/stream?token=${encodeURIComponent(token)}`;
-        const eventSource = new EventSource(sseUrl);
+        const sseUrl = `${API_BASE_URL}/notifications/stream`;
+        const eventSource = new EventSource(sseUrl, { withCredentials: true });
         eventSourceRef.current = eventSource;
 
         eventSource.onopen = () => {
@@ -132,7 +125,7 @@ export function useNotifications(): UseNotificationsReturn {
                 console.log(`SSE reconnecting in ${delay}ms (attempt ${reconnectAttempts.current})`);
 
                 reconnectTimeoutRef.current = setTimeout(() => {
-                    if (isAuthenticated && token) {
+                    if (isAuthenticated) {
                         connectSSE();
                     }
                 }, delay);
@@ -144,11 +137,11 @@ export function useNotifications(): UseNotificationsReturn {
         return () => {
             eventSource.close();
         };
-    }, [token, isAuthenticated]);
+    }, [isAuthenticated]);
 
     // Setup SSE connection when authenticated
     useEffect(() => {
-        if (isAuthenticated && token) {
+        if (isAuthenticated) {
             fetchNotifications();
             const cleanup = connectSSE();
             return cleanup;
@@ -162,7 +155,7 @@ export function useNotifications(): UseNotificationsReturn {
                 eventSourceRef.current = null;
             }
         }
-    }, [isAuthenticated, token, fetchNotifications, connectSSE]);
+    }, [isAuthenticated, fetchNotifications, connectSSE]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -179,81 +172,54 @@ export function useNotifications(): UseNotificationsReturn {
     // Mark single notification as read
     const markAsRead = useCallback(
         async (notificationId: string) => {
-            if (!token) return;
+            if (!isAuthenticated) return;
 
             const notification = notifications.find((n) => n.id === notificationId);
             if (notification?.is_read) return;
 
             try {
-                const response = await fetch(
-                    `${API_BASE_URL}/notifications/${notificationId}/mark-read`,
-                    {
-                        method: "PUT",
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
+                await apiClient.put(`/notifications/${notificationId}/mark-read`);
+                setNotifications((prev) =>
+                    prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
                 );
-
-                if (response.ok) {
-                    setNotifications((prev) =>
-                        prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
-                    );
-                    setUnreadCount((prev) => Math.max(0, prev - 1));
-                }
+                setUnreadCount((prev) => Math.max(0, prev - 1));
             } catch (err) {
                 console.error("Failed to mark notification as read:", err);
             }
         },
-        [token, notifications]
+        [isAuthenticated, notifications]
     );
 
     // Mark all notifications as read
     const markAllAsRead = useCallback(async () => {
-        if (!token) return;
+        if (!isAuthenticated) return;
 
         try {
-            const response = await fetch(`${API_BASE_URL}/notifications/mark-all-read`, {
-                method: "PUT",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            if (response.ok) {
-                setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-                setUnreadCount(0);
-            }
+            await apiClient.put('/notifications/mark-all-read');
+            setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+            setUnreadCount(0);
         } catch (err) {
             console.error("Failed to mark all notifications as read:", err);
         }
-    }, [token]);
+    }, [isAuthenticated]);
 
     // Delete notification
     const deleteNotification = useCallback(
         async (notificationId: string) => {
-            if (!token) return;
+            if (!isAuthenticated) return;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}`, {
-                    method: "DELETE",
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-
-                if (response.ok) {
-                    const deletedNotification = notifications.find((n) => n.id === notificationId);
-                    setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
-                    if (deletedNotification && !deletedNotification.is_read) {
-                        setUnreadCount((prev) => Math.max(0, prev - 1));
-                    }
+                await apiClient.delete(`/notifications/${notificationId}`);
+                const deletedNotification = notifications.find((n) => n.id === notificationId);
+                setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+                if (deletedNotification && !deletedNotification.is_read) {
+                    setUnreadCount((prev) => Math.max(0, prev - 1));
                 }
             } catch (err) {
                 console.error("Failed to delete notification:", err);
             }
         },
-        [token, notifications]
+        [isAuthenticated, notifications]
     );
 
     return {

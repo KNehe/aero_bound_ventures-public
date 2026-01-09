@@ -17,13 +17,14 @@ interface User {
 export default function GoogleCallbackPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const login = useAuth((state) => state.login);
+    const setUser = useAuth((state) => state.setUser);
     const [error, setError] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(true);
 
     useEffect(() => {
         const processCallback = async () => {
-            const token = searchParams.get("token");
+            // Note: Token is now set as HTTP-only cookie by the backend redirect
+            // We only receive user data in the URL params
             const userParam = searchParams.get("user");
             const errorParam = searchParams.get("error");
 
@@ -33,7 +34,7 @@ export default function GoogleCallbackPage() {
                 return;
             }
 
-            if (!token || !userParam) {
+            if (!userParam) {
                 setError("Missing authentication data");
                 setIsProcessing(false);
                 return;
@@ -51,7 +52,7 @@ export default function GoogleCallbackPage() {
                     })),
                 };
 
-                login(token, authUser);
+                setUser(authUser);
 
                 const redirectTo = searchParams.get("redirect");
 
@@ -73,7 +74,7 @@ export default function GoogleCallbackPage() {
         };
 
         processCallback();
-    }, [searchParams, login, router]);
+    }, [searchParams, setUser, router]);
 
     if (error) {
         return (

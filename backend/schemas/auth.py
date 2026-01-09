@@ -59,7 +59,7 @@ class UserResponse(BaseModel):
 
 
 class Token(BaseModel):
-    access_token: str
+    """Token response - token is stored in HttpOnly cookie only"""
     token_type: str
     user: UserInfo
 

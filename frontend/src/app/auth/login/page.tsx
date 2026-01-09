@@ -5,6 +5,7 @@ import Link from "next/link";
 import useAuth from "@/store/auth";
 import { LoginResponse } from "@/types/auth";
 import { ADMIN_GROUP_NAME, MIN_PASSWORD_LENGTH } from "@/constants/auth";
+import { apiClient, ApiClientError } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,7 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   // Use Zustand store
-  const { login, isAuthenticated } = useAuth();
+  const { setUser, isAuthenticated } = useAuth();
 
   // Form state
   const [email, setEmail] = useState("");
@@ -56,6 +57,7 @@ export default function LoginPage() {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
+        credentials: "include",
         body: formData.toString(),
       });
 
@@ -66,7 +68,8 @@ export default function LoginPage() {
 
       const data: LoginResponse = await response.json();
 
-      login(data.access_token, data.user);
+      // Set user in store (token is now in HTTP-only cookie)
+      setUser(data.user);
 
       const isAdmin = data.user.groups.some(group => group.name === ADMIN_GROUP_NAME);
 
@@ -101,28 +104,19 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-      const response = await fetch(`${baseUrl}/register/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
+      await apiClient.post('/register/', {
+        email,
+        password,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Registration failed");
-      }
 
       // After successful registration, automatically log in
       await handleLogin(e);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Signup failed. Please try again.");
+      if (err instanceof ApiClientError) {
+        setError(err.detail || "Registration failed");
+      } else {
+        setError(err instanceof Error ? err.message : "Signup failed. Please try again.");
+      }
       setIsSubmitting(false);
     }
   };

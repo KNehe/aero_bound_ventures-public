@@ -9,7 +9,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { token, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
   const [isHydrated, setIsHydrated] = useState(false);
 
   // Handle hydration
@@ -21,7 +21,7 @@ export default function AdminLayout({
   useEffect(() => {
     if (!isHydrated) return;
 
-    if (!token) {
+    if (!isAuthenticated) {
       router.push('/auth/login?redirect=/admin');
       return;
     }
@@ -30,10 +30,10 @@ export default function AdminLayout({
       router.push('/');
       return;
     }
-  }, [isHydrated, token, isAdmin, router]);
+  }, [isHydrated, isAuthenticated, isAdmin, router]);
 
   // Show loading while checking authentication
-  if (!isHydrated || !token || !isAdmin()) {
+  if (!isHydrated || !isAuthenticated || !isAdmin()) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">

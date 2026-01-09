@@ -3,13 +3,12 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useAuth from "@/store/auth";
 import { Booking, TicketUploadResponse } from "@/types/admin";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { apiClient, isUnauthorizedError, ApiClientError } from "@/lib/api";
 
 export default function BookingDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { token } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
   const bookingId = params.bookingId as string;
 
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -60,30 +59,26 @@ export default function BookingDetailPage() {
     const fetchBooking = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`${API_BASE_URL}/admin/bookings/${bookingId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error("Booking not found");
-          }
-          throw new Error("Failed to fetch booking");
-        }
-
-        const bookingData: Booking = await response.json();
+        const bookingData = await apiClient.get<Booking>(`/admin/bookings/${bookingId}`);
         setBooking(bookingData);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load booking");
+        if (isUnauthorizedError(err)) {
+          await logout();
+          router.push(`/auth/login?redirect=/admin/bookings/${bookingId}`);
+          return;
+        }
+        if (err instanceof ApiClientError && err.status === 404) {
+          setError("Booking not found");
+        } else {
+          setError(err instanceof Error ? err.message : "Failed to load booking");
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchBooking();
-  }, [bookingId]);
+  }, [bookingId, logout, router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -110,7 +105,7 @@ export default function BookingDetailPage() {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedFile || !token) {
+    if (!selectedFile || !isAuthenticated) {
       return;
     }
 
@@ -122,20 +117,7 @@ export default function BookingDetailPage() {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const response = await fetch(`${API_BASE_URL}/tickets/upload/${bookingId}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Upload failed");
-      }
-
-      const result: TicketUploadResponse = await response.json();
+      const result = await apiClient.upload<TicketUploadResponse>(`/tickets/upload/${bookingId}`, formData);
 
       // Update booking with new ticket URL
       setBooking((prev) =>
@@ -150,7 +132,16 @@ export default function BookingDetailPage() {
         fileInput.value = "";
       }
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Upload failed");
+      if (isUnauthorizedError(err)) {
+        await logout();
+        router.push(`/auth/login?redirect=/admin/bookings/${bookingId}`);
+        return;
+      }
+      if (err instanceof ApiClientError) {
+        setUploadError(err.detail || "Upload failed");
+      } else {
+        setUploadError(err instanceof Error ? err.message : "Upload failed");
+      }
     } finally {
       setIsUploading(false);
     }

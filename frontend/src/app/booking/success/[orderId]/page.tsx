@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import useAuth from "@/store/auth";
+import { apiClient, isUnauthorizedError, ApiClientError } from "@/lib/api";
 
 // Pesapal uses server-side integration
 // No global window object needed for iframe approach
@@ -102,7 +103,7 @@ const BOOKING_STATUS = {
   const [showPaymentIframe, setShowPaymentIframe] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
-  const { token, logout } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
   const params =  useParams();
   const {orderId} = params;
 
@@ -167,45 +168,22 @@ const BOOKING_STATUS = {
       const countryCode = phoneMatch ? phoneMatch[1] : '256'; // Default to Uganda
       const phoneNumber = phoneMatch ? phoneMatch[2].replace(/\s/g, '') : bookingData.contact.phone;
 
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-      
-      // Create payment request on backend
-      const response = await fetch(`${baseUrl}/payments/pesapal/initiate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+      // Create payment request on backend using apiClient
+      const data = await apiClient.post<PesapalPaymentResponse>('/payments/pesapal/initiate', {
+        booking_id: bookingData.orderId,
+        amount: parseFloat(bookingData.pricing.total),
+        currency: 'USD', 
+        description: `Flight booking ${bookingData.pnr}`,
+        callback_url: `${window.location.origin}/booking/payment/callback`,
+        billing_address: {
+          email_address: bookingData.contact.email,
+          phone_number: phoneNumber,
+          country_code: countryCode,
+          first_name: firstName,
+          last_name: lastName,
         },
-        body: JSON.stringify({
-          booking_id: bookingData.orderId,
-          amount: parseFloat(bookingData.pricing.total),
-          currency: 'USD', 
-          description: `Flight booking ${bookingData.pnr}`,
-          callback_url: `${window.location.origin}/booking/payment/callback`,
-          billing_address: {
-            email_address: bookingData.contact.email,
-            phone_number: phoneNumber,
-            country_code: countryCode,
-            first_name: firstName,
-            last_name: lastName,
-          },
-        }),
       });
-      console.log("response:", response);
 
-      if(response.status === 401) {
-        logout();
-        router.push(`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`);
-        return;
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Backend error:', errorData);
-        throw new Error(errorData.detail || `Failed to initiate payment (${response.status})`);
-      }
-
-      const data: PesapalPaymentResponse = await response.json();
       console.log('Payment response:', data);
 
       if (data.error) {
@@ -217,7 +195,16 @@ const BOOKING_STATUS = {
       setShowPaymentIframe(true);
     } catch (error) {
       console.error('Payment error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to initiate payment. Please try again.');
+      if (isUnauthorizedError(error)) {
+        await logout();
+        router.push(`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
+      if (error instanceof ApiClientError) {
+        alert(error.detail || 'Failed to initiate payment');
+      } else {
+        alert(error instanceof Error ? error.message : 'Failed to initiate payment. Please try again.');
+      }
       setIsProcessingPayment(false);
     }
   };
@@ -233,32 +220,15 @@ const BOOKING_STATUS = {
 
         const currentPath = `/booking/success/${orderId}`;
 
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-        const response = await fetch(
-          `${baseUrl}/booking/flight-orders/${orderId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (response.status === 401) {
-          logout();
-          router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch booking details");
-        }
-
-        const data = await response.json();
+        const data = await apiClient.get<BookingSuccessData>(`/booking/flight-orders/${orderId}`);
         setBookingData(data);
         console.log("Fetched booking data:", data);
       } catch (err) {
+        if (isUnauthorizedError(err)) {
+          await logout();
+          router.push(`/auth/login?redirect=${encodeURIComponent(`/booking/success/${orderId}`)}`);
+          return;
+        }
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
         setLoading(false);
@@ -266,7 +236,7 @@ const BOOKING_STATUS = {
     };
 
     fetchBookingData();
-  }, [isHydrated, orderId, token]);
+  }, [isHydrated, orderId, logout, router]);
 
   if (loading) {
     return (

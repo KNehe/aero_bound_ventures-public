@@ -22,6 +22,7 @@ from backend.crud.users import (
     link_google_account,
 )
 from backend.utils.security import create_access_token
+from backend.utils.cookies import get_cookie_settings, get_cookie_domain
 from backend.schemas.auth import UserResponse, GroupResponse
 from backend.utils.log_manager import get_app_logger
 
@@ -172,5 +173,19 @@ async def google_callback(
             logger.warning(f"Failed to decode state '{state}': {e}")
             redirect_to = "/"
 
-    redirect_url = f"{FRONTEND_URL}/auth/google/callback?token={jwt_token}&user={user_data.model_dump_json()}&redirect={quote(redirect_to)}"
-    return RedirectResponse(url=redirect_url)
+    redirect_url = f"{FRONTEND_URL}/auth/google/callback?user={user_data.model_dump_json()}&redirect={quote(redirect_to)}"
+    response = RedirectResponse(url=redirect_url)
+
+    cookie_settings = get_cookie_settings()
+    cookie_domain = get_cookie_domain()
+    response.set_cookie(
+        key="access_token",
+        value=jwt_token,
+        httponly=cookie_settings["httponly"],
+        secure=cookie_settings["secure"],
+        samesite=cookie_settings["samesite"],
+        max_age=cookie_settings["max_age"],
+        domain=cookie_domain,
+    )
+
+    return response

@@ -1,8 +1,9 @@
 from backend.models.users import UserInDB
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from typing import Annotated
 from backend.schemas.users import UserCreate, UserRead
 from backend.crud.database import get_session
+from backend.utils.cookies import get_cookie_settings, get_cookie_domain, is_production
 from backend.crud.users import (
     get_user_by_email,
     create_user,
@@ -68,6 +69,7 @@ async def register(
 
 @router.post("/token")
 async def login(
+    response: Response,
     form_data: Annotated[
         OAuth2PasswordRequestForm,
         Depends(),
@@ -83,6 +85,19 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_access_token(data={"sub": user.email})
+
+    # Set HTTP-only cookie
+    cookie_settings = get_cookie_settings()
+    cookie_domain = get_cookie_domain()
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=cookie_settings["httponly"],
+        secure=cookie_settings["secure"],
+        samesite=cookie_settings["samesite"],
+        max_age=cookie_settings["max_age"],
+        domain=cookie_domain,
+    )
 
     # Build user info with groups and permissions
     groups_with_permissions = [
@@ -107,7 +122,23 @@ async def login(
         groups=groups_with_permissions,
     )
 
-    return Token(access_token=access_token, token_type="bearer", user=user_info)
+    return Token(token_type="bearer", user=user_info)
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    """
+    Clear the authentication cookie.
+    """
+    cookie_domain = get_cookie_domain()
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        secure=is_production(),
+        samesite="lax",
+        domain=cookie_domain,
+    )
+    return {"message": "Successfully logged out"}
 
 
 @router.post("/forgot-password/", response_model=ResetPasswordResponse)
@@ -191,9 +222,40 @@ async def reset_password(
     )
 
 
-@router.get("/me/", response_model=UserRead)
-async def fetch_current_user(current_user: UserInDB = Depends(get_current_user)):
-    return current_user
+@router.get("/me/", response_model=UserInfo)
+async def fetch_current_user(
+    current_user: UserInDB = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """
+    Get current authenticated user's information.
+    
+    This endpoint is used by the frontend to check authentication status
+    and retrieve user info (since HTTP-only cookies can't be read by JavaScript).
+    """
+    # Build groups with permissions
+    groups_with_permissions = [
+        GroupRead(
+            name=group.name,
+            description=group.description,
+            permissions=[
+                PermissionRead(
+                    name=perm.name,
+                    codename=perm.codename,
+                    description=perm.description,
+                )
+                for perm in group.permissions
+            ],
+        )
+        for group in current_user.groups
+    ]
+    
+    return UserInfo(
+        id=current_user.id,
+        email=current_user.email,
+        auth_provider=current_user.auth_provider or "email",
+        groups=groups_with_permissions,
+    )
 
 
 @router.post("/change-password/", response_model=ChangePasswordResponse)

@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useState, ChangeEvent, FormEvent } from "react";
 import useAuth from '@/store/auth';
 import { MIN_PASSWORD_LENGTH } from '@/constants/auth';
+import { apiClient, isUnauthorizedError, ApiClientError } from '@/lib/api';
+import { useRouter } from 'next/navigation';
 
 interface FormData {
   old_password: string;
@@ -19,7 +21,8 @@ interface FormErrors {
 
 export default function ProfilePage() {
   const userEmail = useAuth((state) => state.userEmail);
-  const token = useAuth((state) => state.token);
+  const logout = useAuth((state) => state.logout);
+  const router = useRouter();
 
   const [formData, setFormData] = useState<FormData>({
     old_password: "",
@@ -59,32 +62,27 @@ export default function ProfilePage() {
     setIsSubmitting(true);
     setMessage(null); // Clear previous messages
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${baseUrl}/change-password/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          old_password: formData.old_password,
-          new_password: formData.new_password,
-          confirm_password: formData.confirm_password,
-        }),
+      await apiClient.post('/change-password/', {
+        old_password: formData.old_password,
+        new_password: formData.new_password,
+        confirm_password: formData.confirm_password,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to change password');
-      }
-
-      const result = await response.json();
       setMessage("Password changed successfully!");
       setMessageType('success');
       setFormData({ old_password: "", new_password: "", confirm_password: "" });
     } catch (error) {
       console.error('Password change error:', error);
-      setMessage(error instanceof Error ? error.message : "Failed to change password. Please try again.");
+      if (isUnauthorizedError(error)) {
+        await logout();
+        router.push('/auth/login?redirect=/profile');
+        return;
+      }
+      if (error instanceof ApiClientError) {
+        setMessage(error.detail || "Failed to change password");
+      } else {
+        setMessage(error instanceof Error ? error.message : "Failed to change password. Please try again.");
+      }
       setMessageType('error');
     } finally {
       setIsSubmitting(false);

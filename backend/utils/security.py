@@ -6,14 +6,14 @@ from sqlmodel import Session, select
 from backend.models.users import UserInDB
 from backend.models.permissions import Group
 import os
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from jwt.exceptions import InvalidTokenError
 from backend.crud.database import get_session
 import secrets
 from sqlalchemy.orm import selectinload
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -74,12 +74,31 @@ def authenticate_user(session: Session, email: str, password: str):
     return user
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), session=Depends(get_session)):
+def get_current_user(
+    request: Request,
+    token: str | None = Depends(oauth2_scheme),
+    session: Session = Depends(get_session),
+):
+    """
+    Get current authenticated user from JWT token.
+    
+    Tries to get token from:
+    1. Authorization header (Bearer token)
+    2. HTTP-only cookie (access_token)
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    # Try to get token from Authorization header first, then from cookie
+    if not token:
+        token = request.cookies.get("access_token")
+    
+    if not token:
+        raise credentials_exception
+    
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("sub")
@@ -93,14 +112,19 @@ def get_current_user(token: str = Depends(oauth2_scheme), session=Depends(get_se
     return user
 
 
-def get_user_from_token(token: str, session: Session) -> UserInDB:
+def get_user_from_token(
+    token: str | None,
+    session: Session,
+    request: Request | None = None,
+) -> UserInDB:
     """
     Validate a JWT token and return the user.
-    Used for SSE endpoints where token is passed as query param.
+    Used for SSE endpoints where token may be passed as query param or via cookie.
     
     Args:
-        token: JWT access token
+        token: JWT access token (from query param)
         session: Database session
+        request: Optional request object to read cookie from
         
     Returns:
         UserInDB if valid
@@ -112,6 +136,14 @@ def get_user_from_token(token: str, session: Session) -> UserInDB:
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
     )
+    
+    # Try query param token first, then cookie
+    if not token and request:
+        token = request.cookies.get("access_token")
+    
+    if not token:
+        raise credentials_exception
+    
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("sub")
