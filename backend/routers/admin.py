@@ -1,10 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from datetime import datetime, timedelta, timezone
 from backend.crud.database import get_session
+from backend.crud.bookings import (
+    get_all_bookings_paginated,
+    get_all_bookings_count,
+    MAX_PAGINATION_LIMIT,
+)
 from backend.models.bookings import Booking
 from backend.models.constants import ADMIN_GROUP_NAME
-from backend.schemas.admin import BookingStatsResponse, AdminBookingResponse
+from backend.schemas.admin import (
+    BookingStatsResponse,
+    AdminBookingResponse,
+    PaginatedAdminBookingResponse,
+)
 from backend.utils.dependencies import GroupDependency
 from backend.utils.log_manager import get_app_logger
 
@@ -77,28 +86,40 @@ async def get_booking_stats(
 
 @router.get(
     "/bookings",
-    response_model=list[AdminBookingResponse],
+    response_model=PaginatedAdminBookingResponse,
     dependencies=[Depends(GroupDependency(ADMIN_GROUP_NAME))],
 )
 async def get_all_bookings(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(
+        20,
+        ge=1,
+        le=MAX_PAGINATION_LIMIT,
+        description="Maximum number of records to return",
+    ),
     session: Session = Depends(get_session),
 ):
     """
-    Get all bookings with user information for admin dashboard.
+    Get paginated bookings with user information for admin dashboard.
+
+    Args:
+        skip: Number of records to skip (default: 0)
+        limit: Maximum number of records to return (default: 20, max: 100)
 
     Returns:
-        List of all bookings with associated user data
+        Paginated list of bookings with associated user data
     """
-    logger.info("Fetching all bookings for admin dashboard")
+    logger.info(
+        f"Fetching bookings for admin dashboard with skip={skip}, limit={limit}"
+    )
 
     try:
-        bookings = session.exec(
-            select(Booking).order_by(Booking.created_at.desc())
-        ).all()
+        bookings = get_all_bookings_paginated(session, skip=skip, limit=limit)
+        total = get_all_bookings_count(session)
 
-        response = []
+        items = []
         for booking in bookings:
-            response.append(
+            items.append(
                 AdminBookingResponse(
                     id=booking.id,
                     flight_order_id=booking.flight_order_id,
@@ -113,7 +134,14 @@ async def get_all_bookings(
                 )
             )
 
-        logger.info(f"Successfully fetched {len(response)} bookings")
+        response = PaginatedAdminBookingResponse(
+            items=items,
+            total=total,
+            skip=skip,
+            limit=limit,
+        )
+
+        logger.info(f"Successfully fetched {len(items)} bookings (total: {total})")
         return response
 
     except Exception:

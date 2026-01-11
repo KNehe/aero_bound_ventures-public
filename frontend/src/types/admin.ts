@@ -20,6 +20,13 @@ export interface Booking {
   amadeus_order_response: any;
 }
 
+export interface PaginatedBookingsResponse {
+  items: Booking[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
 export interface BookingStats {
   total_bookings: number;
   total_revenue: number;

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import useAuth from "@/store/auth";
-import { Booking, BookingStats } from "@/types/admin";
+import { Booking, BookingStats, PaginatedBookingsResponse } from "@/types/admin";
 import { apiClient, isUnauthorizedError, getApiBaseUrl } from "@/lib/api";
 
 // Status constants to avoid hardcoded strings (matching backend BookingStatus class)
@@ -27,6 +27,9 @@ export default function AdminDashboard() {
   const [statsError, setStatsError] = useState<string | null>(null);
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
   const [bookingsError, setBookingsError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalBookings, setTotalBookings] = useState(0);
+  const PAGE_SIZE = 20;
 
   const filteredBookings = bookings.filter(booking => {
     const matchesFilter = filter === "all" ? true : booking.ticket_url ? "ready" : "processing";
@@ -145,9 +148,10 @@ export default function AdminDashboard() {
       try {
         setIsLoadingBookings(true);
         setBookingsError(null);
-        
-        const data = await apiClient.get<Booking[]>('/admin/bookings');
-        setBookings(data);
+        const skip = (page - 1) * PAGE_SIZE;
+        const data = await apiClient.get<PaginatedBookingsResponse>(`/admin/bookings?skip=${skip}&limit=${PAGE_SIZE}`);
+        setBookings(data.items);
+        setTotalBookings(data.total);
       } catch (error) {
         console.error("Error fetching bookings:", error);
         if (isUnauthorizedError(error)) {
@@ -162,7 +166,7 @@ export default function AdminDashboard() {
     };
     
     fetchBookings();
-  }, [logout, router]);
+  }, [logout, router, page]);
 
   useEffect(() => {
     const url  = `${getApiBaseUrl()}/notifications/${userInfo?.id}`;
@@ -179,7 +183,7 @@ export default function AdminDashboard() {
 
   }, [])
   // Use API stats only - no fallback to mock data
-  const totalBookings = stats?.total_bookings;
+  const statsTotalBookings = stats?.total_bookings;
   const totalRevenue = stats?.total_revenue;
   const activeUsers = stats?.active_users;
   const bookingsToday = stats?.bookings_today;
@@ -250,7 +254,7 @@ export default function AdminDashboard() {
               <div className="ml-4">
                 <p className="text-sm font-semibold text-gray-600">Total Bookings</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {totalBookings !== undefined ? totalBookings : (
+                  {statsTotalBookings !== undefined ? statsTotalBookings : (
                     <span className="text-red-500">N/A</span>
                   )}
                 </p>
@@ -482,6 +486,34 @@ export default function AdminDashboard() {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+          
+          {/* Pagination Controls */}
+          {totalBookings > PAGE_SIZE && (
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              <div className="text-sm text-gray-600 font-medium">
+                Showing {((page - 1) * PAGE_SIZE) + 1} to {Math.min(page * PAGE_SIZE, totalBookings)} of {totalBookings} bookings
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+                <span className="px-4 py-2 text-sm text-gray-600 font-medium">
+                  Page {page} of {Math.ceil(totalBookings / PAGE_SIZE)}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(Math.ceil(totalBookings / PAGE_SIZE), p + 1))}
+                  disabled={page === Math.ceil(totalBookings / PAGE_SIZE)}
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import uuid
 from datetime import datetime
 
@@ -17,6 +17,15 @@ class UserBookingResponse(BaseModel):
     status: str
     created_at: datetime
     ticket_url: str | None
+
+
+class PaginatedUserBookingResponse(BaseModel):
+    """Paginated response model for user's booking list"""
+
+    items: list[UserBookingResponse]
+    total: int = Field(description="Total number of bookings")
+    skip: int = Field(description="Number of items skipped")
+    limit: int = Field(description="Maximum number of items returned")
 
 
 class BookingCancellationResponse(BaseModel):

@@ -13,6 +13,13 @@ interface Booking {
   ticket_url: string | null;
 }
 
+interface PaginatedBookingsResponse {
+  items: Booking[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
 interface CancelModalState {
   isOpen: boolean;
   bookingId: string | null;
@@ -44,6 +51,7 @@ export default function MyBookingsAndTicketsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [totalBookings, setTotalBookings] = useState(0);
   const [search, setSearch] = useState("");
   const [isHydrated, setIsHydrated] = useState(false);
   const [cancelModal, setCancelModal] = useState<CancelModalState>({
@@ -55,7 +63,7 @@ export default function MyBookingsAndTicketsPage() {
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 20;
 
   const handleDownloadTicket = async (ticketUrl: string, bookingId: string) => {
     try {
@@ -171,8 +179,11 @@ export default function MyBookingsAndTicketsPage() {
 
     const fetchBookings = async () => {
       try {
-        const data = await apiClient.get<Booking[]>('/bookings');
-        setBookings(data);
+        setLoading(true);
+        const skip = (page - 1) * PAGE_SIZE;
+        const data = await apiClient.get<PaginatedBookingsResponse>(`/bookings?skip=${skip}&limit=${PAGE_SIZE}`);
+        setBookings(data.items);
+        setTotalBookings(data.total);
       } catch (err) {
         console.error('Error fetching bookings:', err);
         if (isUnauthorizedError(err)) {
@@ -187,7 +198,7 @@ export default function MyBookingsAndTicketsPage() {
     };
 
     fetchBookings();
-  }, [isAuthenticated, isHydrated, router, logout]);
+  }, [isAuthenticated, isHydrated, router, logout, page]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -210,7 +221,7 @@ export default function MyBookingsAndTicketsPage() {
     }
   };
 
-  // Filter bookings by search
+  // Filter bookings by search (client-side filter on current page)
   const filtered = useMemo(() => {
     if (!search.trim()) return bookings;
     const s = search.toLowerCase();
@@ -220,12 +231,8 @@ export default function MyBookingsAndTicketsPage() {
     );
   }, [search, bookings]);
 
-  // Pagination
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  // Reset to page 1 on new search
-  useEffect(() => { setPage(1); }, [search]);
+  const totalPages = Math.ceil(totalBookings / PAGE_SIZE);
+  const paginated = filtered;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-10 px-4">
@@ -299,7 +306,7 @@ export default function MyBookingsAndTicketsPage() {
                     <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
-                    <span className="text-sm font-semibold text-blue-900">{filtered.length} Total</span>
+                    <span className="text-sm font-semibold text-blue-900">{totalBookings} Total</span>
                   </div>
                   <Link
                     href="/"

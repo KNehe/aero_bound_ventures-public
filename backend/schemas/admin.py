@@ -5,12 +5,14 @@ import uuid
 
 class AdminUserInfo(BaseModel):
     """User information in admin booking response"""
+
     id: uuid.UUID
     email: str
 
 
 class AdminBookingResponse(BaseModel):
     """Response model for individual booking in admin dashboard"""
+
     id: uuid.UUID
     flight_order_id: str
     status: str
@@ -18,30 +20,33 @@ class AdminBookingResponse(BaseModel):
     ticket_url: str | None
     user: AdminUserInfo
     amadeus_order_response: dict | None
-    
+
     class Config:
         from_attributes = True
 
 
+class PaginatedAdminBookingResponse(BaseModel):
+    """Paginated response model for admin booking list"""
+
+    items: list[AdminBookingResponse]
+    total: int = Field(description="Total number of bookings")
+    skip: int = Field(description="Number of items skipped")
+    limit: int = Field(description="Maximum number of items returned")
+
+
 class BookingStatsResponse(BaseModel):
     """Response model for booking statistics on admin dashboard"""
-    
-    total_bookings: int = Field(
-        description="Total number of bookings in the system"
-    )
-    total_revenue: float = Field(
-        description="Total revenue from all bookings"
-    )
+
+    total_bookings: int = Field(description="Total number of bookings in the system")
+    total_revenue: float = Field(description="Total revenue from all bookings")
     active_users: int = Field(
         description="Number of unique users who have made bookings"
     )
-    bookings_today: int = Field(
-        description="Number of bookings created today"
-    )
+    bookings_today: int = Field(description="Number of bookings created today")
     bookings_this_week: int = Field(
         description="Number of bookings created in the last 7 days"
     )
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -49,6 +54,6 @@ class BookingStatsResponse(BaseModel):
                 "total_revenue": 45678.90,
                 "active_users": 87,
                 "bookings_today": 5,
-                "bookings_this_week": 23
+                "bookings_this_week": 23,
             }
         }

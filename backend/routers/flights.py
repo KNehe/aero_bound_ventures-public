@@ -26,8 +26,14 @@ from backend.schemas.bookings import (
     BookingResponse,
     UserBookingResponse,
     BookingCancellationResponse,
+    PaginatedUserBookingResponse,
 )
 from backend.crud.database import get_session
+from backend.crud.bookings import (
+    get_user_bookings_paginated,
+    get_user_bookings_count,
+    MAX_PAGINATION_LIMIT,
+)
 from backend.utils.log_manager import get_app_logger
 from sqlmodel import Session, select
 from backend.utils.kafka import kafka_producer
@@ -523,43 +529,57 @@ def _parse_amadeus_client_error(error: ClientError) -> str:
         return DEFAULT_MESSAGE
 
 
-@router.get("/bookings", response_model=list[UserBookingResponse])
+@router.get("/bookings", response_model=PaginatedUserBookingResponse)
 async def get_user_bookings(
-    user: UserInDB = Depends(get_current_user), session: Session = Depends(get_session)
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(
+        20,
+        ge=1,
+        le=MAX_PAGINATION_LIMIT,
+        description="Maximum number of records to return",
+    ),
+    user: UserInDB = Depends(get_current_user),
+    session: Session = Depends(get_session),
 ):
     """
-    Get all bookings for the current user.
+    Get paginated bookings for the current user.
+
+    Args:
+        skip: Number of records to skip (default: 0)
+        limit: Maximum number of records to return (default: 20, max: 100)
 
     Returns:
-        List of bookings with id, pnr, status, created_at, and ticket_url
+        Paginated list of bookings with id, pnr, status, created_at, and ticket_url
     """
     try:
-        key = build_redis_key({"user_bookings": str(user.id)})
-        cached_bookings = redis_cache.get(key)
-        if cached_bookings:
-            logger.info(f"Returning cached bookings for user_id: {user.id}")
-            return cached_bookings
+        cache_key = build_redis_key(
+            {"user_bookings": str(user.id), "skip": skip, "limit": limit}
+        )
+        cached_response = redis_cache.get(cache_key)
+        if cached_response:
+            logger.info(
+                f"Returning cached bookings for user_id: {user.id}, skip: {skip}, limit: {limit}"
+            )
+            return cached_response
 
-        logger.info(f"Fetching bookings for user_id: {user.id}")
+        logger.info(
+            f"Fetching bookings for user_id: {user.id}, skip: {skip}, limit: {limit}"
+        )
 
-        bookings = session.exec(
-            select(Booking)
-            .where(Booking.user_id == user.id)
-            .order_by(Booking.created_at.desc())
-        ).all()
+        bookings = get_user_bookings_paginated(session, user.id, skip=skip, limit=limit)
+        total = get_user_bookings_count(session, user.id)
 
-        response = []
+        items = []
         for booking in bookings:
             pnr = None
             if booking.amadeus_order_response:
-                print(f"amadeus_order_response: {booking.amadeus_order_response}")
                 associated_records = booking.amadeus_order_response.get(
                     "associatedRecords", []
                 )
                 if associated_records:
                     pnr = associated_records[0].get("reference")
 
-            response.append(
+            items.append(
                 UserBookingResponse(
                     id=booking.id,
                     pnr=pnr,
@@ -569,11 +589,17 @@ async def get_user_bookings(
                 )
             )
 
-        response_data = [b.model_dump(mode="json") for b in response]
-        redis_cache.set(key, response_data)
+        response = PaginatedUserBookingResponse(
+            items=items,
+            total=total,
+            skip=skip,
+            limit=limit,
+        )
+
+        redis_cache.set(cache_key, response.model_dump(mode="json"))
 
         logger.info(
-            f"Successfully fetched {len(response)} bookings for user_id: {user.id}"
+            f"Successfully fetched {len(items)} bookings for user_id: {user.id} (total: {total})"
         )
         return response
 

@@ -1,7 +1,89 @@
 """CRUD operations for bookings"""
 
-from sqlmodel import Session, select
+import uuid
+from sqlmodel import Session, select, func
 from backend.models.bookings import Booking
+
+
+MAX_PAGINATION_LIMIT = 100
+
+
+def get_user_bookings_paginated(
+    session: Session, user_id: uuid.UUID, skip: int = 0, limit: int = 20
+) -> list[Booking]:
+    """
+    Get paginated bookings for a user
+
+    Args:
+        session: Database session
+        user_id: User ID to filter bookings
+        skip: Number of records to skip
+        limit: Maximum number of records to return (capped at MAX_PAGINATION_LIMIT)
+
+    Returns:
+        List of Booking objects
+    """
+    limit = min(limit, MAX_PAGINATION_LIMIT)
+    statement = (
+        select(Booking)
+        .where(Booking.user_id == user_id)
+        .order_by(Booking.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    return list(session.exec(statement).all())
+
+
+def get_user_bookings_count(session: Session, user_id: uuid.UUID) -> int:
+    """
+    Get total count of bookings for a user
+
+    Args:
+        session: Database session
+        user_id: User ID to filter bookings
+
+    Returns:
+        Total count of bookings
+    """
+    statement = (
+        select(func.count()).select_from(Booking).where(Booking.user_id == user_id)
+    )
+    return session.exec(statement).one()
+
+
+def get_all_bookings_paginated(
+    session: Session, skip: int = 0, limit: int = 20
+) -> list[Booking]:
+    """
+    Get all bookings with pagination (for admin)
+
+    Args:
+        session: Database session
+        skip: Number of records to skip
+        limit: Maximum number of records to return (capped at MAX_PAGINATION_LIMIT)
+
+    Returns:
+        List of Booking objects
+    """
+    limit = min(limit, MAX_PAGINATION_LIMIT)
+    statement = (
+        select(Booking).order_by(Booking.created_at.desc()).offset(skip).limit(limit)
+    )
+    return list(session.exec(statement).all())
+
+
+def get_all_bookings_count(session: Session) -> int:
+    """
+    Get total count of all bookings
+
+    Args:
+        session: Database session
+
+    Returns:
+        Total count of bookings
+    """
+    statement = select(func.count()).select_from(Booking)
+    return session.exec(statement).one()
 
 
 def get_booking_by_id(session: Session, booking_id: str) -> Booking | None:
@@ -77,7 +159,7 @@ def update_booking_ticket_url(
     booking = get_booking_by_id(session, booking_id)
     if booking:
         booking.ticket_url = ticket_url
-        session.add(booking) 
+        session.add(booking)
         session.commit()
         session.refresh(booking)
     return booking
