@@ -13,6 +13,29 @@ interface Booking {
   ticket_url: string | null;
 }
 
+interface CancelModalState {
+  isOpen: boolean;
+  bookingId: string | null;
+  pnr: string | null;
+  isLoading: boolean;
+}
+
+interface CancelBookingResponse {
+  id: string;
+  status: string;
+  message: string;
+}
+
+const BOOKING_STATUS = {
+  CONFIRMED: "confirmed",
+  PAID: "paid",
+  PENDING: "pending",
+  CANCELLED: "cancelled",
+  REVERSED: "reversed",
+  FAILED: "failed",
+  REFUNDED: "refunded",
+} as const;
+
 export default function MyBookingsAndTicketsPage() {
   const isAuthenticated = useAuth((state) => state.isAuthenticated);
   const logout = useAuth((state) => state.logout);
@@ -23,18 +46,16 @@ export default function MyBookingsAndTicketsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [isHydrated, setIsHydrated] = useState(false);
+  const [cancelModal, setCancelModal] = useState<CancelModalState>({
+    isOpen: false,
+    bookingId: null,
+    pnr: null,
+    isLoading: false,
+  });
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
   const PAGE_SIZE = 10;
-
-  const BOOKING_STATUS = {
-    CONFIRMED: "confirmed",
-    PAID: "paid",
-    PENDING: "pending",
-    CANCELLED: "cancelled",
-    REVERSED: "reversed",
-    FAILED: "failed",
-    REFUNDED: "refunded",
-  } as const;
 
   const handleDownloadTicket = async (ticketUrl: string, bookingId: string) => {
     try {
@@ -67,6 +88,71 @@ export default function MyBookingsAndTicketsPage() {
 
   const handleViewTicket = (ticketUrl: string) => {
     window.open(ticketUrl, '_blank');
+  };
+
+  const canCancelBooking = (status: string): boolean => {
+    const cancellableStatuses: string[] = [
+      BOOKING_STATUS.CONFIRMED,
+      BOOKING_STATUS.PENDING,
+      BOOKING_STATUS.PAID,
+    ];
+    return cancellableStatuses.includes(status);
+  };
+
+  const openCancelModal = (bookingId: string, pnr: string | null) => {
+    setCancelError(null);
+    setCancelModal({
+      isOpen: true,
+      bookingId,
+      pnr,
+      isLoading: false,
+    });
+  };
+
+  const closeCancelModal = () => {
+    setCancelModal({
+      isOpen: false,
+      bookingId: null,
+      pnr: null,
+      isLoading: false,
+    });
+    setCancelError(null);
+  };
+
+  const handleCancelBooking = async () => {
+    if (!cancelModal.bookingId) return;
+
+    setCancelModal(prev => ({ ...prev, isLoading: true }));
+    setCancelError(null);
+
+    try {
+      const response = await apiClient.delete<CancelBookingResponse>(
+        `/booking/flight-orders/${cancelModal.bookingId}`
+      );
+      
+      setBookings(prev =>
+        prev.map(booking =>
+          booking.id === cancelModal.bookingId
+            ? { ...booking, status: BOOKING_STATUS.CANCELLED }
+            : booking
+        )
+      );
+      
+      closeCancelModal();
+      
+      // Show success message
+      setSuccessMessage(response.message || 'Booking cancelled successfully');
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err) {
+      console.error('Error cancelling booking:', err);
+      if (isUnauthorizedError(err)) {
+        await logout();
+        router.push('/auth/login?redirect=/my');
+        return;
+      }
+      setCancelError(err instanceof Error ? err.message : 'Failed to cancel booking');
+      setCancelModal(prev => ({ ...prev, isLoading: false }));
+    }
   };
 
   // Handle hydration
@@ -143,6 +229,26 @@ export default function MyBookingsAndTicketsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-10 px-4">
+      {/* Success Toast */}
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="font-medium">{successMessage}</span>
+            <button
+              onClick={() => setSuccessMessage(null)}
+              className="ml-2 hover:bg-green-700 rounded p-1"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto">
         {/* Header Section */}
         <div className="mb-8">
@@ -285,12 +391,25 @@ export default function MyBookingsAndTicketsPage() {
                             )}
                           </td>
                           <td className="px-6 py-4">
-                            <Link href={`/booking/success/${booking.id}`} className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium">
-                              View Details
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                            </Link>
+                            <div className="flex items-center gap-2">
+                              <Link href={`/booking/success/${booking.id}`} className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium">
+                                View Details
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </Link>
+                              {canCancelBooking(booking.status) && (
+                                <button
+                                  onClick={() => openCancelModal(booking.id, booking.pnr)}
+                                  className="inline-flex items-center gap-1 text-red-600 hover:text-red-700 text-sm font-medium ml-2"
+                                >
+                                  Cancel
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -326,6 +445,14 @@ export default function MyBookingsAndTicketsPage() {
                         <Link href={`/booking/success/${booking.id}`} className="flex-1 text-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs font-medium transition-colors">
                           View Details
                         </Link>
+                        {canCancelBooking(booking.status) && (
+                          <button
+                            onClick={() => openCancelModal(booking.id, booking.pnr)}
+                            className="flex-1 px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-xs font-medium transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        )}
                         {booking.ticket_url && (
                           <>
                             <button onClick={() => handleViewTicket(booking.ticket_url!)} className="flex-1 px-3 py-2 bg-green-100 text-green-700 rounded-md hover:bg-green-200 text-xs font-medium transition-colors">
@@ -375,6 +502,75 @@ export default function MyBookingsAndTicketsPage() {
           </>
         )}
       </div>
+
+      {/* Cancel Confirmation Modal */}
+      {cancelModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={!cancelModal.isLoading ? closeCancelModal : undefined}
+          />
+          
+          {/* Modal */}
+          <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
+            <div className="text-center">
+              {/* Warning Icon */}
+              <div className="mx-auto w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Cancel Booking?</h3>
+              <p className="text-gray-600 mb-2">
+                Are you sure you want to cancel this booking?
+              </p>
+              {cancelModal.pnr && (
+                <p className="text-sm text-gray-500 mb-4">
+                  PNR: <span className="font-semibold">{cancelModal.pnr}</span>
+                </p>
+              )}
+              <p className="text-sm text-red-600 mb-6">
+                This action cannot be undone. Refund eligibility depends on the airline&apos;s policy.
+              </p>
+
+              {cancelError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-700">{cancelError}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={closeCancelModal}
+                  disabled={cancelModal.isLoading}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                >
+                  Keep Booking
+                </button>
+                <button
+                  onClick={handleCancelBooking}
+                  disabled={cancelModal.isLoading}
+                  className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {cancelModal.isLoading ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Cancelling...
+                    </>
+                  ) : (
+                    'Yes, Cancel Booking'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

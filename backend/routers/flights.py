@@ -21,12 +21,17 @@ from backend.schemas.locations import (
     AirportCitySearchRequest,
     AirportCitySearchResponse,
 )
-from backend.models.bookings import Booking
-from backend.schemas.bookings import BookingResponse, UserBookingResponse
+from backend.models.bookings import Booking, BookingStatus
+from backend.schemas.bookings import (
+    BookingResponse,
+    UserBookingResponse,
+    BookingCancellationResponse,
+)
 from backend.crud.database import get_session
 from backend.utils.log_manager import get_app_logger
 from sqlmodel import Session, select
 from backend.utils.kafka import kafka_producer
+import uuid as uuid_module
 
 from backend.utils.constants import KafkaTopics, KafkaEventTypes
 
@@ -308,10 +313,6 @@ async def cancel_flight_order(
         HTTPException 403: If user doesn't own the booking
         HTTPException 400: If booking cannot be cancelled
     """
-    from backend.schemas.bookings import BookingCancellationResponse
-    from backend.models.bookings import BookingStatus
-    import uuid as uuid_module
-
     logger.info(
         f"Booking cancellation initiated for booking_id: {booking_id}, user_id: {current_user.id}"
     )
@@ -343,10 +344,11 @@ async def cancel_flight_order(
                 detail="This booking has already been cancelled",
             )
 
-        # 3. Check if booking can be cancelled (only confirmed or pending bookings)
+        # 3. Check if booking can be cancelled (only confirmed, pending, or paid bookings)
         non_cancellable_statuses = [
-            BookingStatus.REFUNDED,
             BookingStatus.REVERSED,
+            BookingStatus.FAILED,
+            BookingStatus.REFUNDED,
         ]
         if booking.status in non_cancellable_statuses:
             raise HTTPException(
@@ -371,9 +373,7 @@ async def cancel_flight_order(
                     f"Successfully cancelled flight order in Amadeus: {booking.flight_order_id}"
                 )
             except ClientError as e:
-                logger.warning(
-                    f"Failed to cancel in Amadeus (may already be cancelled): {str(e)}"
-                )
+                logger.warning(f"Failed to cancel in Amadeus: {str(e)}")
                 # Continue with local cancellation even if Amadeus fails
                 # This handles cases where the order was already cancelled externally
 

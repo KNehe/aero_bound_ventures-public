@@ -626,6 +626,26 @@ const BOOKING_STATUS = {
                 <h3 className="text-lg font-bold text-gray-900">Quick Actions</h3>
               </div>
               <div className="space-y-3">
+                {/* Show cancelled message if booking is cancelled */}
+                {bookingData.status === BOOKING_STATUS.CANCELLED && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="font-semibold text-red-800">Booking Cancelled</span>
+                    </div>
+                    <p className="text-sm text-red-700">
+                      This booking has been cancelled. If you paid for this booking, a refund will be processed within 5-7 business days.
+                    </p>
+                    <a
+                      href="/"
+                      className="mt-3 inline-block w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg text-center transition-colors"
+                    >
+                      Book a New Flight
+                    </a>
+                  </div>
+                )}
                 {/* Show payment button if booking is confirmed but not yet paid */}
                 {bookingData.status === BOOKING_STATUS.CONFIRMED && (
                   <button
