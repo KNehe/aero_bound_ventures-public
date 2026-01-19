@@ -16,13 +16,13 @@ sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(backend_dir))
 
 # Load environment variables
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # noqa: E402
 
 load_dotenv()
 
 # Import all models for autogenerate support (AFTER path is set)
-from backend.models import *  # noqa: F401,F403
-from sqlmodel import SQLModel
+from backend.models import *  # noqa: F401,F403,E402
+from sqlmodel import SQLModel  # noqa: E402
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
