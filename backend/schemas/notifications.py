@@ -34,3 +34,14 @@ class NotificationStreamEvent(BaseModel):
 
 class UnreadCountResponse(BaseModel):
     unread_count: int
+
+
+class CursorPaginatedNotificationResponse(BaseModel):
+    """Cursor-based paginated response for notifications"""
+
+    items: list[NotificationResponse]
+    next_cursor: str | None = None
+    has_more: bool
+    has_previous: bool = False
+    total_count: int | None = None
+    limit: int

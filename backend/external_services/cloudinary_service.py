@@ -19,11 +19,11 @@ def configure_cloudinary():
 def upload_file(file, resource_type: str = "auto") -> dict:
     """
     Upload a file to Cloudinary
-    
+
     Args:
         file: File object to upload
         resource_type: Type of resource (auto, image, video, raw)
-        
+
     Returns:
         Dictionary containing upload result with public_id, secure_url, etc.
     """

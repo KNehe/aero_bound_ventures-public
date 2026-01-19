@@ -1,89 +1,114 @@
 """CRUD operations for bookings"""
 
 import uuid
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select
 from backend.models.bookings import Booking
-
+from backend.utils.pagination import (
+    CursorPaginator,
+    get_total_count,
+)
 
 MAX_PAGINATION_LIMIT = 100
 
 
-def get_user_bookings_paginated(
-    session: Session, user_id: uuid.UUID, skip: int = 0, limit: int = 20
-) -> list[Booking]:
+def _booking_cursor_fields(booking: Booking) -> dict:
+    """Extract cursor fields from a booking."""
+    return {"created_at": booking.created_at, "id": booking.id}
+
+
+def get_user_bookings_cursor(
+    session: Session,
+    user_id: uuid.UUID,
+    cursor: str | None = None,
+    limit: int = 20,
+    include_count: bool = False,
+) -> tuple[list[Booking], str | None, bool, int | None]:
     """
-    Get paginated bookings for a user
+    Get cursor-paginated bookings for a user.
 
     Args:
         session: Database session
         user_id: User ID to filter bookings
-        skip: Number of records to skip
+        cursor: Cursor for pagination (None for first page)
         limit: Maximum number of records to return (capped at MAX_PAGINATION_LIMIT)
+        include_count: Whether to include total count (can be expensive)
 
     Returns:
-        List of Booking objects
+        Tuple of (list of Booking objects, next_cursor or None, has_more, total_count or None)
     """
-    limit = min(limit, MAX_PAGINATION_LIMIT)
-    statement = (
-        select(Booking)
-        .where(Booking.user_id == user_id)
-        .order_by(Booking.created_at.desc())
-        .offset(skip)
-        .limit(limit)
+    paginator = CursorPaginator(
+        cursor=cursor,
+        limit=limit,
+        order_fields=["created_at", "id"],
+        order_direction="desc",
     )
-    return list(session.exec(statement).all())
+
+    # Build base query
+    query = select(Booking).where(Booking.user_id == user_id)
+
+    # Get total count if requested (before applying cursor/limit)
+    total_count = None
+    if include_count:
+        count_query = select(Booking).where(Booking.user_id == user_id)
+        total_count = get_total_count(session, count_query)
+
+    # Apply pagination
+    query = paginator.apply_cursor_filter(query, Booking)
+    query = paginator.apply_ordering(query, Booking)
+    query = paginator.apply_limit(query)
+
+    bookings = list(session.exec(query).all())
+    items, next_cursor, has_more = paginator.build_result(
+        bookings, _booking_cursor_fields
+    )
+
+    return items, next_cursor, has_more, total_count
 
 
-def get_user_bookings_count(session: Session, user_id: uuid.UUID) -> int:
+def get_all_bookings_cursor(
+    session: Session,
+    cursor: str | None = None,
+    limit: int = 20,
+    include_count: bool = False,
+) -> tuple[list[Booking], str | None, bool, int | None]:
     """
-    Get total count of bookings for a user
+    Get cursor-paginated bookings (admin view).
 
     Args:
         session: Database session
-        user_id: User ID to filter bookings
-
-    Returns:
-        Total count of bookings
-    """
-    statement = (
-        select(func.count()).select_from(Booking).where(Booking.user_id == user_id)
-    )
-    return session.exec(statement).one()
-
-
-def get_all_bookings_paginated(
-    session: Session, skip: int = 0, limit: int = 20
-) -> list[Booking]:
-    """
-    Get all bookings with pagination (for admin)
-
-    Args:
-        session: Database session
-        skip: Number of records to skip
+        cursor: Cursor for pagination (None for first page)
         limit: Maximum number of records to return (capped at MAX_PAGINATION_LIMIT)
+        include_count: Whether to include total count (can be expensive)
 
     Returns:
-        List of Booking objects
+        Tuple of (list of Booking objects, next_cursor or None, has_more, total_count or None)
     """
-    limit = min(limit, MAX_PAGINATION_LIMIT)
-    statement = (
-        select(Booking).order_by(Booking.created_at.desc()).offset(skip).limit(limit)
+    paginator = CursorPaginator(
+        cursor=cursor,
+        limit=limit,
+        order_fields=["created_at", "id"],
+        order_direction="desc",
     )
-    return list(session.exec(statement).all())
 
+    # Build base query
+    query = select(Booking)
 
-def get_all_bookings_count(session: Session) -> int:
-    """
-    Get total count of all bookings
+    # Get total count if requested
+    total_count = None
+    if include_count:
+        total_count = get_total_count(session, select(Booking))
 
-    Args:
-        session: Database session
+    # Apply pagination
+    query = paginator.apply_cursor_filter(query, Booking)
+    query = paginator.apply_ordering(query, Booking)
+    query = paginator.apply_limit(query)
 
-    Returns:
-        Total count of bookings
-    """
-    statement = select(func.count()).select_from(Booking)
-    return session.exec(statement).one()
+    bookings = list(session.exec(query).all())
+    items, next_cursor, has_more = paginator.build_result(
+        bookings, _booking_cursor_fields
+    )
+
+    return items, next_cursor, has_more, total_count
 
 
 def get_booking_by_id(session: Session, booking_id: str) -> Booking | None:

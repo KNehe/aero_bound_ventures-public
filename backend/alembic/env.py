@@ -17,6 +17,7 @@ sys.path.insert(0, str(backend_dir))
 
 # Load environment variables
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Import all models for autogenerate support (AFTER path is set)

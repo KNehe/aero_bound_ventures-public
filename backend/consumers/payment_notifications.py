@@ -65,7 +65,9 @@ async def _handle_payment_success(session, event: PaymentSuccessEvent):
                     "booking_id": str(event.booking_id),
                 },
             )
-            logger.info(f"Admin payment notification sent to {len(admin_emails)} admins")
+            logger.info(
+                f"Admin payment notification sent to {len(admin_emails)} admins"
+            )
         except Exception as e:
             logger.error(f"Failed to send admin payment notification email: {e}")
 

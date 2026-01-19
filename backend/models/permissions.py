@@ -16,7 +16,11 @@ class GroupPermission(SQLModel, table=True):
     group_id: uuid.UUID = Field(foreign_key="group.id", nullable=False)
     permission_id: uuid.UUID = Field(foreign_key="permission.id", nullable=False)
     assigned_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            default=lambda: datetime.now(timezone.utc),
+        )
     )
 
 
@@ -28,7 +32,11 @@ class UserGroup(SQLModel, table=True):
     user_id: uuid.UUID = Field(foreign_key="userindb.id", nullable=False)
     group_id: uuid.UUID = Field(foreign_key="group.id", nullable=False)
     assigned_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            default=lambda: datetime.now(timezone.utc),
+        )
     )
 
 
@@ -40,7 +48,11 @@ class UserPermission(SQLModel, table=True):
     user_id: uuid.UUID = Field(foreign_key="userindb.id", nullable=False)
     permission_id: uuid.UUID = Field(foreign_key="permission.id", nullable=False)
     assigned_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            default=lambda: datetime.now(timezone.utc),
+        )
     )
 
 
@@ -54,7 +66,11 @@ class Permission(SQLModel, table=True):
     )  # e.g., "flights.view_flight"
     description: str | None = Field(default=None, nullable=True)
     created_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            default=lambda: datetime.now(timezone.utc),
+        )
     )
 
     # Relationships
@@ -75,9 +91,12 @@ class Group(SQLModel, table=True):
     )  # e.g., "Admin", "Flight Manager"
     description: str | None = Field(default=None, nullable=True)
     created_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            default=lambda: datetime.now(timezone.utc),
+        )
     )
-
 
     # Relationships
     permissions: list["Permission"] = Relationship(

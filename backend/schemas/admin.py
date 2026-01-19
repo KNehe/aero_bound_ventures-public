@@ -25,12 +25,20 @@ class AdminBookingResponse(BaseModel):
         from_attributes = True
 
 
-class PaginatedAdminBookingResponse(BaseModel):
-    """Paginated response model for admin booking list"""
+class CursorPaginatedAdminBookingResponse(BaseModel):
+    """Cursor-based paginated response model for admin booking list"""
 
     items: list[AdminBookingResponse]
-    total: int = Field(description="Total number of bookings")
-    skip: int = Field(description="Number of items skipped")
+    next_cursor: str | None = Field(
+        description="Cursor for the next page, null if no more pages"
+    )
+    has_more: bool = Field(description="Whether there are more items after this page")
+    has_previous: bool = Field(
+        default=False, description="Whether there are items before this page"
+    )
+    total_count: int | None = Field(
+        default=None, description="Total count (null if not requested)"
+    )
     limit: int = Field(description="Maximum number of items returned")
 
 

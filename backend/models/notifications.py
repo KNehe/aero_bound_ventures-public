@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, Index
 from typing import TYPE_CHECKING
 import uuid
 from datetime import datetime, timezone
@@ -34,3 +34,7 @@ class Notification(SQLModel, table=True):
         )
     )
     user: "UserInDB" = Relationship(back_populates="notifications")
+
+    __table_args__ = (
+        Index("ix_notification_user_cursor", "user_id", "created_at", "id"),
+    )

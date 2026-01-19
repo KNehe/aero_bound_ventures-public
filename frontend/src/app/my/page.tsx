@@ -13,10 +13,12 @@ interface Booking {
   ticket_url: string | null;
 }
 
-interface PaginatedBookingsResponse {
+interface CursorPaginatedBookingsResponse {
   items: Booking[];
-  total: number;
-  skip: number;
+  next_cursor: string | null;
+  has_more: boolean;
+  has_previous: boolean;
+  total_count: number | null;
   limit: number;
 }
 
@@ -49,9 +51,14 @@ export default function MyBookingsAndTicketsPage() {
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [navigating, setNavigating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [hasPrevious, setHasPrevious] = useState(false);
+  const [cursorHistory, setCursorHistory] = useState<string[]>([]);
   const [totalBookings, setTotalBookings] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [isHydrated, setIsHydrated] = useState(false);
   const [cancelModal, setCancelModal] = useState<CancelModalState>({
@@ -62,14 +69,14 @@ export default function MyBookingsAndTicketsPage() {
   });
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
+
   const PAGE_SIZE = 20;
 
   const handleDownloadTicket = async (ticketUrl: string, bookingId: string) => {
     try {
       const response = await fetch(ticketUrl);
       const blob = await response.blob();
-      
+
       // Detect file extension from content type or URL
       let extension = 'pdf';
       const contentType = response.headers.get('content-type');
@@ -80,7 +87,7 @@ export default function MyBookingsAndTicketsPage() {
       } else if (ticketUrl.match(/\.(jpg|jpeg|png|pdf)$/i)) {
         extension = ticketUrl.match(/\.(jpg|jpeg|png|pdf)$/i)![1].toLowerCase();
       }
-      
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -137,7 +144,7 @@ export default function MyBookingsAndTicketsPage() {
       const response = await apiClient.delete<CancelBookingResponse>(
         `/booking/flight-orders/${cancelModal.bookingId}`
       );
-      
+
       setBookings(prev =>
         prev.map(booking =>
           booking.id === cancelModal.bookingId
@@ -145,9 +152,9 @@ export default function MyBookingsAndTicketsPage() {
             : booking
         )
       );
-      
+
       closeCancelModal();
-      
+
       // Show success message
       setSuccessMessage(response.message || 'Booking cancelled successfully');
       setTimeout(() => setSuccessMessage(null), 5000);
@@ -171,19 +178,24 @@ export default function MyBookingsAndTicketsPage() {
   useEffect(() => {
     // Wait for hydration and check if user is authenticated
     if (!isHydrated) return;
-    
+
     if (!isAuthenticated) {
       router.push('/auth/login?redirect=/my');
       return;
     }
 
-    const fetchBookings = async () => {
+    const fetchBookings = async (cursor?: string | null) => {
       try {
         setLoading(true);
-        const skip = (page - 1) * PAGE_SIZE;
-        const data = await apiClient.get<PaginatedBookingsResponse>(`/bookings?skip=${skip}&limit=${PAGE_SIZE}`);
+        const url = cursor
+          ? `/bookings?cursor=${cursor}&limit=${PAGE_SIZE}&include_count=true`
+          : `/bookings?limit=${PAGE_SIZE}&include_count=true`;
+        const data = await apiClient.get<CursorPaginatedBookingsResponse>(url);
         setBookings(data.items);
-        setTotalBookings(data.total);
+        setNextCursor(data.next_cursor);
+        setHasMore(data.has_more);
+        setHasPrevious(data.has_previous);
+        setTotalBookings(data.total_count ?? 0);
       } catch (err) {
         console.error('Error fetching bookings:', err);
         if (isUnauthorizedError(err)) {
@@ -198,7 +210,70 @@ export default function MyBookingsAndTicketsPage() {
     };
 
     fetchBookings();
-  }, [isAuthenticated, isHydrated, router, logout, page]);
+  }, [isAuthenticated, isHydrated, router, logout]);
+
+  const goToNextPage = async () => {
+    if (!nextCursor || navigating) return;
+
+    try {
+      setNavigating(true);
+      const url = `/bookings?cursor=${nextCursor}&limit=${PAGE_SIZE}&include_count=true`;
+      const data = await apiClient.get<CursorPaginatedBookingsResponse>(url);
+
+      // Save current cursor to history for going back
+      setCursorHistory(prev => [...prev, nextCursor]);
+
+      setBookings(data.items);
+      setNextCursor(data.next_cursor);
+      setHasMore(data.has_more);
+      setHasPrevious(true);
+      setCurrentPage(prev => prev + 1);
+    } catch (err) {
+      console.error('Error loading next page:', err);
+      if (isUnauthorizedError(err)) {
+        await logout();
+        router.push('/auth/login?redirect=/my');
+        return;
+      }
+    } finally {
+      setNavigating(false);
+    }
+  };
+
+  const goToPreviousPage = async () => {
+    if (cursorHistory.length === 0 || navigating) return;
+
+    try {
+      setNavigating(true);
+
+      // Pop the last cursor from history
+      const newHistory = [...cursorHistory];
+      newHistory.pop();
+      const previousCursor = newHistory.length > 0 ? newHistory[newHistory.length - 1] : null;
+
+      const url = previousCursor
+        ? `/bookings?cursor=${previousCursor}&limit=${PAGE_SIZE}&include_count=true`
+        : `/bookings?limit=${PAGE_SIZE}&include_count=true`;
+
+      const data = await apiClient.get<CursorPaginatedBookingsResponse>(url);
+
+      setCursorHistory(newHistory);
+      setBookings(data.items);
+      setNextCursor(data.next_cursor);
+      setHasMore(data.has_more);
+      setHasPrevious(newHistory.length > 0);
+      setCurrentPage(prev => prev - 1);
+    } catch (err) {
+      console.error('Error loading previous page:', err);
+      if (isUnauthorizedError(err)) {
+        await logout();
+        router.push('/auth/login?redirect=/my');
+        return;
+      }
+    } finally {
+      setNavigating(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -231,7 +306,6 @@ export default function MyBookingsAndTicketsPage() {
     );
   }, [search, bookings]);
 
-  const totalPages = Math.ceil(totalBookings / PAGE_SIZE);
   const paginated = filtered;
 
   return (
@@ -437,7 +511,7 @@ export default function MyBookingsAndTicketsPage() {
                           {booking.status.toUpperCase()}
                         </span>
                       </div>
-                      
+
                       <div className="text-xs text-gray-500 mb-3">
                         {new Date(booking.created_at).toLocaleDateString('en-US', {
                           year: 'numeric',
@@ -481,27 +555,45 @@ export default function MyBookingsAndTicketsPage() {
                 </div>
 
                 {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <div className="mt-6 flex items-center justify-between px-4 py-4 bg-white rounded-lg shadow-sm border">
-                    <div className="text-sm text-gray-600 font-medium">
-                      Page {page} of {totalPages}
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setPage(p => Math.max(1, p - 1))}
-                        disabled={page === 1}
-                        className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Previous
-                      </button>
-                      <button
-                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                        disabled={page === totalPages}
-                        className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Next
-                      </button>
-                    </div>
+                {(hasPrevious || hasMore) && (
+                  <div className="mt-6 flex items-center justify-center gap-4">
+                    <button
+                      onClick={goToPreviousPage}
+                      disabled={!hasPrevious || navigating}
+                      className="px-5 py-2.5 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Previous
+                    </button>
+
+                    <span className="text-sm text-gray-600 font-medium">
+                      Page {currentPage}
+                    </span>
+
+                    <button
+                      onClick={goToNextPage}
+                      disabled={!hasMore || navigating}
+                      className="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                    >
+                      {navigating ? (
+                        <>
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          Next
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </>
+                      )}
+                    </button>
                   </div>
                 )}
               </>
@@ -518,7 +610,7 @@ export default function MyBookingsAndTicketsPage() {
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={!cancelModal.isLoading ? closeCancelModal : undefined}
           />
-          
+
           {/* Modal */}
           <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
             <div className="text-center">
@@ -528,7 +620,7 @@ export default function MyBookingsAndTicketsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
               </div>
-              
+
               <h3 className="text-xl font-bold text-gray-900 mb-2">Cancel Booking?</h3>
               <p className="text-gray-600 mb-2">
                 Are you sure you want to cancel this booking?

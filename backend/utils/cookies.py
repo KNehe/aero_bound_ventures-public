@@ -24,7 +24,7 @@ def is_production() -> bool:
 def get_cookie_settings() -> CookieSettings:
     """
     Get cookie settings based on environment.
-    
+
     Returns:
         CookieSettings with appropriate values for the current environment:
         - Development: secure=False (works with HTTP on localhost)
@@ -32,7 +32,7 @@ def get_cookie_settings() -> CookieSettings:
     """
     is_prod = is_production()
     access_token_expire_minutes = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
-    
+
     return CookieSettings(
         httponly=True,
         secure=is_prod,
@@ -44,7 +44,7 @@ def get_cookie_settings() -> CookieSettings:
 def get_cookie_domain() -> str | None:
     """
     Get cookie domain based on environment.
-    
+
     Returns:
         Domain string for production, None for development (localhost).
     """

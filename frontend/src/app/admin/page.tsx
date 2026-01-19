@@ -2,10 +2,9 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import useAuth from "@/store/auth";
-import { Booking, BookingStats, PaginatedBookingsResponse } from "@/types/admin";
+import { Booking, BookingStats, CursorPaginatedBookingsResponse } from "@/types/admin";
 import { apiClient, isUnauthorizedError, getApiBaseUrl } from "@/lib/api";
 
-// Status constants to avoid hardcoded strings (matching backend BookingStatus class)
 const BOOKING_STATUS = {
   CONFIRMED: "confirmed",
   PAID: "paid",
@@ -27,8 +26,8 @@ export default function AdminDashboard() {
   const [statsError, setStatsError] = useState<string | null>(null);
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
   const [bookingsError, setBookingsError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [totalBookings, setTotalBookings] = useState(0);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
   const PAGE_SIZE = 20;
 
   const filteredBookings = bookings.filter(booking => {
@@ -141,32 +140,32 @@ export default function AdminDashboard() {
     fetchStats();
   }, [logout, router]);
 
-  // Fetch all bookings from API
-  useEffect(() => {
-
-    const fetchBookings = async () => {
-      try {
-        setIsLoadingBookings(true);
-        setBookingsError(null);
-        const skip = (page - 1) * PAGE_SIZE;
-        const data = await apiClient.get<PaginatedBookingsResponse>(`/admin/bookings?skip=${skip}&limit=${PAGE_SIZE}`);
-        setBookings(data.items);
-        setTotalBookings(data.total);
-      } catch (error) {
-        console.error("Error fetching bookings:", error);
-        if (isUnauthorizedError(error)) {
-          await logout();
-          router.push('/auth/login?redirect=/admin');
-          return;
-        }
-        setBookingsError(error instanceof Error ? error.message : "Failed to load bookings");
-      } finally {
-        setIsLoadingBookings(false);
+  const fetchBookings = async (cursor?: string | null) => {
+    try {
+      setIsLoadingBookings(true);
+      setBookingsError(null);
+      const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+      if (cursor) params.append('cursor', cursor);
+      const data = await apiClient.get<CursorPaginatedBookingsResponse>(`/admin/bookings?${params.toString()}`);
+      setBookings(prev => cursor ? [...prev, ...data.items] : data.items);
+      setNextCursor(data.next_cursor);
+      setHasMore(data.has_more);
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+      if (isUnauthorizedError(error)) {
+        await logout();
+        router.push('/auth/login?redirect=/admin');
+        return;
       }
-    };
-    
+      setBookingsError(error instanceof Error ? error.message : "Failed to load bookings");
+    } finally {
+      setIsLoadingBookings(false);
+    }
+  };
+
+  useEffect(() => {
     fetchBookings();
-  }, [logout, router, page]);
+  }, [logout, router]);
 
   useEffect(() => {
     const url  = `${getApiBaseUrl()}/notifications/${userInfo?.id}`;
@@ -490,30 +489,15 @@ export default function AdminDashboard() {
           )}
           
           {/* Pagination Controls */}
-          {totalBookings > PAGE_SIZE && (
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-              <div className="text-sm text-gray-600 font-medium">
-                Showing {((page - 1) * PAGE_SIZE) + 1} to {Math.min(page * PAGE_SIZE, totalBookings)} of {totalBookings} bookings
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Previous
-                </button>
-                <span className="px-4 py-2 text-sm text-gray-600 font-medium">
-                  Page {page} of {Math.ceil(totalBookings / PAGE_SIZE)}
-                </span>
-                <button
-                  onClick={() => setPage(p => Math.min(Math.ceil(totalBookings / PAGE_SIZE), p + 1))}
-                  disabled={page === Math.ceil(totalBookings / PAGE_SIZE)}
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Next
-                </button>
-              </div>
+          {hasMore && (
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-center">
+              <button
+                onClick={() => fetchBookings(nextCursor)}
+                disabled={isLoadingBookings}
+                className="px-6 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isLoadingBookings ? 'Loading...' : 'Load More'}
+              </button>
             </div>
           )}
         </div>

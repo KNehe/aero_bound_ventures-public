@@ -81,7 +81,7 @@ def get_current_user(
 ):
     """
     Get current authenticated user from JWT token.
-    
+
     Tries to get token from:
     1. Authorization header (Bearer token)
     2. HTTP-only cookie (access_token)
@@ -91,14 +91,14 @@ def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
+
     # Try to get token from Authorization header first, then from cookie
     if not token:
         token = request.cookies.get("access_token")
-    
+
     if not token:
         raise credentials_exception
-    
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("sub")
@@ -120,15 +120,15 @@ def get_user_from_token(
     """
     Validate a JWT token and return the user.
     Used for SSE endpoints where token may be passed as query param or via cookie.
-    
+
     Args:
         token: JWT access token (from query param)
         session: Database session
         request: Optional request object to read cookie from
-        
+
     Returns:
         UserInDB if valid
-        
+
     Raises:
         HTTPException 401 if token is invalid
     """
@@ -136,14 +136,14 @@ def get_user_from_token(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
     )
-    
+
     # Try query param token first, then cookie
     if not token and request:
         token = request.cookies.get("access_token")
-    
+
     if not token:
         raise credentials_exception
-    
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("sub")

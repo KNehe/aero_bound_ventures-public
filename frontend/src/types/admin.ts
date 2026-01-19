@@ -20,10 +20,12 @@ export interface Booking {
   amadeus_order_response: any;
 }
 
-export interface PaginatedBookingsResponse {
+export interface CursorPaginatedBookingsResponse {
   items: Booking[];
-  total: number;
-  skip: number;
+  next_cursor: string | null;
+  has_more: boolean;
+  has_previous: boolean;
+  total_count: number | null;
   limit: number;
 }
 

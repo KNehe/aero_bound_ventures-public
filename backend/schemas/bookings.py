@@ -19,12 +19,20 @@ class UserBookingResponse(BaseModel):
     ticket_url: str | None
 
 
-class PaginatedUserBookingResponse(BaseModel):
-    """Paginated response model for user's booking list"""
+class CursorPaginatedUserBookingResponse(BaseModel):
+    """Cursor-based paginated response model for user's booking list"""
 
     items: list[UserBookingResponse]
-    total: int = Field(description="Total number of bookings")
-    skip: int = Field(description="Number of items skipped")
+    next_cursor: str | None = Field(
+        description="Cursor for the next page, null if no more pages"
+    )
+    has_more: bool = Field(description="Whether there are more items after this page")
+    has_previous: bool = Field(
+        default=False, description="Whether there are items before this page"
+    )
+    total_count: int | None = Field(
+        default=None, description="Total count (null if not requested)"
+    )
     limit: int = Field(description="Maximum number of items returned")
 
 

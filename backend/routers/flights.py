@@ -26,14 +26,13 @@ from backend.schemas.bookings import (
     BookingResponse,
     UserBookingResponse,
     BookingCancellationResponse,
-    PaginatedUserBookingResponse,
+    CursorPaginatedUserBookingResponse,
 )
 from backend.crud.database import get_session
 from backend.crud.bookings import (
-    get_user_bookings_paginated,
-    get_user_bookings_count,
-    MAX_PAGINATION_LIMIT,
+    get_user_bookings_cursor,
 )
+from backend.utils.pagination import MAX_PAGINATION_LIMIT
 from backend.utils.log_manager import get_app_logger
 from sqlmodel import Session, select
 from backend.utils.kafka import kafka_producer
@@ -529,45 +528,50 @@ def _parse_amadeus_client_error(error: ClientError) -> str:
         return DEFAULT_MESSAGE
 
 
-@router.get("/bookings", response_model=PaginatedUserBookingResponse)
+@router.get("/bookings", response_model=CursorPaginatedUserBookingResponse)
 async def get_user_bookings(
-    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    cursor: str | None = Query(None, description="Cursor for pagination"),
     limit: int = Query(
         20,
         ge=1,
         le=MAX_PAGINATION_LIMIT,
         description="Maximum number of records to return",
     ),
+    include_count: bool = Query(
+        False,
+        description="Include total_count in response (may be slower)",
+    ),
     user: UserInDB = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     """
-    Get paginated bookings for the current user.
+    Get cursor-paginated bookings for the current user.
 
     Args:
-        skip: Number of records to skip (default: 0)
+        cursor: Cursor for pagination (None for first page)
         limit: Maximum number of records to return (default: 20, max: 100)
 
     Returns:
-        Paginated list of bookings with id, pnr, status, created_at, and ticket_url
+        Cursor-paginated list of bookings with id, pnr, status, created_at, and ticket_url
     """
     try:
         cache_key = build_redis_key(
-            {"user_bookings": str(user.id), "skip": skip, "limit": limit}
+            {"user_bookings": str(user.id), "cursor": cursor or "first", "limit": limit}
         )
         cached_response = redis_cache.get(cache_key)
         if cached_response:
             logger.info(
-                f"Returning cached bookings for user_id: {user.id}, skip: {skip}, limit: {limit}"
+                f"Returning cached bookings for user_id: {user.id}, cursor: {cursor}, limit: {limit}"
             )
             return cached_response
 
         logger.info(
-            f"Fetching bookings for user_id: {user.id}, skip: {skip}, limit: {limit}"
+            f"Fetching bookings for user_id: {user.id}, cursor: {cursor}, limit: {limit}"
         )
 
-        bookings = get_user_bookings_paginated(session, user.id, skip=skip, limit=limit)
-        total = get_user_bookings_count(session, user.id)
+        bookings, next_cursor, has_more, total_count = get_user_bookings_cursor(
+            session, user.id, cursor=cursor, limit=limit, include_count=include_count
+        )
 
         items = []
         for booking in bookings:
@@ -589,17 +593,19 @@ async def get_user_bookings(
                 )
             )
 
-        response = PaginatedUserBookingResponse(
+        response = CursorPaginatedUserBookingResponse(
             items=items,
-            total=total,
-            skip=skip,
+            next_cursor=next_cursor,
+            has_more=has_more,
+            has_previous=cursor is not None,
+            total_count=total_count,
             limit=limit,
         )
 
         redis_cache.set(cache_key, response.model_dump(mode="json"))
 
         logger.info(
-            f"Successfully fetched {len(items)} bookings for user_id: {user.id} (total: {total})"
+            f"Successfully fetched {len(items)} bookings for user_id: {user.id} (has_more: {has_more})"
         )
         return response
 
