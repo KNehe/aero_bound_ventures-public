@@ -7,6 +7,15 @@ import { apiClient, getApiBaseUrl } from "@/lib/api";
 
 const API_BASE_URL = getApiBaseUrl();
 
+interface CursorPaginatedNotificationResponse {
+    items: Notification[];
+    next_cursor: string | null;
+    has_more: boolean;
+    has_previous: boolean;
+    total_count: number | null;
+    limit: number;
+}
+
 interface UseNotificationsReturn {
     notifications: Notification[];
     unreadCount: number;
@@ -37,8 +46,8 @@ export function useNotifications(): UseNotificationsReturn {
 
         setIsLoading(true);
         try {
-            const data = await apiClient.get<Notification[]>('/notifications/?limit=20');
-            setNotifications(data);
+            const data = await apiClient.get<CursorPaginatedNotificationResponse>('/notifications/?limit=20&include_count=true');
+            setNotifications(data.items);
             setError(null);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to fetch notifications");
