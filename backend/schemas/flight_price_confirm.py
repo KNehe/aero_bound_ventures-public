@@ -1,3 +1,4 @@
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -8,6 +9,7 @@ class DepartureArrival(BaseModel):
 
     iataCode: str
     at: str
+    terminal: Optional[str] = None
 
 
 class Aircraft(BaseModel):
@@ -37,10 +39,11 @@ class Segment(BaseModel):
     number: str
     aircraft: Aircraft
     operating: Operating
-    duration: str
-    id: str
-    numberOfStops: int
-    blacklistedInEU: bool
+    duration: Optional[str] = None
+    id: Optional[str] = None
+    numberOfStops: Optional[int] = None
+    blacklistedInEU: Optional[bool] = None
+    co2Emissions: Optional[list] = None
 
 
 class Itinerary(BaseModel):
@@ -48,8 +51,8 @@ class Itinerary(BaseModel):
     Represents an itinerary, which is a collection of flight segments.
     """
 
-    duration: str
     segments: list
+    duration: Optional[str] = None
 
 
 class Fee(BaseModel):
@@ -71,6 +74,9 @@ class Price(BaseModel):
     base: str
     fees: list = None
     grandTotal: str = None
+    billingCurrency: str = None
+    taxes: list = None
+    refundableTaxes: str = None
 
 
 class PricingOptions(BaseModel):
@@ -90,6 +96,14 @@ class IncludedBags(BaseModel):
     quantity: int
 
 
+class AdditionalServices(BaseModel):
+    """
+    Represents additional services like chargeable seats.
+    """
+
+    chargeableSeatNumber: Optional[str] = None
+
+
 class FareDetailsBySegment(BaseModel):
     """
     Represents fare details for a specific flight segment.
@@ -99,8 +113,10 @@ class FareDetailsBySegment(BaseModel):
     cabin: str
     fareBasis: str
     Class: str = Field(alias="class")
-    includedCheckedBags: IncludedBags = None
-    includedCabinBags: IncludedBags = None
+    brandedFare: Optional[str] = None
+    includedCheckedBags: Optional[IncludedBags] = None
+    includedCabinBags: Optional[IncludedBags] = None
+    additionalServices: Optional[AdditionalServices] = None
 
 
 class TravelerPricing(BaseModel):
@@ -124,18 +140,19 @@ class FlightOffer(BaseModel):
     type: str
     id: str
     source: str
-    instantTicketingRequired: bool
-    nonHomogeneous: bool
-    oneWay: bool
-    isUpsellOffer: bool
-    lastTicketingDate: str
-    lastTicketingDateTime: str
-    numberOfBookableSeats: int
-    itineraries: list
+    itineraries: List[Itinerary]
     price: Price
     pricingOptions: PricingOptions
     validatingAirlineCodes: list
     travelerPricings: list
-    totalPrice: str = None
-    totalPriceBase: str = None
-    fareType: str = None
+    instantTicketingRequired: Optional[bool] = None
+    nonHomogeneous: Optional[bool] = None
+    oneWay: Optional[bool] = None
+    isUpsellOffer: Optional[bool] = None
+    lastTicketingDate: Optional[str] = None
+    lastTicketingDateTime: Optional[str] = None
+    numberOfBookableSeats: Optional[int] = None
+    totalPrice: Optional[str] = None
+    totalPriceBase: Optional[str] = None
+    fareType: Optional[str] = None
+    paymentCardRequired: Optional[bool] = None

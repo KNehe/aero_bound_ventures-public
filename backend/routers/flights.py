@@ -210,16 +210,68 @@ async def flight_order(
 
 
 @router.get("/shopping/seatmaps")
-async def view_seat_map_get(flightorderId: Annotated[str, Query()]):
-    response = amadeus_flight_service.view_seat_map(flightorderId=flightorderId)
-    return response
+async def view_seat_map_get(
+    flightorderId: Annotated[str, Query()],
+    current_user: UserInDB = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    try:
+        amadeus_order_id = flightorderId
+        # Check if flightorderId is a database UUID
+        try:
+            booking_uuid = uuid_module.UUID(flightorderId)
+            booking = session.exec(
+                select(Booking)
+                .where(Booking.id == booking_uuid)
+                .where(Booking.user_id == current_user.id)
+            ).first()
+
+            if booking:
+                amadeus_order_id = booking.flight_order_id
+                logger.info(
+                    f"Mapped booking UUID {flightorderId} to Amadeus order ID {amadeus_order_id}"
+                )
+            else:
+                # If it's a UUID but not found in DB for this user, it's either someone else's or invalid
+                raise HTTPException(
+                    status_code=404, detail="Booking not found or access denied"
+                )
+        except ValueError:
+            # Not a UUID, use as is (direct Amadeus ID)
+            pass
+
+        logger.info(
+            f"Final Amadeus Flight Order ID for seatmap retrieval: {amadeus_order_id}"
+        )
+        response = amadeus_flight_service.view_seat_map_get(
+            flightorderId=amadeus_order_id
+        )
+        return response
+    except ClientError as e:
+        error_detail = _parse_amadeus_client_error(e)
+        raise HTTPException(status_code=400, detail=error_detail)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to retrieve seat map for ID: {flightorderId}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve seat map: {str(e)}"
+        )
 
 
 @router.post("/shopping/seatmaps")
 async def view_seat_map_post(request: FlightOffer):
-    request_body = request.model_dump()
-    response = amadeus_flight_service.view_seat_map_post(request_body)
-    return response
+    try:
+        request_body = request.model_dump()
+        response = amadeus_flight_service.view_seat_map_post(request_body)
+        return response
+    except ClientError as e:
+        error_detail = _parse_amadeus_client_error(e)
+        raise HTTPException(status_code=400, detail=error_detail)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve seat map: {str(e)}"
+        )
 
 
 @router.get("/booking/flight-orders/{booking_id}")

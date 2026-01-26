@@ -165,6 +165,10 @@ class TravelerPrice(BaseModel):
     base: str
 
 
+class AdditionalServicesBySegment(BaseModel):
+    chargeableSeatNumber: str | None = None
+
+
 class FareDetailsBySegment(BaseModel):
     segmentId: str
     cabin: str
@@ -177,6 +181,7 @@ class FareDetailsBySegment(BaseModel):
     includedCheckedBags: "Bags"
     includedCabinBags: "Bags"
     amenities: list["Amenity"]
+    additionalServices: AdditionalServicesBySegment | None = None
 
 
 class Bags(BaseModel):

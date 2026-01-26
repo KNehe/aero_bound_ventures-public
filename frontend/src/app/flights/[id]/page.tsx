@@ -14,23 +14,24 @@ export default function FlightPricingPage({ params }: { params: Promise<{ id: st
   const [flightOffer, setFlightOffer] = useState<FlightOffer>(selectedFlight);
   const selectFlight = useFlights(state => state.selectFlight);
 
-  useEffect(() =>{
+  useEffect(() => {
     confirmPrice()
   }, [])
 
-  const confirmPrice = async ()=>{
+  const confirmPrice = async () => {
     const url = `${BASE_API_URL}/shopping/flight-offers/pricing`
 
     const res = await fetch(url, {
-                            method: "POST",
-                            body: JSON.stringify(selectedFlight),
-                            headers: {
-                              "Content-Type": "application/json",
-                            }
-                        });
+      method: "POST",
+      body: JSON.stringify(selectedFlight),
+      headers: {
+        "Content-Type": "application/json",
+      }
+    });
     const data = await res.json()
-    console.log(data?.data?.flightOffers[0])
-    selectFlight(data)
+    if (data?.data?.flightOffers?.[0]) {
+      selectFlight(data.data.flightOffers[0])
+    }
   }
 
 
@@ -51,7 +52,7 @@ export default function FlightPricingPage({ params }: { params: Promise<{ id: st
                   <div className="flex items-start justify-between">
                     <div>
                       <h2 className="text-lg font-semibold text-black">
-                        {flightOffer.itineraries[0].segments[0].departure.iataCode} 
+                        {flightOffer.itineraries[0].segments[0].departure.iataCode}
                         <span className="text-gray-500">→</span> {flightOffer.itineraries[0].segments[flightOffer.itineraries[0].segments.length - 1].arrival.iataCode}
                       </h2>
                       <div className="text-sm text-gray-800 mt-1 font-medium">
@@ -97,7 +98,7 @@ export default function FlightPricingPage({ params }: { params: Promise<{ id: st
                     </div>
                   ))}
 
-                    <div className="pt-2 border-t">
+                  <div className="pt-2 border-t">
                     <h4 className="text-sm font-semibold text-gray-800 mb-2">Traveler pricing</h4>
                     <div className="space-y-2">
                       {flightOffer.travelerPricings?.map((tp, idx) => (

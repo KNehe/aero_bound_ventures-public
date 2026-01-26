@@ -98,6 +98,11 @@ export interface FareDetails {
   brandedFare: string;
   class: string;
   includedCheckedBags: IncludedCheckedBags;
+  additionalServices?: AdditionalServices;
+}
+
+export interface AdditionalServices {
+  chargeableSeatNumber?: string;
 }
 
 export interface IncludedCheckedBags {
