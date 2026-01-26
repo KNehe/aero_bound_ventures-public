@@ -1,9 +1,9 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function PaymentCallbackPage() {
+function PaymentCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"processing" | "success" | "failed">("processing");
@@ -21,7 +21,7 @@ export default function PaymentCallbackPage() {
     }
 
     // Extract original booking ID from merchant reference (format: booking_id-timestamp)
-    const originalBookingId = orderMerchantReference.includes('-') 
+    const originalBookingId = orderMerchantReference.includes('-')
       ? orderMerchantReference.substring(0, orderMerchantReference.lastIndexOf('-'))
       : orderMerchantReference;
 
@@ -44,7 +44,7 @@ export default function PaymentCallbackPage() {
         if (data.status === "success") {
           setStatus("success");
           setMessage("Payment completed successfully!");
-          
+
           // Redirect to booking success page after 2 seconds (use original booking ID)
           setTimeout(() => {
             router.push(`/booking/success/${originalBookingId}?payment=success`);
@@ -55,7 +55,7 @@ export default function PaymentCallbackPage() {
         } else if (data.status === "pending") {
           setStatus("processing");
           setMessage("Payment is pending. Please complete the payment to confirm your booking.");
-          
+
           // Redirect to booking page (use original booking ID)
           setTimeout(() => {
             router.push(`/booking/success/${originalBookingId}?payment=pending`);
@@ -117,5 +117,22 @@ export default function PaymentCallbackPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function PaymentCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Loading...</h2>
+          </div>
+        </div>
+      </div>
+    }>
+      <PaymentCallbackContent />
+    </Suspense>
   );
 }

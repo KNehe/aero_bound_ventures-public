@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import useAuth from "@/store/auth";
 import { ADMIN_GROUP_NAME } from "@/constants/auth";
@@ -14,7 +14,7 @@ interface User {
     groups: { id: string; name: string }[];
 }
 
-export default function GoogleCallbackPage() {
+function GoogleCallbackContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const setUser = useAuth((state) => state.setUser);
@@ -110,4 +110,19 @@ export default function GoogleCallbackPage() {
     }
 
     return null;
+}
+
+export default function GoogleCallbackPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        }>
+            <GoogleCallbackContent />
+        </Suspense>
+    );
 }
