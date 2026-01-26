@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import Link from "next/link";
 
 // Status constants to avoid hardcoded strings (matching backend BookingStatus class)
 const BOOKING_STATUS = {
@@ -110,31 +111,28 @@ export default function UserAccount({ user, bookings, onLogout }: UserAccountPro
           <nav className="flex space-x-8 px-6">
             <button
               onClick={() => setActiveTab('profile')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'profile'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'profile'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               Profile
             </button>
             <button
               onClick={() => setActiveTab('bookings')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'bookings'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'bookings'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               My Bookings ({bookings.length})
             </button>
             <button
               onClick={() => setActiveTab('settings')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'settings'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'settings'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               Settings
             </button>
@@ -165,7 +163,7 @@ export default function UserAccount({ user, bookings, onLogout }: UserAccountPro
                       <input
                         type="text"
                         value={editForm.firstName}
-                        onChange={(e) => setEditForm({...editForm, firstName: e.target.value})}
+                        onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                       />
                     </div>
@@ -176,7 +174,7 @@ export default function UserAccount({ user, bookings, onLogout }: UserAccountPro
                       <input
                         type="text"
                         value={editForm.lastName}
-                        onChange={(e) => setEditForm({...editForm, lastName: e.target.value})}
+                        onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                       />
                     </div>
@@ -188,7 +186,7 @@ export default function UserAccount({ user, bookings, onLogout }: UserAccountPro
                     <input
                       type="tel"
                       value={editForm.phone}
-                      onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                     />
                   </div>
@@ -236,7 +234,7 @@ export default function UserAccount({ user, bookings, onLogout }: UserAccountPro
           {activeTab === 'bookings' && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold text-gray-900">My Bookings</h2>
-              
+
               {bookings.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -246,12 +244,12 @@ export default function UserAccount({ user, bookings, onLogout }: UserAccountPro
                   </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings yet</h3>
                   <p className="text-gray-600 mb-4">Start exploring destinations and book your next adventure!</p>
-                  <a
+                  <Link
                     href="/"
                     className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
                     Browse Flights
-                  </a>
+                  </Link>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -269,7 +267,7 @@ export default function UserAccount({ user, bookings, onLogout }: UserAccountPro
                           <p className="text-sm text-gray-500">{booking.passengers} passenger{booking.passengers > 1 ? 's' : ''}</p>
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <p className="text-gray-500">From</p>
@@ -290,7 +288,7 @@ export default function UserAccount({ user, bookings, onLogout }: UserAccountPro
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
                         <p className="text-sm text-gray-600">{booking.airline}</p>
                         <div className="flex space-x-2">
@@ -312,7 +310,7 @@ export default function UserAccount({ user, bookings, onLogout }: UserAccountPro
           {activeTab === 'settings' && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold text-gray-900">Account Settings</h2>
-              
+
               <div className="space-y-4">
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h3 className="font-medium text-gray-900 mb-2">Change Password</h3>

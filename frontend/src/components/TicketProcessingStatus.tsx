@@ -63,10 +63,10 @@ export default function TicketProcessingStatus({ bookingId, onTicketReady }: Tic
     const progressInterval = setInterval(() => {
       setTicketStatus(prev => {
         if (!prev) return prev;
-        
+
         const newProgress = Math.min(prev.progress + Math.random() * 15, 100);
         const newStatus = newProgress >= 100 ? "ready" : prev.status;
-        
+
         if (newStatus === "ready") {
           clearInterval(progressInterval);
           // Simulate ticket URL generation
@@ -80,7 +80,7 @@ export default function TicketProcessingStatus({ bookingId, onTicketReady }: Tic
             onTicketReady?.(`/tickets/${bookingId}.pdf`);
           }, 2000);
         }
-        
+
         return {
           ...prev,
           progress: newProgress,
@@ -158,7 +158,7 @@ export default function TicketProcessingStatus({ bookingId, onTicketReady }: Tic
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Ticket Processing</h1>
-        <p className="text-gray-600">We're preparing your tickets for {ticketStatus.flightDetails.airline}</p>
+        <p className="text-gray-600">We&apos;re preparing your tickets for {ticketStatus.flightDetails.airline}</p>
       </div>
 
       {/* Status Card */}
@@ -170,9 +170,9 @@ export default function TicketProcessingStatus({ bookingId, onTicketReady }: Tic
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900 capitalize">
-                {ticketStatus.status === "processing" ? "Processing Tickets" : 
-                 ticketStatus.status === "ready" ? "Tickets Ready" :
-                 ticketStatus.status === "failed" ? "Processing Failed" : "Cancelled"}
+                {ticketStatus.status === "processing" ? "Processing Tickets" :
+                  ticketStatus.status === "ready" ? "Tickets Ready" :
+                    ticketStatus.status === "failed" ? "Processing Failed" : "Cancelled"}
               </h2>
               <p className="text-sm text-gray-500">
                 Booking ID: {ticketStatus.bookingId}
@@ -195,7 +195,7 @@ export default function TicketProcessingStatus({ bookingId, onTicketReady }: Tic
               <span>{Math.round(ticketStatus.progress)}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
+              <div
                 className="bg-blue-600 h-2 rounded-full transition-all duration-500"
                 style={{ width: `${ticketStatus.progress}%` }}
               ></div>
@@ -296,36 +296,32 @@ export default function TicketProcessingStatus({ bookingId, onTicketReady }: Tic
       {/* Processing Steps */}
       {ticketStatus.status === "processing" && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="font-medium text-blue-900 mb-4">What's happening now?</h3>
+          <h3 className="font-medium text-blue-900 mb-4">What&apos;s happening now?</h3>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                ticketStatus.progress >= 25 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'
-              }`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${ticketStatus.progress >= 25 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'
+                }`}>
                 {ticketStatus.progress >= 25 ? '✓' : '1'}
               </div>
               <span className="text-sm text-blue-800">Validating booking information</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                ticketStatus.progress >= 50 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'
-              }`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${ticketStatus.progress >= 50 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'
+                }`}>
                 {ticketStatus.progress >= 50 ? '✓' : '2'}
               </div>
               <span className="text-sm text-blue-800">Generating ticket documents</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                ticketStatus.progress >= 75 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'
-              }`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${ticketStatus.progress >= 75 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'
+                }`}>
                 {ticketStatus.progress >= 75 ? '✓' : '3'}
               </div>
               <span className="text-sm text-blue-800">Applying security features</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                ticketStatus.progress >= 100 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'
-              }`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${ticketStatus.progress >= 100 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'
+                }`}>
                 {ticketStatus.progress >= 100 ? '✓' : '4'}
               </div>
               <span className="text-sm text-blue-800">Preparing for download</span>

@@ -17,7 +17,7 @@ export interface Booking {
   ticket_url: string | null;
   total_amount?: number;
   user: BookingUser;
-  amadeus_order_response: any;
+  amadeus_order_response: Record<string, unknown>;
 }
 
 export interface CursorPaginatedBookingsResponse {
