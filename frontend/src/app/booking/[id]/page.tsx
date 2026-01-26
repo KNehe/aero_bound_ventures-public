@@ -7,6 +7,7 @@ import useFlights from "@/store/flights";
 import useAuth from "@/store/auth";
 import countryCodes from "@/data/countryCodes.json";
 import { apiClient, isUnauthorizedError, ApiClientError } from "@/lib/api";
+import SeatMap from "@/components/SeatMap";
 
 // Local interface for form state - simplified for the booking form
 interface BookingTraveler {
@@ -39,7 +40,7 @@ const transformToApiTraveler = (bookingTraveler: BookingTraveler): ApiTraveler =
   // Smart defaults for optional fields
   const validityCountry = bookingTraveler.documents.validityCountry || bookingTraveler.documents.issuanceCountry;
   const issuanceLocation = bookingTraveler.documents.issuanceLocation || bookingTraveler.documents.birthPlace;
-  
+
   // Calculate issuance date if not provided (assume 10 years before expiry for new passports)
   let issuanceDate = bookingTraveler.documents.issuanceDate;
   if (!issuanceDate && bookingTraveler.documents.expiryDate) {
@@ -48,7 +49,7 @@ const transformToApiTraveler = (bookingTraveler: BookingTraveler): ApiTraveler =
     calculatedIssuance.setFullYear(expiry.getFullYear() - 10);
     issuanceDate = calculatedIssuance.toISOString().split('T')[0];
   }
-  
+
   return {
     id: bookingTraveler.id,
     dateOfBirth: bookingTraveler.dateOfBirth,
@@ -89,16 +90,22 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const resolvedParams = React.use(params);
   const [currentStep, setCurrentStep] = useState(0); // Step 0: Traveler Info
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Use Zustand stores
   const { isAuthenticated, logout } = useAuth();
-  const selectedFlight = useFlights((state) => state.selectedFlight?.data?.flightOffers[0]) as FlightOffer | null;
+  const selectedFlight = useFlights((state) => state.selectedFlight) as FlightOffer | null;
+  const selectFlight = useFlights((state) => state.selectFlight);
 
   // console.log("Selected Flight in Booking Page:", selectedFlight?.data.flightOffers[0]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Initialize travelers based on flight offer
   const [travelers, setTravelers] = useState<BookingTraveler[]>([]);
+  const [seatMapData, setSeatMapData] = useState<any>(null);
+  const [selectedSeats, setSelectedSeats] = useState<Record<string, string>>({}); // travelerId -> seatNumber
+  const [isSeatMapLoading, setIsSeatMapLoading] = useState(false);
+  const [isPricingLoading, setIsPricingLoading] = useState(false);
+
 
   // Check authentication on mount
   useEffect(() => {
@@ -145,8 +152,113 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     setIsLoading(false);
   }, [selectedFlight]);
 
+  // Fetch seat map data once flight is confirmed
+  useEffect(() => {
+    if (selectedFlight && currentStep === 1 && !seatMapData) {
+      fetchSeatMap();
+    }
+  }, [selectedFlight, currentStep, seatMapData]);
+
+  const fetchSeatMap = async () => {
+    setIsSeatMapLoading(true);
+    try {
+      const response = await apiClient.post<any>("/shopping/seatmaps", selectedFlight);
+      console.log("Pre-booking Seat Map Raw Response:", response);
+
+      // Handle various potential response structures gracefully
+      let data = null;
+      if (Array.isArray(response)) {
+        data = response[0];
+      } else if (response && response.data) {
+        data = Array.isArray(response.data) ? response.data[0] : response.data;
+      } else {
+        data = response;
+      }
+
+      console.log("Parsed Seat Map Data:", data);
+      setSeatMapData(data);
+    } catch (error: any) {
+      console.error("Error fetching seat map:", error);
+
+      const errorMessage = error?.detail || error?.message || "Seat map not available";
+
+      if (errorMessage.toLowerCase().includes("not available")) {
+        console.warn("Seat map not available from airline. This is expected for many flights.");
+      } else {
+        console.error("Unexpected seat map error:", errorMessage);
+      }
+
+      // Set seatMapData to null so UI shows appropriate message
+      setSeatMapData(null);
+    } finally {
+      setIsSeatMapLoading(false);
+    }
+  };
+
+  const handleSelectSeat = (travelerId: string, seatNumber: string, price?: any) => {
+    setSelectedSeats((prev) => ({
+      ...prev,
+      [travelerId]: seatNumber,
+    }));
+  };
+
+  const confirmPricingWithSeats = async () => {
+    if (!selectedFlight) return true;
+
+    // Only need to re-price if seats are selected
+    const hasSeats = Object.values(selectedSeats).some(s => s !== "");
+    if (!hasSeats) return true;
+
+    setIsPricingLoading(true);
+    try {
+      // Create updated offer with seat selections
+      const updatedOffer = {
+        ...selectedFlight,
+        travelerPricings: selectedFlight.travelerPricings.map((tp: any) => {
+          const travelerId = tp.travelerId;
+          const selectedSeat = selectedSeats[travelerId];
+
+          if (!selectedSeat) return tp;
+
+          return {
+            ...tp,
+            fareDetailsBySegment: tp.fareDetailsBySegment.map((fd: any) => ({
+              ...fd,
+              additionalServices: {
+                chargeableSeatNumber: selectedSeat
+              }
+            }))
+          };
+        })
+      };
+
+      const data = await apiClient.post<any>("/shopping/flight-offers/pricing", updatedOffer);
+
+      if (data?.data?.flightOffers?.[0]) {
+        // Update the selected flight with the newly priced one
+        // This includes updated price and additionalServices details from Amadeus
+        selectFlight(data.data.flightOffers[0]);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Pricing confirmation failed:", error);
+      alert("Failed to confirm seat pricing. The selected seats might no longer be available.");
+      return false;
+    } finally {
+      setIsPricingLoading(false);
+    }
+  };
+
+  const handleNextStep = async () => {
+    if (currentStep === 1) {
+      const success = await confirmPricingWithSeats();
+      if (!success) return;
+    }
+    setCurrentStep(prev => prev + 1);
+  };
+
   const [termsAccepted, setTermsAccepted] = useState(false);
-  // Removed payment and authentication-related state/handlers
 
   // Helper function to format date to YYYY-MM-DD format
   const formatDateForBackend = (date: string | Date): string => {
@@ -228,7 +340,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       // Transform booking travelers to API format
       const apiTravelers: ApiTraveler[] = travelers.map(transformToApiTraveler);
 
-      // Prepare booking payload with flight offer and travelers
+      // Prepare booking payload with flight offer (already priced with seats from step 2)
       const bookingPayload: FlightBookingData = {
         flight_offer: selectedFlight!,
         travelers: apiTravelers,
@@ -236,9 +348,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
       console.log("Booking Payload:", bookingPayload);
 
-      // Check authentication before submitting
       if (!isAuthenticated) {
-        // If not authenticated, redirect to login with current page as redirect target
         const currentPath = `/booking/${resolvedParams.id}`;
         router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
         return;
@@ -269,8 +379,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  const totalSteps = 2; // Traveler Info -> Review
-  const progress = (currentStep / totalSteps) * 100;
+  const totalSteps = 3; // Traveler Info -> Seat Selection -> Review
+  const progress = (currentStep / (totalSteps - 1)) * 100;
 
   // Show loading/redirecting state while checking authentication
   if (!isAuthenticated) {
@@ -349,7 +459,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className={`mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-all duration-300 ${currentStep === 1 ? 'max-w-7xl' : 'max-w-4xl'}`}>
         <form onSubmit={handleSubmit} className="space-y-8">c
           {/* Step 1: Traveler Information */}
           {currentStep === 0 && (
@@ -366,14 +476,14 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                   </button>
                 )}
               </div>
-              
+
               <div className="space-y-8">
                 {travelers.map((traveler, index) => (
                   <div key={traveler.id} className="border border-gray-200 rounded-lg p-6">
                     <h3 className="text-lg font-semibold text-gray-800 mb-4 capitalize">
                       {traveler.travelerType} {index + 1}
                     </h3>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
@@ -385,7 +495,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
                         <input
@@ -396,7 +506,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
                         <input
@@ -408,7 +518,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
                         <select
@@ -421,7 +531,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           <option value="FEMALE">Female</option>
                         </select>
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
                         <input
@@ -432,7 +542,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
                         <div className="flex">
@@ -457,7 +567,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Document Information */}
                     <div className="mt-6 pt-6 border-t border-gray-200">
                       <h4 className="text-md font-semibold text-gray-800 mb-4">Travel Document</h4>
@@ -471,7 +581,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-900 cursor-not-allowed"
                           />
                         </div>
-                        
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Document Number *</label>
                           <input
@@ -482,7 +592,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                           />
                         </div>
-                        
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Passport Expiry Date *
@@ -501,7 +611,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             Must be valid for at least 6 months from today
                           </p>
                         </div>
-                        
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Nationality *</label>
                           <select
@@ -518,7 +628,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             ))}
                           </select>
                         </div>
-                        
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Issuance Country *</label>
                           <select
@@ -535,10 +645,10 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             ))}
                           </select>
                         </div>
-                        
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Validity Country 
+                            Validity Country
                             <span className="text-xs text-gray-500 ml-1">(Optional - defaults to issuance country)</span>
                           </label>
                           <select
@@ -554,7 +664,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             ))}
                           </select>
                         </div>
-                        
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Birth Place *</label>
                           <input
@@ -566,10 +676,10 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                           />
                         </div>
-                        
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Issuance Location 
+                            Issuance Location
                             <span className="text-xs text-gray-500 ml-1">(Optional - defaults to birth place)</span>
                           </label>
                           <input
@@ -580,10 +690,10 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                           />
                         </div>
-                        
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Issuance Date 
+                            Issuance Date
                             <span className="text-xs text-gray-500 ml-1">(Optional - auto-calculated if omitted)</span>
                           </label>
                           <input
@@ -605,11 +715,55 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             </div>
           )}
 
-          {/* Step 2: Review and Confirm */}
+          {/* Step 2: Seat Selection */}
           {currentStep === 1 && (
             <div className="bg-white rounded-lg shadow-sm border p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Choose Your Seats</h2>
+
+              <div className="space-y-8">
+                {travelers.map((traveler, index) => (
+                  <div key={traveler.id} className="border border-gray-200 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4 capitalize">
+                      {traveler.firstName || `Traveler ${index + 1}`} ({traveler.travelerType})
+                    </h3>
+
+                    {isSeatMapLoading ? (
+                      <div className="flex flex-col items-center justify-center p-12">
+                        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                        <p className="text-gray-500 font-medium">Retrieving real-time cabin layout...</p>
+                      </div>
+                    ) : seatMapData ? (
+                      <div className="flex flex-col items-center justify-center">
+                        <SeatMap
+                          seatMapData={seatMapData}
+                          onSelectSeat={handleSelectSeat}
+                          selectedSeats={selectedSeats}
+                          travelerId={traveler.id}
+                        />
+                      </div>
+                    ) : (
+                      <div className="bg-amber-50 p-6 rounded-lg border border-amber-200 text-center">
+                        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <p className="text-amber-800 font-semibold mb-2">Seat Map Not Available</p>
+                        <p className="text-sm text-amber-700 mb-1">The airline hasn't provided seat maps for this flight through our booking system.</p>
+                        <p className="text-sm text-amber-600">You can proceed with booking and select seats during check-in or through the airline's website.</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Review and Confirm */}
+          {currentStep === 2 && (
+            <div className="bg-white rounded-lg shadow-sm border p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Review and Confirm</h2>
-              
+
               <div className="space-y-6">
                 {/* Flight Summary */}
                 <div className="border border-gray-200 rounded-lg p-4">
@@ -620,20 +774,27 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     <p><strong>Total:</strong> {selectedFlight.price.currency} {selectedFlight.price.total}</p>
                   </div>
                 </div>
-                
+
                 {/* Traveler Summary */}
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-gray-800 mb-3">Traveler Information</h3>
                   {travelers.map((traveler, index) => (
                     <div key={traveler.id} className="mb-3 last:mb-0">
-                      <p className="font-medium text-gray-800 capitalize">{traveler.travelerType} {index + 1}</p>
+                      <p className="font-medium text-gray-800 capitalize">
+                        {traveler.firstName || `Traveler ${index + 1}`} {traveler.lastName}
+                        {selectedSeats[traveler.id] && (
+                          <span className="ml-2 text-blue-600 font-bold text-sm bg-blue-50 px-2 py-0.5 rounded">
+                            Seat {selectedSeats[traveler.id]}
+                          </span>
+                        )}
+                      </p>
                       <p className="text-sm text-gray-600">
-                        {traveler.firstName} {traveler.lastName} • {traveler.dateOfBirth} • {traveler.gender}
+                        {traveler.travelerType} • {traveler.dateOfBirth} • {traveler.gender}
                       </p>
                     </div>
                   ))}
                 </div>
-                
+
                 {/* Terms and Conditions */}
                 <div className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-start">
@@ -664,14 +825,16 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             >
               Previous
             </button>
-            
+
             <div className="flex gap-3">
               {currentStep < totalSteps - 1 ? (
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(prev => prev + 1)}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleNextStep}
+                  disabled={isPricingLoading}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
+                  {isPricingLoading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
                   Next
                 </button>
               ) : (

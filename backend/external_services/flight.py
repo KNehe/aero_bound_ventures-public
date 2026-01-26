@@ -116,9 +116,15 @@ class AmadeusFlightService:
     def view_seat_map_post(self, flight_offer: dict) -> dict:
         try:
             body = {"data": [flight_offer]}
+            print("=" * 80)
+            print("SEAT MAP REQUEST BODY:")
+            print(f"Flight Offer Keys: {flight_offer.keys()}")
+            print(f"Full body being sent to Amadeus: {body}")
+            print("=" * 80)
             response = self.amadeus.shopping.seatmaps.post(body).data
             return response
         except ResponseError as error:
+            print(f"Amadeus Seat Map Error: {error}")
             raise error
 
     def get_flight_order(self, flight_orderId: str) -> dict:

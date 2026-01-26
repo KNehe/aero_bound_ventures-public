@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import useAuth from "@/store/auth";
 import { apiClient, isUnauthorizedError, ApiClientError } from "@/lib/api";
+import SeatMap from "@/components/SeatMap";
 
 // Pesapal uses server-side integration
 // No global window object needed for iframe approach
@@ -85,16 +86,16 @@ interface BookingSuccessData {
 }
 
 export default function BookingSuccessPage() {
-// Status constants to avoid hardcoded strings (matching backend BookingStatus class)
-const BOOKING_STATUS = {
-  CONFIRMED: "confirmed",
-  PAID: "paid",
-  PENDING: "pending",
-  CANCELLED: "cancelled",
-  REVERSED: "reversed",
-  FAILED: "failed",
-  REFUNDED: "refunded",
-} as const;
+  // Status constants to avoid hardcoded strings (matching backend BookingStatus class)
+  const BOOKING_STATUS = {
+    CONFIRMED: "confirmed",
+    PAID: "paid",
+    PENDING: "pending",
+    CANCELLED: "cancelled",
+    REVERSED: "reversed",
+    FAILED: "failed",
+    REFUNDED: "refunded",
+  } as const;
   const router = useRouter();
   const [bookingData, setBookingData] = useState<BookingSuccessData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,18 +104,22 @@ const BOOKING_STATUS = {
   const [showPaymentIframe, setShowPaymentIframe] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [showSeatMap, setShowSeatMap] = useState(false);
+  const [seatMapData, setSeatMapData] = useState<any>(null);
+  const [isSeatMapLoading, setIsSeatMapLoading] = useState(false);
+  const [selectedSeats, setSelectedSeats] = useState<Record<string, string>>({});
   const { logout, isAuthenticated } = useAuth();
-  const params =  useParams();
-  const {orderId} = params;
+  const params = useParams();
+  const { orderId } = params;
 
   const handleDownloadTicket = async () => {
     const ticketUrl = (bookingData as any)?.ticket_url;
     if (!ticketUrl) return;
-    
+
     try {
       const response = await fetch(ticketUrl);
       const blob = await response.blob();
-      
+
       // Detect file extension from content type or URL
       let extension = 'pdf';
       const contentType = response.headers.get('content-type');
@@ -125,7 +130,7 @@ const BOOKING_STATUS = {
       } else if (ticketUrl.match(/\.(jpg|jpeg|png|pdf)$/i)) {
         extension = ticketUrl.match(/\.(jpg|jpeg|png|pdf)$/i)![1].toLowerCase();
       }
-      
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -172,7 +177,7 @@ const BOOKING_STATUS = {
       const data = await apiClient.post<PesapalPaymentResponse>('/payments/pesapal/initiate', {
         booking_id: bookingData.orderId,
         amount: parseFloat(bookingData.pricing.total),
-        currency: 'USD', 
+        currency: 'USD',
         description: `Flight booking ${bookingData.pnr}`,
         callback_url: `${window.location.origin}/booking/payment/callback`,
         billing_address: {
@@ -209,6 +214,45 @@ const BOOKING_STATUS = {
     }
   };
 
+  const fetchSeatMap = async () => {
+    setIsSeatMapLoading(true);
+    try {
+      // For success page, we might need the original flight offer or use orderId
+      // The backend view_seat_map_get uses flightOrderId
+      const response = await apiClient.get<any>(`/shopping/seatmaps?flightorderId=${orderId}`);
+      console.log("Success Page Seat Map Raw Response:", response);
+
+      // Handle various potential response structures gracefully
+      let data = null;
+      if (Array.isArray(response)) {
+        data = response[0];
+      } else if (response && response.data) {
+        data = Array.isArray(response.data) ? response.data[0] : response.data;
+      } else {
+        data = response;
+      }
+
+      setSeatMapData(data);
+    } catch (error) {
+      console.error("Error fetching seat map:", error);
+    } finally {
+      setIsSeatMapLoading(false);
+    }
+  };
+
+  const handleOpenSeatMap = () => {
+    setShowSeatMap(true);
+    if (!seatMapData) {
+      fetchSeatMap();
+    }
+  };
+
+  const handleSelectSeat = (travelerId: string, seatNumber: string, price?: any) => {
+    // In a real app, this would trigger an API call to update the seat assignment
+    setSelectedSeats(prev => ({ ...prev, [travelerId]: seatNumber }));
+  };
+
+
   useEffect(() => {
     if (!orderId || !isHydrated) return;
 
@@ -222,7 +266,16 @@ const BOOKING_STATUS = {
 
         const data = await apiClient.get<BookingSuccessData>(`/booking/flight-orders/${orderId}`);
         setBookingData(data);
+
+        // Initialize selected seats from passenger data
+        const initialSeats: Record<string, string> = {};
+        data.passengers.forEach(p => {
+          if (p.seat) initialSeats[p.id] = p.seat;
+        });
+        setSelectedSeats(initialSeats);
+
         console.log("Fetched booking data:", data);
+
       } catch (err) {
         if (isUnauthorizedError(err)) {
           await logout();
@@ -384,10 +437,10 @@ const BOOKING_STATUS = {
                   <h2 className="text-2xl font-bold text-gray-900">Booking Summary</h2>
                 </div>
                 <span className={`px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm ${getStatusColor(bookingData.status)}`}>
-                    {bookingData.status.toUpperCase()}
+                  {bookingData.status.toUpperCase()}
                 </span>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white p-4 rounded-lg border border-gray-200">
                   <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Booking Reference</h3>
@@ -418,7 +471,7 @@ const BOOKING_STATUS = {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900">Flight Itinerary</h2>
               </div>
-              
+
               {/* Outbound Flight */}
               <div className="mb-8">
                 <div className="flex items-center gap-2 mb-4">
@@ -682,11 +735,73 @@ const BOOKING_STATUS = {
                     Ticket is being processed. Please be patient (max 24 hours)
                   </button>
                 )}
+                <button
+                  onClick={handleOpenSeatMap}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-center"
+                >
+                  View Seat Map
+                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Seat Map Modal */}
+      {showSeatMap && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
+
+            <div className="flex items-center justify-between p-6 border-b">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Aircraft Seat Map</h3>
+                <p className="text-sm text-gray-500">View your seat assignments • Visit airline website to make changes</p>
+              </div>
+              <button
+                onClick={() => setShowSeatMap(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <svg className="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {isSeatMapLoading ? (
+                <div className="flex flex-col items-center justify-center py-20">
+                  <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <p className="text-gray-500 font-medium">Loading cabin layout...</p>
+                </div>
+              ) : seatMapData ? (
+                <div className="flex flex-col items-center">
+                  <SeatMap
+                    seatMapData={seatMapData}
+                    onSelectSeat={handleSelectSeat}
+                    selectedSeats={selectedSeats}
+                    travelerId={bookingData.passengers[0].id} // Default to first traveler for display
+                  />
+                </div>
+
+              ) : (
+                <div className="bg-red-50 p-8 rounded-xl border border-red-100 text-center">
+                  <p className="text-red-700 font-bold mb-2">Seat Map Unavailable</p>
+                  <p className="text-sm text-red-600">The airline hasn't provided a seat map for this booking yet.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setShowSeatMap(false)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-8 rounded-xl transition-all shadow-md hover:shadow-lg"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
