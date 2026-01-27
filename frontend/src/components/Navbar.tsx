@@ -100,8 +100,8 @@ export default function Navbar() {
               key={link.name}
               onClick={() => handleNavigation(link.href)}
               className={`font-medium transition-all duration-200 relative ${isActive
-                  ? 'text-blue-600'
-                  : 'text-gray-800 hover:text-blue-600'
+                ? 'text-blue-600'
+                : 'text-gray-800 hover:text-blue-600'
                 }`}
             >
               {link.name}
@@ -111,21 +111,23 @@ export default function Navbar() {
             </button>
           );
         })}
-        {/* Bookings/Dashboard Link */}
-        {isAdmin() ? (
-          <Link
-            href="/admin"
-            className="font-medium text-gray-800 hover:text-blue-600 transition-colors px-3 py-1 rounded-lg border border-blue-100 bg-blue-50 hover:bg-blue-100 ml-2"
-          >
-            Admin Dashboard
-          </Link>
-        ) : (
-          <Link
-            href="/my"
-            className="font-medium text-gray-800 hover:text-blue-600 transition-colors px-3 py-1 rounded-lg border border-blue-100 bg-blue-50 hover:bg-blue-100 ml-2"
-          >
-            My Bookings
-          </Link>
+        {/* Bookings/Dashboard Link - Only show when authenticated */}
+        {isAuthenticated && (
+          isAdmin() ? (
+            <Link
+              href="/admin"
+              className="font-medium text-gray-800 hover:text-blue-600 transition-colors px-3 py-1 rounded-lg border border-blue-100 bg-blue-50 hover:bg-blue-100 ml-2"
+            >
+              Admin Dashboard
+            </Link>
+          ) : (
+            <Link
+              href="/my"
+              className="font-medium text-gray-800 hover:text-blue-600 transition-colors px-3 py-1 rounded-lg border border-blue-100 bg-blue-50 hover:bg-blue-100 ml-2"
+            >
+              My Bookings
+            </Link>
+          )
         )}
         {/* Auth Links */}
         {isAuthenticated ? (
@@ -180,29 +182,31 @@ export default function Navbar() {
               key={link.name}
               onClick={() => handleNavigation(link.href)}
               className={`font-medium text-lg transition-all duration-200 ${isActive
-                  ? 'text-blue-600'
-                  : 'text-gray-800 hover:text-blue-600'
+                ? 'text-blue-600'
+                : 'text-gray-800 hover:text-blue-600'
                 }`}
             >
               {link.name}
             </button>
           );
         })}
-        {/* Bookings/Dashboard Link */}
-        {isAdmin() ? (
-          <Link
-            href="/admin"
-            className="font-medium text-lg text-gray-800 hover:text-blue-600 transition-colors px-3 py-1 rounded-lg border border-blue-100 bg-blue-50 hover:bg-blue-100"
-          >
-            Admin Dashboard
-          </Link>
-        ) : (
-          <Link
-            href="/my"
-            className="font-medium text-lg text-gray-800 hover:text-blue-600 transition-colors px-3 py-1 rounded-lg border border-blue-100 bg-blue-50 hover:bg-blue-100"
-          >
-            My Bookings
-          </Link>
+        {/* Bookings/Dashboard Link - Only show when authenticated */}
+        {isAuthenticated && (
+          isAdmin() ? (
+            <Link
+              href="/admin"
+              className="font-medium text-lg text-gray-800 hover:text-blue-600 transition-colors px-3 py-1 rounded-lg border border-blue-100 bg-blue-50 hover:bg-blue-100"
+            >
+              Admin Dashboard
+            </Link>
+          ) : (
+            <Link
+              href="/my"
+              className="font-medium text-lg text-gray-800 hover:text-blue-600 transition-colors px-3 py-1 rounded-lg border border-blue-100 bg-blue-50 hover:bg-blue-100"
+            >
+              My Bookings
+            </Link>
+          )
         )}
         {/* Auth Links */}
         {isAuthenticated ? (
