@@ -15,7 +15,7 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
     function handleClickOutside(event: MouseEvent) {
       // Check if click was outside both dropdowns
       if (originRef.current && !originRef.current.contains(event.target as Node) &&
-          destinationRef.current && !destinationRef.current.contains(event.target as Node)) {
+        destinationRef.current && !destinationRef.current.contains(event.target as Node)) {
         setShowDropdown({ origin: false, destination: false });
       }
     }
@@ -55,8 +55,7 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
     origin: "",
     destination: ""
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { setSearchParams, setLoading } = useFlights();
   const [locationSearchResults, setLocationSearchResults] = useState<{ origin: any[]; destination: any[] }>({
     origin: [],
     destination: []
@@ -71,17 +70,16 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
   });
   const router = useRouter();
 
-  const updateFlights = useFlights((state) => state.updateFlights);
 
   const BASE_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 
   const debounce = (callback: any, delay: number) => {
     let timer: any;
-    
+
     return (...args: any[]) => {
       window.clearTimeout(timer);
-      
+
       timer = window.setTimeout(() => {
         callback(...args);
       }, delay);
@@ -89,10 +87,10 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
   }
 
   const debouncedSearchOrigin = useRef(
-    debounce((value: string)=> searchLocations("origin", value), 500)
+    debounce((value: string) => searchLocations("origin", value), 300)
   )
   const debouncedSearchDestination = useRef(
-    debounce((value: string)=> searchLocations("destination", value), 500)
+    debounce((value: string) => searchLocations("destination", value), 300)
   )
 
   const searchLocations = async (searchType: 'origin' | 'destination', query: string) => {
@@ -102,9 +100,9 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
     try {
       const response = await fetch(`${BASE_API_URL}/reference-data/locations?keyword=${query}`);
       const data = await response.json();
-      
+
       const locations = Array.isArray(data) ? data : [];
-      
+
       setLocationSearchResults(prev => ({ ...prev, [searchType]: locations }));
       setShowDropdown(prev => ({ ...prev, [searchType]: true }));
     } catch (error) {
@@ -129,10 +127,10 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value, type } = e.target;
     const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
-    
-    setForm((prev) => ({ 
-      ...prev, 
-      [name]: type === 'checkbox' ? checked : value 
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
     }));
   }
 
@@ -152,40 +150,27 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
       params.returnDate = form.returnDate;
     }
 
-    if (form.children > 0){
+    if (form.children > 0) {
       params.children = form.children.toString();
     }
 
-    if (form.infants > 0){
+    if (form.infants > 0) {
       params.infants = form.infants.toString();
     }
-    if (form.travelClass){
+    if (form.travelClass) {
       params.travelClass = form.travelClass;
     }
 
-    if (form.nonStop){
+    if (form.nonStop) {
       params.nonStop = form.nonStop.toString();
     }
-    const queryParams = new URLSearchParams(params);
 
-    try {
-      setLoading(true);
+    // Store params and set loading state
+    setSearchParams(params);
+    setLoading(true);
 
-      const url = `${BASE_API_URL}/shopping/flight-offers?${queryParams.toString()}`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      updateFlights(data)
-
-      router.push(`/flights`);
-      
-    }catch(error) {
-      // setError(error.message);
-    } finally {
-      setLoading(false);
-      setError(null);
-    }
-
+    // Immediate navigation
+    router.push(`/flights`);
   }
 
   // Convert string values to numbers for calculations
@@ -245,7 +230,7 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
               debouncedSearchOrigin.current(value)
             }}
             onFocus={(e) => {
-              if(e.target.value)setShowDropdown(prev => ({ ...prev, origin: true }))
+              if (e.target.value) setShowDropdown(prev => ({ ...prev, origin: true }))
             }}
             onBlur={(e) => {
               // Only hide if the related target is not in the dropdown
@@ -309,7 +294,7 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
               debouncedSearchDestination.current(value)
             }}
             onFocus={(e) => {
-               if(e.target.value) setShowDropdown(prev => ({ ...prev, destination: true }))
+              if (e.target.value) setShowDropdown(prev => ({ ...prev, destination: true }))
             }}
             onBlur={(e) => {
               // Only hide if the related target is not in the dropdown
@@ -429,7 +414,7 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
             value={form.adults}
             onChange={handleChange}
           >
-            {[1,2,3,4,5,6,7,8,9].map(num => (
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
               <option key={num} value={num}>{num}</option>
             ))}
           </select>
@@ -443,7 +428,7 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
             value={form.children}
             onChange={handleChange}
           >
-            {[0,1,2,3,4,5,6,7,8].map(num => (
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(num => (
               <option key={num} value={num}>{num}</option>
             ))}
           </select>
@@ -457,7 +442,7 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
             value={form.infants}
             onChange={handleChange}
           >
-            {[0,1,2,3,4].map(num => (
+            {[0, 1, 2, 3, 4].map(num => (
               <option key={num} value={num}>{num}</option>
             ))}
           </select>
@@ -482,10 +467,10 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
         </div>
         <button
           type="submit"
-          disabled={totalPassengers > 9 || infants > adults || loading}
+          disabled={totalPassengers > 9 || infants > adults}
           className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 text-white font-bold py-2 px-8 rounded-lg text-lg shadow transition-colors"
         >
-          {loading ? "Searching..." : "Search Flights"}
+          Search Flights
         </button>
       </div>
     </form>
