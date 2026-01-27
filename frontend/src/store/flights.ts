@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { FlightOffer } from '@/types/flight-booking';
+import { FlightOffer } from '@/types/flight_offer';
 
 interface FlightsState {
     flights: FlightOffer[];
