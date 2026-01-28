@@ -433,6 +433,7 @@ async def get_payment_status(
             detail=f"Failed to fetch payment status: {str(e)}",
         )
 
+
 @router.post("/pesapal/refund", response_model=RefundResponse)
 async def request_pesapal_refund(
     refund_request: RefundRequest,
@@ -442,7 +443,7 @@ async def request_pesapal_refund(
     logger.info(
         f"Refund request initiated by user {current_user.email}"
         f"for confirmation_code: {refund_request.confirmation_code}"
-        )
+    )
     try:
         result = await pesapal_client.request_refund(
             confirmation_code=refund_request.confirmation_code,
@@ -471,7 +472,6 @@ async def request_pesapal_refund(
             confirmation_code=refund_request.confirmation_code,
         )
 
-        
     except ValueError as e:
         logger.error(f"Refund request validation error: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

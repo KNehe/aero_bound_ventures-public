@@ -90,5 +90,6 @@ class RefundResponse(BaseModel):
 
     status: str = Field(..., description="200 for success, 500 for rejection")
     message: str = Field(..., description="Brief summary of the response")
-    confirmation_code: str = Field(..., description="The confirmation code that was refunded")
-
+    confirmation_code: str = Field(
+        ..., description="The confirmation code that was refunded"
+    )
