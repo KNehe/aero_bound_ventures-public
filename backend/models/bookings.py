@@ -16,6 +16,7 @@ class BookingStatus:
     FAILED = "failed"
     PENDING = "pending"
     REFUNDED = "refunded"
+    REFUND_PENDING = "refund_pending"  # Awaiting merchant approval
 
 
 class Booking(SQLModel, table=True):

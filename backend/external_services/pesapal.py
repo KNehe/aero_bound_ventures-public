@@ -277,6 +277,57 @@ class PesapalClient:
                 f"Transaction status: {data.get('payment_status_description')} (code: {data.get('status_code')})"
             )
             return data
+    
+    async def request_refund(
+        self,
+        confirmation_code: str,
+        amount: float,
+        username: str,
+        remarks: str,
+    ) -> dict[str, Any]:
+        token = await self._get_access_token()
 
+        payload = {
+            "confirmation_code": confirmation_code,
+            "amount": str(amount),
+            "username": username,
+            "remarks": remarks,
+        }
+
+        logger.info(
+            f"Submittting refund request for confirmation code: {confirmation_code}",
+            f"amount: {amount} initiated by {username} with remarks: {remarks}"
+        )
+
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}",
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/api/Transactions/RefundRequest",
+                json=payload,
+                headers=headers,
+            )
+            logger.info(f"Pesapal Request Refund Response Status: {response.status_code}")
+            logger.debug(f"Pesapal Request Refund Response Body: {response.text}")
+
+            data = response.json()
+            
+            if data.get("status") == "500":
+                error_message = data.get("message", "Refund  rejected by Pesapal")
+                logger.warning(f"Refund request rejected by Pesapal: {error_message}")
+                return data
+            logger.info(f"Refund request submitted successfully: {data.get('message')}")
+            return data
+
+            
+
+
+        
+        
+        
 
 pesapal_client = PesapalClient()

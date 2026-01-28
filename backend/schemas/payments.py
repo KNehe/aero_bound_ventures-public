@@ -71,3 +71,24 @@ class PesapalTransactionStatus(BaseModel):
     payment_status_code: str
     currency: str
     error: dict | None = None
+
+
+class RefundRequest(BaseModel):
+    """Request to initiate a refund via Pesapal"""
+
+    confirmation_code: str = Field(
+        ..., description="Payment confirmation code from transaction status"
+    )
+    amount: float = Field(..., gt=0, description="Amount to refund")
+    remarks: str = Field(
+        ..., min_length=5, max_length=500, description="Reason for the refund"
+    )
+
+
+class RefundResponse(BaseModel):
+    """Response from Pesapal refund request"""
+
+    status: str = Field(..., description="200 for success, 500 for rejection")
+    message: str = Field(..., description="Brief summary of the response")
+    confirmation_code: str = Field(..., description="The confirmation code that was refunded")
+

@@ -20,3 +20,4 @@ class KafkaEventTypes:
     PAYMENT_SUCCESSFUL = "payment_successful"
     PAYMENT_FAILED = "payment_failed"
     TICKET_UPLOADED = "ticket_uploaded"
+    REFUND_REQUESTED = "refund_requested"

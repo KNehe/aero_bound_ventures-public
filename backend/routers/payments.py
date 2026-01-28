@@ -12,6 +12,8 @@ from backend.schemas.payments import (
     PesapalPaymentRequest,
     PesapalPaymentResponse,
     PesapalTransactionStatus,
+    RefundRequest,
+    RefundResponse,
 )
 from backend.crud.bookings import get_booking_by_id, update_booking_status
 from backend.utils.security import get_current_user
@@ -429,4 +431,53 @@ async def get_payment_status(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch payment status: {str(e)}",
+        )
+
+@router.post("/pesapal/refund", response_model=RefundResponse)
+async def request_pesapal_refund(
+    refund_request: RefundRequest,
+    session: Session = Depends(get_session),
+    current_user: UserInDB = Depends(get_current_user),
+):
+    logger.info(
+        f"Refund request initiated by user {current_user.email}"
+        f"for confirmation_code: {refund_request.confirmation_code}"
+        )
+    try:
+        result = await pesapal_client.request_refund(
+            confirmation_code=refund_request.confirmation_code,
+            amount=refund_request.amount,
+            username=current_user.email,
+            remarks=refund_request.remarks,
+        )
+
+        kafka_producer.send(
+            KafkaTopics.PAYMENT_EVENTS,
+            {
+                "event_type": KafkaEventTypes.REFUND_REQUESTED,
+                "confirmation_code": refund_request.confirmation_code,
+                "amount": refund_request.amount,
+                "remarks": refund_request.remarks,
+                "initiated_by": current_user.email,
+                "user_id": str(current_user.id),
+                "pesapal_status": result.get("status"),
+                "pesapal_message": result.get("message"),
+            },
+        )
+
+        return RefundResponse(
+            status=result.get("status"),
+            message=result.get("message", "Unknown response from Pesapal"),
+            confirmation_code=refund_request.confirmation_code,
+        )
+
+        
+    except ValueError as e:
+        logger.error(f"Refund request validation error: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        logger.error(f"Refund request failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process refund request: {str(e)}",
         )
