@@ -17,9 +17,9 @@ variable "key_pair_name" {
 }
 
 variable "repo_url" {
-  description = "The URL of the repository to clone"
+  description = "The repository path (org/repo format, e.g., KNehe/aero_bound_ventures)"
   type        = string
-  default     = "https://github.com/KNehe/aero_bound_ventures.git"
+  default     = "KNehe/aero_bound_ventures"
 }
 
 variable "gh_pat" {
