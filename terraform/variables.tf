@@ -10,6 +10,12 @@ variable "instance_type" {
   default     = "t3.micro"
 }
 
+variable "key_pair_name" {
+  description = "Name of the AWS key pair for SSH access"
+  type        = string
+  default     = ""
+}
+
 variable "repo_url" {
   description = "The URL of the repository to clone"
   type        = string
@@ -80,4 +86,72 @@ variable "amadeus_base_url" {
 variable "database_url" {
   type      = string
   sensitive = true
+}
+
+# Pesapal Payment Gateway
+variable "pesapal_consumer_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "pesapal_consumer_secret" {
+  type      = string
+  sensitive = true
+}
+
+variable "pesapal_base_url" {
+  type      = string
+  default   = "https://pay.pesapal.com/v3"
+}
+
+variable "pesapal_ipn_id" {
+  type      = string
+  sensitive = true
+}
+
+# Cloudinary
+variable "cloudinary_url" {
+  type      = string
+  sensitive = true
+}
+
+# Redis
+variable "redis_url" {
+  type    = string
+  default = "redis://redis:6379"
+}
+
+# Google OAuth
+variable "google_client_id" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "google_client_secret" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "google_redirect_uri" {
+  type    = string
+  default = ""
+}
+
+# CORS and Frontend
+variable "cors_origins" {
+  type    = string
+  default = "http://localhost:3000"
+}
+
+variable "frontend_url" {
+  type    = string
+  default = "http://localhost:3000"
+}
+
+# Environment
+variable "environment" {
+  type    = string
+  default = "production"
 }
