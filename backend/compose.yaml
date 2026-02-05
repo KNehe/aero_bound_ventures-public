@@ -58,8 +58,8 @@ services:
     healthcheck:
       test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
       interval: 30s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui

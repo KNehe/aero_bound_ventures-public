@@ -85,3 +85,12 @@ resource "aws_instance" "app_server" {
     Name = var.instance_name
   }
 }
+
+resource "aws_eip" "app_eip" {
+  instance = aws_instance.app_server.id
+  domain   = "vpc"
+  
+  tags = {
+    Name = "${var.instance_name}-eip"
+  }
+}
