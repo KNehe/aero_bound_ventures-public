@@ -7,7 +7,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket          = "aero-bound-ventures-terraform-state-bucket"
+    bucket          = "aero-bound-tfstate-245209218155"
     key             = "prod/terraform.tfstate"
     region          = "us-east-2"
     use_lockfile    = true

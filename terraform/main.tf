@@ -8,7 +8,7 @@ data "aws_vpc" "default" {
 
 resource "aws_security_group" "app_server_sg"{
   name  = "aero-bound-ventures-sg"
-  description = "Allow inbound traffic on port 8000"
+  description = "Allow inbound traffic on ports 8000 and 22"
   vpc_id = data.aws_vpc.default.id
 
   ingress{
@@ -17,6 +17,15 @@ resource "aws_security_group" "app_server_sg"{
     protocol = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  
+  ingress{
+    description = "SSH access for debugging"
+    from_port = 22
+    to_port = 22
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  
   egress{
     from_port = 0
     to_port = 0
@@ -39,20 +48,35 @@ data "aws_ami" "ubuntu" {
 resource "aws_instance" "app_server" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = var.instance_type
+  key_name      = var.key_pair_name
+  
   user_data = templatefile("./setup.sh", {
-    repo_url = var.repo_url,
-    gh_pat = var.gh_pat,
-    mail_username = var.mail_username,
-    mail_password = var.mail_password,
-    mail_from = var.mail_from,
-    mail_port = var.mail_port,
-    mail_server = var.mail_server,
+    repo_url                    = var.repo_url,
+    gh_pat                      = var.gh_pat,
+    mail_username               = var.mail_username,
+    mail_password               = var.mail_password,
+    mail_from                   = var.mail_from,
+    mail_port                   = var.mail_port,
+    mail_server                 = var.mail_server,
     access_token_expire_minutes = var.access_token_expire_minutes,
-    secret_key = var.secret_key,
-    algorithm = var.algorithm,
-    amadeus_api_key = var.amadeus_api_key,
-    amadeus_api_secret = var.amadeus_api_secret,
-    amadeus_base_url = var.amadeus_base_url
+    secret_key                  = var.secret_key,
+    algorithm                   = var.algorithm,
+    amadeus_api_key             = var.amadeus_api_key,
+    amadeus_api_secret          = var.amadeus_api_secret,
+    amadeus_base_url            = var.amadeus_base_url,
+    database_url                = var.database_url,
+    pesapal_consumer_key        = var.pesapal_consumer_key,
+    pesapal_consumer_secret     = var.pesapal_consumer_secret,
+    pesapal_base_url            = var.pesapal_base_url,
+    pesapal_ipn_id              = var.pesapal_ipn_id,
+    cloudinary_url              = var.cloudinary_url,
+    redis_url                   = var.redis_url,
+    google_client_id            = var.google_client_id,
+    google_client_secret        = var.google_client_secret,
+    google_redirect_uri         = var.google_redirect_uri,
+    cors_origins                = var.cors_origins,
+    frontend_url                = var.frontend_url,
+    environment                 = var.environment
   })
 
   vpc_security_group_ids = [aws_security_group.app_server_sg.id]
@@ -61,4 +85,3 @@ resource "aws_instance" "app_server" {
     Name = var.instance_name
   }
 }
-
