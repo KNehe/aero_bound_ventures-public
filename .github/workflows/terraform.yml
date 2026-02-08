@@ -94,3 +94,28 @@ jobs:
         
       - name: Terraform Apply
         run: terraform -chdir=terraform apply -auto-approve tfplan
+
+      - name: Get EC2 IP
+        id: get_ip
+        run: echo "ec2_public_ip=$(terraform -chdir=terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
+    outputs:
+      ec2_public_ip: ${{ steps.get_ip.outputs.ec2_public_ip }}
+
+  deploy-app:
+    name: "Deploy Application"
+    needs: deploy-infrastructure
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ needs.deploy-infrastructure.outputs.ec2_public_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/aero_bound_ventures
+            git pull origin main
+            cd backend
+            docker-compose down
+            docker-compose up -d --build
