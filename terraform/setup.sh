@@ -2,6 +2,8 @@
 
 set -ex
 
+# Force instance recreation: V2
+
 # Update and Install dependencies
 apt-get update -y
 apt-get install -y docker.io docker-compose git
