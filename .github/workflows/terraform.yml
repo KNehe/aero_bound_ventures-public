@@ -127,6 +127,7 @@ jobs:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
+          debug: true
           host: ${{ needs.deploy-infrastructure.outputs.ec2_public_ip }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
