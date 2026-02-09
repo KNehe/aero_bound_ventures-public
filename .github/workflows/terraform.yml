@@ -125,15 +125,108 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          debug: true
-          host: ${{ needs.deploy-infrastructure.outputs.ec2_public_ip }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd ~/aero_bound_ventures
-            git pull origin main
+        env:
+          PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          HOST: ${{ needs.deploy-infrastructure.outputs.ec2_public_ip }}
+          USER: ubuntu
+          GH_PAT: ${{ secrets.GH_PAT }}
+          # Env vars for .env file generation
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_PORT: ${{ secrets.MAIL_PORT }}
+          MAIL_SERVER: ${{ secrets.MAIL_SERVER }}
+          ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          ALGORITHM: ${{ secrets.ALGORITHM }}
+          AMADEUS_API_KEY: ${{ secrets.AMADEUS_API_KEY }}
+          AMADEUS_API_SECRET: ${{ secrets.AMADEUS_API_SECRET }}
+          AMADEUS_BASE_URL: ${{ secrets.AMADEUS_BASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PESAPAL_CONSUMER_KEY: ${{ secrets.PESAPAL_CONSUMER_KEY }}
+          PESAPAL_CONSUMER_SECRET: ${{ secrets.PESAPAL_CONSUMER_SECRET }}
+          PESAPAL_BASE_URL: ${{ secrets.PESAPAL_BASE_URL }}
+          PESAPAL_IPN_ID: ${{ secrets.PESAPAL_IPN_ID }}
+          CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
+          CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          ENVIRONMENT: ${{ secrets.ENVIRONMENT }}
+        run: |
+          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+          ssh -o StrictHostKeyChecking=no -i private_key ${USER}@${HOST} "
+            # Set non-interactive to avoid prompts
+            export DEBIAN_FRONTEND=noninteractive
+
+            # 1. Install Dependencies (if missing)
+            if ! command -v docker &> /dev/null; then
+                echo 'Docker not found. Installing...'
+                sudo apt-get update -y
+                sudo apt-get install -y docker.io docker-compose-v2 git
+                sudo systemctl start docker
+                sudo systemctl enable docker
+                sudo usermod -aG docker ubuntu
+            fi
+
+            # Debug Info
+            echo 'Debug: Checking permissions...'
+            id
+            sudo id
+            sudo docker info
+
+            # 2. Clone or Pull
+            if [ -d 'aero_bound_ventures' ]; then
+              echo 'Repo exists, pulling...'
+              cd aero_bound_ventures
+              git pull origin main
+            else
+              echo 'Repo missing, cloning...'
+              git clone https://${GH_PAT}@github.com/KNehe/aero_bound_ventures.git
+              cd aero_bound_ventures
+            fi
+
             cd backend
-            docker-compose down
-            docker-compose up -d --build
+
+            # 3. Generate .env file dynamically
+            cat <<EOF > .env
+          MAIL_USERNAME=${MAIL_USERNAME}
+          MAIL_PASSWORD=${MAIL_PASSWORD}
+          MAIL_FROM=${MAIL_FROM}
+          MAIL_PORT=${MAIL_PORT}
+          MAIL_SERVER=${MAIL_SERVER}
+          ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+          SECRET_KEY=${SECRET_KEY}
+          ALGORITHM=${ALGORITHM}
+          AMADEUS_API_KEY=${AMADEUS_API_KEY}
+          AMADEUS_API_SECRET=${AMADEUS_API_SECRET}
+          AMADEUS_BASE_URL=${AMADEUS_BASE_URL}
+          DATABASE_URL=${DATABASE_URL}
+          PESAPAL_CONSUMER_KEY=${PESAPAL_CONSUMER_KEY}
+          PESAPAL_CONSUMER_SECRET=${PESAPAL_CONSUMER_SECRET}
+          PESAPAL_BASE_URL=${PESAPAL_BASE_URL}
+          PESAPAL_IPN_ID=${PESAPAL_IPN_ID}
+          CLOUDINARY_URL=${CLOUDINARY_URL}
+          REDIS_URL=${REDIS_URL}
+          GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+          GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+          GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
+          CORS_ORIGINS=${CORS_ORIGINS}
+          FRONTEND_URL=${FRONTEND_URL}
+          ENVIRONMENT=${ENVIRONMENT}
+          EOF
+
+            # 4. Deploy
+            # Use 'docker compose' (v2) if available, otherwise 'docker-compose'
+            if docker compose version &> /dev/null; then
+              echo 'Using docker compose v2'
+              sudo docker compose down
+              sudo docker compose up -d --build
+            else
+              echo 'Using legacy docker-compose'
+              sudo docker-compose down
+              sudo docker-compose up -d --build
+            fi
+          "
