@@ -95,6 +95,23 @@ jobs:
       - name: Terraform Apply
         run: terraform -chdir=terraform apply -auto-approve tfplan
 
+      - name: Wait for Instance Ready
+        run: |
+          # Retrieve Instance ID using AWS CLI by tag name
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=aero-bound_ventures" "Name=instance-state-name,Values=pending,running" \
+            --query "Reservations[].Instances[].InstanceId" \
+            --output text | head -n 1)
+          
+          if [ -z "$INSTANCE_ID" ]; then
+            echo "Error: Could not find instance with tag Name=aero-bound_ventures"
+            exit 1
+          fi
+          
+          echo "Found Instance ID: $INSTANCE_ID"
+          echo "Waiting for instance to be ready..."
+          aws ec2 wait instance-status-ok --instance-ids $INSTANCE_ID
+
       - name: Get EC2 IP
         id: get_ip
         run: echo "ec2_public_ip=$(terraform -chdir=terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
