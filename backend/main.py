@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from backend.routers import users, oauth
 from backend.crud.database import init_db
@@ -82,14 +82,18 @@ app.add_middleware(
 
 app.add_middleware(SecurityMiddleware, config=security_config)
 
-app.include_router(users.router)
-app.include_router(oauth.router)
-app.include_router(flights.router)
-app.include_router(payments.router)
-app.include_router(admin.router, prefix="/admin", tags=["admin"])
-app.include_router(tickets.router)
-app.include_router(notifications.router)
-app.include_router(health.router)
+api_v1_router = APIRouter(prefix="/api/v1", tags=["Version One"])
+
+api_v1_router.include_router(users.router)
+api_v1_router.include_router(oauth.router)
+api_v1_router.include_router(flights.router)
+api_v1_router.include_router(payments.router)
+api_v1_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+api_v1_router.include_router(tickets.router)
+api_v1_router.include_router(notifications.router)
+api_v1_router.include_router(health.router)
+
+app.include_router(api_v1_router)
 
 
 @app.get("/")
