@@ -9,31 +9,6 @@ on:
       - main
 
 env:
-  TF_VAR_gh_pat: ${{ secrets.GH_PAT }}
-  TF_VAR_mail_username: ${{ secrets.MAIL_USERNAME }}
-  TF_VAR_mail_password: ${{ secrets.MAIL_PASSWORD }}
-  TF_VAR_mail_from: ${{ secrets.MAIL_FROM }}
-  TF_VAR_mail_port: ${{ secrets.MAIL_PORT }}
-  TF_VAR_mail_server: ${{ secrets.MAIL_SERVER }}
-  TF_VAR_access_token_expire_minutes: ${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
-  TF_VAR_secret_key: ${{ secrets.SECRET_KEY }}
-  TF_VAR_algorithm: ${{ secrets.ALGORITHM }}
-  TF_VAR_amadeus_api_key: ${{ secrets.AMADEUS_API_KEY }}
-  TF_VAR_amadeus_api_secret: ${{ secrets.AMADEUS_API_SECRET }}
-  TF_VAR_amadeus_base_url: ${{ secrets.AMADEUS_BASE_URL }}
-  TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
-  TF_VAR_pesapal_consumer_key: ${{ secrets.PESAPAL_CONSUMER_KEY }}
-  TF_VAR_pesapal_consumer_secret: ${{ secrets.PESAPAL_CONSUMER_SECRET }}
-  TF_VAR_pesapal_base_url: ${{ secrets.PESAPAL_BASE_URL }}
-  TF_VAR_pesapal_ipn_id: ${{ secrets.PESAPAL_IPN_ID }}
-  TF_VAR_cloudinary_url: ${{ secrets.CLOUDINARY_URL }}
-  TF_VAR_redis_url: ${{ secrets.REDIS_URL }}
-  TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
-  TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-  TF_VAR_google_redirect_uri: ${{ secrets.GOOGLE_REDIRECT_URI }}
-  TF_VAR_cors_origins: ${{ secrets.CORS_ORIGINS }}
-  TF_VAR_frontend_url: ${{ secrets.FRONTEND_URL }}
-  TF_VAR_environment: ${{ secrets.ENVIRONMENT }}
   TF_VAR_key_pair_name: ${{ secrets.KEY_PAIR_NAME }}
 
 jobs:
