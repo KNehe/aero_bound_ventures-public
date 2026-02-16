@@ -2,6 +2,7 @@ services:
   fastapi-app:
     build: .
     container_name: fastapi-app
+    restart: always
     ports:
       - "8000:80"
     environment:
@@ -30,6 +31,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
   redis:
       image: redis:latest
+      restart: always
       ports:
         - 6379:6379
       volumes:
@@ -38,6 +40,7 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.8.3
     container_name: kafka
+    restart: always
     ports:
       - "9092:9092"
     environment:
@@ -63,6 +66,7 @@ services:
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
+    restart: always
     ports:
       - "8080:8080"
     environment:
@@ -74,6 +78,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
+    restart: always
     ports:
       - "9090:9090"
     volumes:
@@ -87,6 +92,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
+    restart: always
     ports:
       - "3001:3000"
     environment:
@@ -106,6 +112,7 @@ services:
   loki:
     image: grafana/loki:latest
     container_name: loki
+    restart: always
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
@@ -113,6 +120,7 @@ services:
       - loki_data:/loki
   promtail:
     image: grafana/promtail:latest
+    restart: always
     container_name: promtail
     volumes:
       - ./promtail-config.yml:/etc/promtail/config.yml
