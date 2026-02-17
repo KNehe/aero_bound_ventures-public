@@ -11,12 +11,13 @@ resource "aws_security_group" "app_server_sg"{
   description = "Allow inbound traffic on ports 8000 and 22"
   vpc_id = data.aws_vpc.default.id
 
-  ingress{
-    from_port = 8000
-    to_port = 8000
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  # Port 8000 closed — traffic goes through Nginx (80/443) only
+  # ingress{
+  #   from_port = 8000
+  #   to_port = 8000
+  #   protocol = "tcp"
+  #   cidr_blocks = ["0.0.0.0/0"]
+  # }
 
   ingress{
     description = "HTTP for Nginx and Certbot"
