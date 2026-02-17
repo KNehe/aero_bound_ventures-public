@@ -133,11 +133,37 @@ jobs:
           ENVIRONMENT: ${{ secrets.ENVIRONMENT }}
         run: |
           echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+
+          # Wait for SSH to become available (can take 30-60s after instance boot)
+          echo "Waiting for SSH to become available..."
+          for i in $(seq 1 10); do
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i private_key ${USER}@${HOST} "echo 'SSH is ready'"; then
+              break
+            fi
+            echo "Attempt $i/10 failed, retrying in 15s..."
+            sleep 15
+          done
+
           ssh -o StrictHostKeyChecking=no -i private_key ${USER}@${HOST} "
             # Set non-interactive to avoid prompts
             export DEBIAN_FRONTEND=noninteractive
 
-            # 1. Install Dependencies (if missing)
+            # 1. Create swap space (2GB) if not already present
+            if [ ! -f /swapfile ]; then
+              echo 'Creating 2GB swap file...'
+              sudo fallocate -l 2G /swapfile
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile
+              sudo swapon /swapfile
+              echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+              echo 'Swap created successfully'
+            else
+              echo 'Swap already exists'
+              sudo swapon /swapfile 2>/dev/null || true
+            fi
+            free -h
+
+            # 2. Install Dependencies (if missing)
             if ! command -v docker &> /dev/null; then
                 echo 'Docker not found. Installing...'
                 sudo apt-get update -y
@@ -153,7 +179,7 @@ jobs:
             sudo id
             sudo docker info
 
-            # 2. Clone or Pull
+            # 3. Clone or Pull
             if [ -d 'aero_bound_ventures' ]; then
               echo 'Repo exists, pulling...'
               cd aero_bound_ventures
@@ -166,7 +192,7 @@ jobs:
 
             cd backend
 
-            # 3. Generate .env file dynamically
+            # 4. Generate .env file dynamically
             cat <<EOF > .env
           MAIL_USERNAME=${MAIL_USERNAME}
           MAIL_PASSWORD=${MAIL_PASSWORD}
@@ -194,7 +220,7 @@ jobs:
           ENVIRONMENT=${ENVIRONMENT}
           EOF
 
-            # 4. Deploy Docker containers
+            # 5. Deploy Docker containers
             # Use 'docker compose' (v2) if available, otherwise 'docker-compose'
             if docker compose version &> /dev/null; then
               echo 'Using docker compose v2'
@@ -206,7 +232,7 @@ jobs:
               sudo docker-compose up -d --build
             fi
 
-            # 5. Setup Nginx reverse proxy + SSL
+            # 6. Setup Nginx reverse proxy + SSL
             echo '--- Setting up Nginx reverse proxy ---'
 
             # Install Nginx and Certbot if not present

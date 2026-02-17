@@ -66,6 +66,10 @@ resource "aws_instance" "app_server" {
   instance_type = var.instance_type
   key_name      = var.key_pair_name
 
+  root_block_device {
+    volume_size = 16
+  }
+
   vpc_security_group_ids = [aws_security_group.app_server_sg.id]
 
   tags = {
