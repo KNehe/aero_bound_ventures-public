@@ -9,7 +9,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     depends_on:
       - db
       - redis
