@@ -466,7 +466,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Traveler Information</h2>
-                {process.env.NODE_ENV === 'development' && (
+                {process.env.NEXT_PUBLIC_SHOW_TEST_DATA === 'true' && (
                   <button
                     type="button"
                     onClick={populateTestData}
