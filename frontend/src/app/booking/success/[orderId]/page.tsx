@@ -111,11 +111,14 @@ export default function BookingSuccessPage() {
   const { logout, isAuthenticated } = useAuth();
   const params = useParams();
   const { orderId } = params;
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isViewingTicket, setIsViewingTicket] = useState(false);
 
   const handleDownloadTicket = async () => {
     const ticketUrl = (bookingData as any)?.ticket_url;
     if (!ticketUrl) return;
 
+    setIsDownloading(true);
     try {
       const response = await fetch(ticketUrl);
       const blob = await response.blob();
@@ -141,13 +144,17 @@ export default function BookingSuccessPage() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading ticket:', error);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
   const handleViewTicket = () => {
     const ticketUrl = (bookingData as any)?.ticket_url;
     if (!ticketUrl) return;
+    setIsViewingTicket(true);
     window.open(ticketUrl, '_blank');
+    setTimeout(() => setIsViewingTicket(false), 1000);
   };
 
   // Handle hydration
@@ -714,15 +721,31 @@ export default function BookingSuccessPage() {
                   <div className="w-full flex gap-2">
                     <button
                       onClick={handleViewTicket}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg text-center transition-colors"
+                      disabled={isViewingTicket}
+                      className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white font-semibold py-2 px-4 rounded-lg text-center transition-colors"
                     >
-                      View Ticket
+                      {isViewingTicket ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Opening...
+                        </div>
+                      ) : (
+                        "View Ticket"
+                      )}
                     </button>
                     <button
                       onClick={handleDownloadTicket}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-center transition-colors"
+                      disabled={isDownloading}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2 px-4 rounded-lg text-center transition-colors"
                     >
-                      Download Ticket
+                      {isDownloading ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Downloading...
+                        </div>
+                      ) : (
+                        "Download Ticket"
+                      )}
                     </button>
                   </div>
                 )}
@@ -737,9 +760,17 @@ export default function BookingSuccessPage() {
                 )}
                 <button
                   onClick={handleOpenSeatMap}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-center"
+                  disabled={isSeatMapLoading}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-center"
                 >
-                  View Seat Map
+                  {isSeatMapLoading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Loading Seat Map...
+                    </div>
+                  ) : (
+                    "View Seat Map"
+                  )}
                 </button>
               </div>
             </div>

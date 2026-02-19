@@ -9,6 +9,28 @@ export interface BookingUser {
   last_name?: string;
 }
 
+export interface AmadeusOrderResponse {
+  associatedRecords?: Array<{ reference?: string }>;
+  travelers?: Array<{
+    travelerType?: string;
+    name?: { firstName?: string; lastName?: string };
+  }>;
+  flightOffers?: Array<{
+    itineraries?: Array<{
+      duration?: string;
+      segments?: Array<{
+        departure: { iataCode?: string; at?: string };
+        arrival: { iataCode?: string; at?: string };
+        carrierCode?: string;
+        number?: string;
+        aircraft?: { code?: string };
+        duration?: string;
+        numberOfStops?: number;
+      }>;
+    }>;
+  }>;
+}
+
 export interface Booking {
   id: string;
   flight_order_id: string;
@@ -17,7 +39,7 @@ export interface Booking {
   ticket_url: string | null;
   total_amount?: number;
   user: BookingUser;
-  amadeus_order_response: Record<string, unknown>;
+  amadeus_order_response: AmadeusOrderResponse;
 }
 
 export interface CursorPaginatedBookingsResponse {

@@ -1,4 +1,5 @@
 "use client";
+import { useState } from 'react';
 import { FaPlane, FaClock } from 'react-icons/fa';
 import { FlightOffer, Segment } from "@/types/flight_offer";
 import useFlights from '@/store/flights';
@@ -10,6 +11,7 @@ export default function FlightOfferCard({ flight }: { flight: FlightOffer }) {
   const returnFlight = itineraries.length > 1 ? itineraries[1] : null;
   const selectFlight = useFlights(state => state.selectFlight);
   const router = useRouter();
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const formatTime = (datetime: string) =>
     new Date(datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -41,6 +43,7 @@ export default function FlightOfferCard({ flight }: { flight: FlightOffer }) {
   };
 
   const onSelectFlight = () => {
+    setIsNavigating(true);
     selectFlight(flight);
     router.push(`/flights/${flight.id}/`);
   };
@@ -144,12 +147,22 @@ export default function FlightOfferCard({ flight }: { flight: FlightOffer }) {
 
         <button
           onClick={onSelectFlight}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2"
+          disabled={isNavigating}
+          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold py-3 px-8 rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2"
         >
-          Select Flight
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+          {isNavigating ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              Loading...
+            </>
+          ) : (
+            <>
+              Select Flight
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </>
+          )}
         </button>
       </div>
     </div>

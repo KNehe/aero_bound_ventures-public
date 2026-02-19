@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ConstructionBanner from '@/components/ConstructionBanner';
+import NavigationProgress from '@/components/NavigationProgress';
 
 
 const geistSans = Geist({
@@ -29,6 +31,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         <div className="sticky top-0 z-50 w-full">
           <ConstructionBanner />
           <Navbar />

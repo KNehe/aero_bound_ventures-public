@@ -55,6 +55,7 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
     origin: "",
     destination: ""
   });
+  const [isSearching, setIsSearching] = useState(false);
   const { setSearchParams, setLoading } = useFlights();
   const [locationSearchResults, setLocationSearchResults] = useState<{ origin: any[]; destination: any[] }>({
     origin: [],
@@ -168,6 +169,7 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
     // Store params and set loading state
     setSearchParams(params);
     setLoading(true);
+    setIsSearching(true);
 
     // Immediate navigation
     router.push(`/flights`);
@@ -467,10 +469,17 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
         </div>
         <button
           type="submit"
-          disabled={totalPassengers > 9 || infants > adults}
+          disabled={totalPassengers > 9 || infants > adults || isSearching}
           className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 text-white font-bold py-2 px-8 rounded-lg text-lg shadow transition-colors"
         >
-          Search Flights
+          {isSearching ? (
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              Searching...
+            </div>
+          ) : (
+            "Search Flights"
+          )}
         </button>
       </div>
     </form>

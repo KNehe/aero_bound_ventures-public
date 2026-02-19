@@ -18,14 +18,17 @@ export default function BookingDetailPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isViewingTicket, setIsViewingTicket] = useState(false);
 
   const handleDownloadTicket = async () => {
     if (!booking?.ticket_url) return;
-    
+
+    setIsDownloading(true);
     try {
       const response = await fetch(booking.ticket_url);
       const blob = await response.blob();
-      
+
       // Detect file extension from content type or URL
       let extension = 'pdf';
       const contentType = response.headers.get('content-type');
@@ -36,7 +39,7 @@ export default function BookingDetailPage() {
       } else if (booking.ticket_url.match(/\.(jpg|jpeg|png|pdf)$/i)) {
         extension = booking.ticket_url.match(/\.(jpg|jpeg|png|pdf)$/i)![1].toLowerCase();
       }
-      
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -47,12 +50,16 @@ export default function BookingDetailPage() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading ticket:', error);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
   const handleViewTicket = () => {
     if (!booking?.ticket_url) return;
+    setIsViewingTicket(true);
     window.open(booking.ticket_url, '_blank');
+    setTimeout(() => setIsViewingTicket(false), 1000);
   };
 
   useEffect(() => {
@@ -195,7 +202,7 @@ export default function BookingDetailPage() {
   const pnr =
     booking.amadeus_order_response?.associatedRecords?.[0]?.reference || "N/A";
   const travelers =
-    booking.amadeus_order_response?.travelers?.map((t: any) => ({
+    booking.amadeus_order_response?.travelers?.map((t) => ({
       name: `${t.name?.firstName || ""} ${t.name?.lastName || ""}`.trim(),
       type: t.travelerType,
     })) || [];
@@ -204,7 +211,8 @@ export default function BookingDetailPage() {
   const flightOffers = booking.amadeus_order_response?.flightOffers || [];
   const itineraries = flightOffers[0]?.itineraries || [];
 
-  const formatTime = (dateTimeString: string) => {
+  const formatTime = (dateTimeString?: string) => {
+    if (!dateTimeString) return 'N/A';
     return new Date(dateTimeString).toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
@@ -212,7 +220,8 @@ export default function BookingDetailPage() {
     });
   };
 
-  const formatDate = (dateTimeString: string) => {
+  const formatDate = (dateTimeString?: string) => {
+    if (!dateTimeString) return 'N/A';
     return new Date(dateTimeString).toLocaleDateString("en-US", {
       weekday: "short",
       year: "numeric",
@@ -281,13 +290,12 @@ export default function BookingDetailPage() {
                 <div>
                   <p className="text-sm text-gray-500">Status</p>
                   <span
-                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      booking.status === "confirmed" || booking.status === "paid"
-                        ? "bg-green-100 text-green-800"
-                        : booking.status === "pending"
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${booking.status === "confirmed" || booking.status === "paid"
+                      ? "bg-green-100 text-green-800"
+                      : booking.status === "pending"
                         ? "bg-yellow-100 text-yellow-800"
                         : "bg-red-100 text-red-800"
-                    }`}
+                      }`}
                   >
                     {booking.status.toUpperCase()}
                   </span>
@@ -308,7 +316,7 @@ export default function BookingDetailPage() {
                 <div className="mt-4 pt-4 border-t">
                   <p className="text-sm text-gray-500 mb-2">Travelers</p>
                   <ul className="space-y-1">
-                    {travelers.map((traveler: any, idx: number) => (
+                    {travelers.map((traveler, idx: number) => (
                       <li key={idx} className="text-sm text-gray-900">
                         {traveler.name} ({traveler.type})
                       </li>
@@ -351,47 +359,67 @@ export default function BookingDetailPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={handleViewTicket}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                      disabled={isViewingTicket}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-60 transition-colors"
                     >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                        />
-                      </svg>
-                      View Ticket
+                      {isViewingTicket ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Opening...
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                            />
+                          </svg>
+                          View Ticket
+                        </>
+                      )}
                     </button>
                     <button
                       onClick={handleDownloadTicket}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                      disabled={isDownloading}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-60 transition-colors"
                     >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                        />
-                      </svg>
-                      Download Ticket
+                      {isDownloading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Downloading...
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                            />
+                          </svg>
+                          Download Ticket
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -428,9 +456,9 @@ export default function BookingDetailPage() {
                     Flight Itinerary
                   </h2>
                 </div>
-                
+
                 <div className="space-y-6">
-                  {itineraries.map((itinerary: any, itinIndex: number) => (
+                  {itineraries.map((itinerary, itinIndex: number) => (
                     <div key={itinIndex}>
                       <div className="flex items-center gap-2 mb-3">
                         <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 rounded-full text-sm font-semibold">
@@ -443,9 +471,9 @@ export default function BookingDetailPage() {
                           Duration: {itinerary.duration?.replace("PT", "").replace("H", "h ").replace("M", "m")}
                         </span>
                       </div>
-                      
+
                       <div className="space-y-4">
-                        {itinerary.segments?.map((segment: any, segIndex: number) => (
+                        {itinerary.segments?.map((segment, segIndex: number) => (
                           <div key={segIndex} className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-4">
                             <div className="flex items-start justify-between mb-3">
                               <div className="flex-1">
@@ -459,7 +487,7 @@ export default function BookingDetailPage() {
                                   {formatDate(segment.departure.at)}
                                 </div>
                               </div>
-                              
+
                               <div className="flex-1 mx-4 flex flex-col items-center">
                                 <div className="flex items-center w-full">
                                   <div className="flex-1 h-px bg-blue-300"></div>
@@ -472,7 +500,7 @@ export default function BookingDetailPage() {
                                   {segment.duration?.replace("PT", "").replace("H", "h ").replace("M", "m")}
                                 </div>
                               </div>
-                              
+
                               <div className="flex-1 text-right">
                                 <div className="text-lg font-bold text-gray-900">
                                   {formatTime(segment.arrival.at)}
@@ -485,7 +513,7 @@ export default function BookingDetailPage() {
                                 </div>
                               </div>
                             </div>
-                            
+
                             <div className="flex items-center justify-between pt-3 border-t border-blue-200">
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-semibold text-gray-700">
@@ -503,7 +531,7 @@ export default function BookingDetailPage() {
                           </div>
                         ))}
                       </div>
-                      
+
                       {itinIndex < itineraries.length - 1 && (
                         <div className="my-4 border-t border-gray-300"></div>
                       )}
@@ -629,7 +657,7 @@ export default function BookingDetailPage() {
                   >
                     Choose File
                   </label>
-                  
+
                   {/* Custom File Upload Area */}
                   <div className="relative">
                     <input
@@ -642,13 +670,12 @@ export default function BookingDetailPage() {
                     />
                     <label
                       htmlFor="ticket-file"
-                      className={`flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer transition-all ${
-                        isUploading
-                          ? "border-gray-300 bg-gray-50 cursor-not-allowed"
-                          : selectedFile
+                      className={`flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer transition-all ${isUploading
+                        ? "border-gray-300 bg-gray-50 cursor-not-allowed"
+                        : selectedFile
                           ? "border-green-400 bg-green-50 hover:bg-green-100"
                           : "border-blue-300 bg-white hover:bg-blue-50 hover:border-blue-400"
-                      }`}
+                        }`}
                     >
                       {selectedFile ? (
                         <div className="flex flex-col items-center text-center p-4">

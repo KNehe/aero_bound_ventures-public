@@ -13,24 +13,33 @@ export default function FlightPricingPage({ params }: { params: Promise<{ id: st
   const selectedFlight = useFlights(state => state.selectedFlight) as FlightOffer
   const [flightOffer, setFlightOffer] = useState<FlightOffer>(selectedFlight);
   const selectFlight = useFlights(state => state.selectFlight);
+  const [isPricingLoading, setIsPricingLoading] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
     confirmPrice()
   }, [])
 
   const confirmPrice = async () => {
-    const url = `${BASE_API_URL}/shopping/flight-offers/pricing`
+    setIsPricingLoading(true);
+    try {
+      const url = `${BASE_API_URL}/shopping/flight-offers/pricing`
 
-    const res = await fetch(url, {
-      method: "POST",
-      body: JSON.stringify(selectedFlight),
-      headers: {
-        "Content-Type": "application/json",
+      const res = await fetch(url, {
+        method: "POST",
+        body: JSON.stringify(selectedFlight),
+        headers: {
+          "Content-Type": "application/json",
+        }
+      });
+      const data = await res.json()
+      if (data?.data?.flightOffers?.[0]) {
+        selectFlight(data.data.flightOffers[0])
       }
-    });
-    const data = await res.json()
-    if (data?.data?.flightOffers?.[0]) {
-      selectFlight(data.data.flightOffers[0])
+    } catch (error) {
+      console.error("Pricing confirmation error:", error);
+    } finally {
+      setIsPricingLoading(false);
     }
   }
 
@@ -143,10 +152,26 @@ export default function FlightPricingPage({ params }: { params: Promise<{ id: st
 
                 <div>
                   <button
-                    onClick={() => router.push(`/booking/${flightOffer.id}`)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg"
+                    onClick={() => {
+                      setIsNavigating(true);
+                      router.push(`/booking/${flightOffer.id}`);
+                    }}
+                    disabled={isPricingLoading || isNavigating}
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg"
                   >
-                    Confirm and continue
+                    {isNavigating ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Loading...
+                      </div>
+                    ) : isPricingLoading ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Confirming price...
+                      </div>
+                    ) : (
+                      "Confirm and continue"
+                    )}
                   </button>
                 </div>
 
@@ -155,7 +180,10 @@ export default function FlightPricingPage({ params }: { params: Promise<{ id: st
             </aside>
           </div>
         ) : (
-          <div className="bg-white p-6 rounded-lg shadow-sm text-center text-gray-600">Loading flight offer...</div>
+          <div className="bg-white p-12 rounded-lg shadow-sm text-center">
+            <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600 font-medium">Loading flight offer...</p>
+          </div>
         )}
       </div>
     </div>

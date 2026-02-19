@@ -33,11 +33,11 @@ export default function AdminDashboard() {
   const filteredBookings = bookings.filter(booking => {
     const matchesFilter = filter === "all" ? true : booking.ticket_url ? "ready" : "processing";
     const pnr = booking.amadeus_order_response?.associatedRecords?.[0]?.reference || "";
-    const matchesSearch = 
+    const matchesSearch =
       booking.flight_order_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       booking.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       pnr.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     return (filter === "all" || matchesFilter === filter) && matchesSearch;
   });
 
@@ -77,7 +77,7 @@ export default function AdminDashboard() {
   };
 
   // Helper to extract PNR from amadeus_order_response
-  const extractPNR = (amadeusOrder: any): string => {
+  const extractPNR = (amadeusOrder: Booking['amadeus_order_response']): string => {
     try {
       return amadeusOrder?.associatedRecords?.[0]?.reference || 'N/A';
     } catch {
@@ -86,12 +86,12 @@ export default function AdminDashboard() {
   };
 
   // Helper to extract flight details from amadeus_order_response
-  const extractFlightDetails = (amadeusOrder: any) => {
+  const extractFlightDetails = (amadeusOrder: Booking['amadeus_order_response']) => {
     try {
       const flight = amadeusOrder?.flightOffers?.[0];
       const itinerary = flight?.itineraries?.[0];
       const segment = itinerary?.segments?.[0];
-      
+
       return {
         origin: segment?.departure?.iataCode || 'N/A',
         destination: segment?.arrival?.iataCode || 'N/A',
@@ -111,8 +111,7 @@ export default function AdminDashboard() {
   };
 
   const handleViewDetails = (bookingId: string) => {
-    // Navigate to detailed booking view
-    window.location.href = `/admin/bookings/${bookingId}`;
+    router.push(`/admin/bookings/${bookingId}`);
   };
 
   // Fetch booking statistics from API
@@ -121,7 +120,7 @@ export default function AdminDashboard() {
       try {
         setIsLoadingStats(true);
         setStatsError(null);
-        
+
         const data = await apiClient.get<BookingStats>('/admin/stats/bookings');
         setStats(data);
       } catch (error) {
@@ -136,7 +135,7 @@ export default function AdminDashboard() {
         setIsLoadingStats(false);
       }
     };
-    
+
     fetchStats();
   }, [logout, router]);
 
@@ -168,7 +167,7 @@ export default function AdminDashboard() {
   }, [logout, router]);
 
   useEffect(() => {
-    const url  = `${getApiBaseUrl()}/notifications/${userInfo?.id}`;
+    const url = `${getApiBaseUrl()}/notifications/${userInfo?.id}`;
     const sse = new EventSource(url, { withCredentials: true });
 
     sse.onmessage = (event) => {
@@ -224,109 +223,109 @@ export default function AdminDashboard() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">{isLoadingStats ? (
-            // Loading skeletons
-            <>
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-white rounded-lg shadow-sm border p-6">
-                  <div className="animate-pulse">
-                    <div className="flex items-center">
-                      <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-                      <div className="ml-4 flex-1">
-                        <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-                        <div className="h-6 bg-gray-200 rounded w-16"></div>
-                      </div>
+          // Loading skeletons
+          <>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white rounded-lg shadow-sm border p-6">
+                <div className="animate-pulse">
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
+                    <div className="ml-4 flex-1">
+                      <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                      <div className="h-6 bg-gray-200 rounded w-16"></div>
                     </div>
                   </div>
                 </div>
-              ))}
-            </>
-          ) : (
-            <>
-          {/* Total Bookings */}
-          <div className="bg-gradient-to-br from-white to-blue-50 rounded-lg shadow-md border border-blue-100 p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-sm">
-                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-semibold text-gray-600">Total Bookings</p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {statsTotalBookings !== undefined ? statsTotalBookings : (
-                    <span className="text-red-500">N/A</span>
-                  )}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Revenue */}
-          <div className="bg-gradient-to-br from-white to-green-50 rounded-lg shadow-md border border-green-100 p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center">
-              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-sm">
-                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-semibold text-gray-600">Total Revenue</p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {totalRevenue !== undefined ? (
-                    `$${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                  ) : (
-                    <span className="text-red-500">N/A</span>
-                  )}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Active Users */}
-          <div className="bg-gradient-to-br from-white to-purple-50 rounded-lg shadow-md border border-purple-100 p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center">
-              <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm">
-                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-semibold text-gray-600">Active Users</p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {activeUsers !== undefined ? activeUsers : (
-                    <span className="text-red-500">N/A</span>
-                  )}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Bookings Today/Week */}
-          <div className="bg-gradient-to-br from-white to-orange-50 rounded-lg shadow-md border border-orange-100 p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center">
-              <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-sm">
-                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-semibold text-gray-600">Bookings (Today/Week)</p>
-                <div className="flex items-baseline gap-1">
-                  {bookingsToday !== undefined && bookingsThisWeek !== undefined ? (
-                    <>
-                      <p className="text-3xl font-bold text-gray-900">{bookingsToday}</p>
-                      <span className="text-gray-400">/</span>
-                      <p className="text-xl font-semibold text-gray-600">{bookingsThisWeek}</p>
-                    </>
-                  ) : (
-                    <span className="text-3xl font-bold text-red-500">N/A</span>
-                  )}
+            ))}
+          </>
+        ) : (
+          <>
+            {/* Total Bookings */}
+            <div className="bg-gradient-to-br from-white to-blue-50 rounded-lg shadow-md border border-blue-100 p-6 hover:shadow-lg transition-shadow">
+              <div className="flex items-center">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-semibold text-gray-600">Total Bookings</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {statsTotalBookings !== undefined ? statsTotalBookings : (
+                      <span className="text-red-500">N/A</span>
+                    )}
+                  </p>
                 </div>
               </div>
             </div>
-          </div>
-            </>
-          )}
+
+            {/* Revenue */}
+            <div className="bg-gradient-to-br from-white to-green-50 rounded-lg shadow-md border border-green-100 p-6 hover:shadow-lg transition-shadow">
+              <div className="flex items-center">
+                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-sm">
+                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-semibold text-gray-600">Total Revenue</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {totalRevenue !== undefined ? (
+                      `$${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    ) : (
+                      <span className="text-red-500">N/A</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Active Users */}
+            <div className="bg-gradient-to-br from-white to-purple-50 rounded-lg shadow-md border border-purple-100 p-6 hover:shadow-lg transition-shadow">
+              <div className="flex items-center">
+                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm">
+                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-semibold text-gray-600">Active Users</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {activeUsers !== undefined ? activeUsers : (
+                      <span className="text-red-500">N/A</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bookings Today/Week */}
+            <div className="bg-gradient-to-br from-white to-orange-50 rounded-lg shadow-md border border-orange-100 p-6 hover:shadow-lg transition-shadow">
+              <div className="flex items-center">
+                <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-sm">
+                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-semibold text-gray-600">Bookings (Today/Week)</p>
+                  <div className="flex items-baseline gap-1">
+                    {bookingsToday !== undefined && bookingsThisWeek !== undefined ? (
+                      <>
+                        <p className="text-3xl font-bold text-gray-900">{bookingsToday}</p>
+                        <span className="text-gray-400">/</span>
+                        <p className="text-xl font-semibold text-gray-600">{bookingsThisWeek}</p>
+                      </>
+                    ) : (
+                      <span className="text-3xl font-bold text-red-500">N/A</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
         </div>
 
         {/* Filters and Search */}
@@ -374,7 +373,7 @@ export default function AdminDashboard() {
           <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
             <h2 className="text-xl font-bold text-gray-900">All Bookings</h2>
           </div>
-          
+
           {bookingsError && (
             <div className="p-6 bg-red-50 border-b border-red-200">
               <div className="flex items-center">
@@ -385,7 +384,7 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
-          
+
           {isLoadingBookings ? (
             <div className="p-12 text-center">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -433,7 +432,7 @@ export default function AdminDashboard() {
                     const pnr = extractPNR(booking.amadeus_order_response);
                     const flightDetails = extractFlightDetails(booking.amadeus_order_response);
                     const ticketStatus = booking.ticket_url ? 'ready' : 'pending';
-                    
+
                     return (
                       <tr key={booking.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -487,7 +486,7 @@ export default function AdminDashboard() {
               </table>
             </div>
           )}
-          
+
           {/* Pagination Controls */}
           {hasMore && (
             <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-center">
