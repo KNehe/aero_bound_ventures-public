@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import useAuth from '@/store/auth';
 
@@ -9,13 +9,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { isAuthenticated, isAdmin } = useAuth();
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  // Handle hydration
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
+  const { isAuthenticated, isAdmin, isHydrated } = useAuth();
 
   // Authentication and authorization check
   useEffect(() => {

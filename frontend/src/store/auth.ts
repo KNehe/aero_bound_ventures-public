@@ -8,8 +8,10 @@ interface AuthState {
   userEmail: string | null;
   userInfo: UserInfo | null;
   isAuthenticated: boolean;
+  isHydrated: boolean;
   isLoading: boolean;
   setUser: (userInfo: UserInfo) => void;
+  setIsHydrated: (isHydrated: boolean) => void;
   logout: () => Promise<void>;
   checkAuth: () => Promise<boolean>;
   isAdmin: () => boolean;
@@ -21,12 +23,17 @@ const useAuth = create<AuthState>()(
       userEmail: null,
       userInfo: null,
       isAuthenticated: false,
+      isHydrated: false,
       isLoading: false,
-      
+
       setUser: (userInfo: UserInfo) => {
         set({ userEmail: userInfo.email, userInfo, isAuthenticated: true });
       },
-      
+
+      setIsHydrated: (isHydrated: boolean) => {
+        set({ isHydrated });
+      },
+
       logout: async () => {
         try {
           await apiClient.post('/logout');
@@ -35,7 +42,7 @@ const useAuth = create<AuthState>()(
         }
         set({ userEmail: null, userInfo: null, isAuthenticated: false });
       },
-      
+
       checkAuth: async () => {
         try {
           set({ isLoading: true });
@@ -51,7 +58,7 @@ const useAuth = create<AuthState>()(
           set({ isLoading: false });
         }
       },
-      
+
       isAdmin: () => {
         const state = get();
         return state.userInfo?.groups?.some(group => group.name === ADMIN_GROUP_NAME) ?? false;
@@ -64,6 +71,11 @@ const useAuth = create<AuthState>()(
         userInfo: state.userInfo,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.setIsHydrated(true);
+        }
+      },
     }
   )
 );

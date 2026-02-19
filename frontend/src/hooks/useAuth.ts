@@ -9,15 +9,16 @@ import useAuth from '@/store/auth';
  */
 export function useRequireAuth() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isHydrated } = useAuth();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    // Only redirect if store is hydrated and user is not authenticated
+    if (isHydrated && !isAuthenticated) {
       router.push('/');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isHydrated, router]);
 
-  return isAuthenticated;
+  return isHydrated && isAuthenticated;
 }
 
 /**
@@ -26,15 +27,15 @@ export function useRequireAuth() {
  */
 export function useRequireAdmin() {
   const router = useRouter();
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isHydrated, isAdmin } = useAuth();
 
   useEffect(() => {
-    if (!isAuthenticated || !isAdmin()) {
+    if (isHydrated && (!isAuthenticated || !isAdmin())) {
       router.push('/');
     }
-  }, [isAuthenticated, isAdmin, router]);
+  }, [isAuthenticated, isHydrated, isAdmin, router]);
 
-  return isAuthenticated && isAdmin();
+  return isHydrated && isAuthenticated && isAdmin();
 }
 
 /**
@@ -42,11 +43,11 @@ export function useRequireAdmin() {
  */
 export function useRedirectIfAuthenticated(redirectTo: string = '/') {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isHydrated } = useAuth();
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isHydrated && isAuthenticated) {
       router.push(redirectTo);
     }
-  }, [isAuthenticated, redirectTo, router]);
+  }, [isAuthenticated, isHydrated, redirectTo, router]);
 }

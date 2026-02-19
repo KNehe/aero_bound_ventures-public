@@ -9,18 +9,18 @@ export default function ProfileLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isHydrated } = useAuth();
 
   useEffect(() => {
     // Check if user is authenticated
-    if (!isAuthenticated) {
+    if (isHydrated && !isAuthenticated) {
       router.push('/auth/login?redirect=/profile');
       return;
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isHydrated, router]);
 
   // If not authenticated, don't render anything
-  if (!isAuthenticated) {
+  if (!isHydrated || !isAuthenticated) {
     return null;
   }
 

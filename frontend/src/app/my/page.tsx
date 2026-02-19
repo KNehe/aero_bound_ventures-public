@@ -46,8 +46,7 @@ const BOOKING_STATUS = {
 } as const;
 
 export default function MyBookingsAndTicketsPage() {
-  const isAuthenticated = useAuth((state) => state.isAuthenticated);
-  const logout = useAuth((state) => state.logout);
+  const { isAuthenticated, logout, isHydrated } = useAuth();
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +59,7 @@ export default function MyBookingsAndTicketsPage() {
   const [totalBookings, setTotalBookings] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [isHydrated, setIsHydrated] = useState(false);
+
   const [cancelModal, setCancelModal] = useState<CancelModalState>({
     isOpen: false,
     bookingId: null,
@@ -170,10 +169,7 @@ export default function MyBookingsAndTicketsPage() {
     }
   };
 
-  // Handle hydration
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
+
 
   useEffect(() => {
     // Wait for hydration and check if user is authenticated
