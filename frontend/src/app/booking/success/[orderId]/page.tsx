@@ -254,9 +254,8 @@ export default function BookingSuccessPage() {
     }
   };
 
-  const handleSelectSeat = (travelerId: string, seatNumber: string, price?: any) => {
-    // In a real app, this would trigger an API call to update the seat assignment
-    setSelectedSeats(prev => ({ ...prev, [travelerId]: seatNumber }));
+  const handleSelectSeat = (_travelerId: string, _seatNumber: string, _price?: any) => {
+    // Read-only: seat selection is disabled on the success page
   };
 
 
@@ -806,11 +805,20 @@ export default function BookingSuccessPage() {
                 </div>
               ) : seatMapData ? (
                 <div className="flex flex-col items-center">
+                  <div className="w-full mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-3">
+                    <svg className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm text-amber-800">
+                      This is a <strong>view-only</strong> seat map showing your booked seat assignment. To change your seat, please visit the airline&apos;s website or contact them directly.
+                    </p>
+                  </div>
                   <SeatMap
                     seatMapData={seatMapData}
                     onSelectSeat={handleSelectSeat}
                     selectedSeats={selectedSeats}
-                    travelerId={bookingData.passengers[0].id} // Default to first traveler for display
+                    travelerId={bookingData.passengers[0].id}
+                    readOnly
                   />
                 </div>
 

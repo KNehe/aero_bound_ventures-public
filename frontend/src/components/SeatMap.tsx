@@ -60,6 +60,7 @@ interface SeatMapProps {
     onSelectSeat: (travelerId: string, seatNumber: string, price?: Price) => void;
     selectedSeats: Record<string, string>;
     travelerId: string;
+    readOnly?: boolean;
 }
 
 // --- Sub-components (Memoized for performance) ---
@@ -71,7 +72,8 @@ const SeatItem = memo(({
     onHover,
     onSelect,
     isExitRow,
-    travelerPricing
+    travelerPricing,
+    readOnly
 }: {
     seat: Seat;
     status: string;
@@ -80,6 +82,7 @@ const SeatItem = memo(({
     onSelect: (seatNumber: string, price?: Price) => void;
     isExitRow: boolean;
     travelerPricing?: TravelerPricing;
+    readOnly?: boolean;
 }) => {
     const price = travelerPricing?.price;
     const isChargeable = !!price && parseFloat(price.total) > 0;
@@ -103,7 +106,7 @@ const SeatItem = memo(({
         <div className="relative group/seat w-full">
             <button
                 type="button"
-                onClick={() => (status === "AVAILABLE" || isSelected) && onSelect(seat.number, price)}
+                onClick={() => !readOnly && (status === "AVAILABLE" || isSelected) && onSelect(seat.number, price)}
                 onMouseEnter={() => onHover(seat)}
                 onMouseLeave={() => onHover(null)}
                 className={`${baseClasses} ${activeStatusClass} ${isExitRow ? 'ring-1 ring-amber-400' : ''}`}
@@ -156,7 +159,7 @@ FacilityItem.displayName = "FacilityItem";
 
 // --- Main Component ---
 
-export default function SeatMap({ seatMapData, onSelectSeat, selectedSeats, travelerId }: SeatMapProps) {
+export default function SeatMap({ seatMapData, onSelectSeat, selectedSeats, travelerId, readOnly = false }: SeatMapProps) {
     const [hoveredSeat, setHoveredSeat] = useState<Seat | null>(null);
 
     const deck = seatMapData?.decks?.[0];
@@ -201,10 +204,11 @@ export default function SeatMap({ seatMapData, onSelectSeat, selectedSeats, trav
             <div className="flex-1 w-full bg-slate-50 rounded-3xl p-8 border border-slate-200 shadow-sm overflow-hidden relative">
 
                 {/* Legend & Summary Float (Moved to Top) */}
-                <div className="mb-10 w-full max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 px-4 py-3 bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-md">
+                <div className={`mb-10 w-full max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-3 ${readOnly ? 'md:grid-cols-5' : 'md:grid-cols-6'} gap-3 px-4 py-3 bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-md`}>
                     <LegendItem color="bg-emerald-50 border-emerald-200 text-emerald-700" label="Free" />
                     <LegendItem color="bg-indigo-50 border-indigo-200 text-indigo-700" label="Preferred" />
-                    <LegendItem color="bg-indigo-600 border-indigo-700 text-white" label="Selected" />
+                    {!readOnly && <LegendItem color="bg-indigo-600 border-indigo-700 text-white" label="Selected" />}
+                    <LegendItem color="bg-indigo-600 border-indigo-700 text-white" label="Your Seat" icon={<FaCheckCircle size={10} />} />
                     <LegendItem color="bg-slate-100 border-slate-200 text-slate-400" label="Occupied" icon={<FaUserLock size={10} />} />
                     <LegendItem color="bg-rose-50 border-rose-100 text-rose-300" label="Blocked" />
                     <LegendItem color="bg-slate-200/50 border-slate-300 text-slate-500" label="Wing" icon={<GiPlaneWing size={12} />} />
@@ -324,6 +328,7 @@ export default function SeatMap({ seatMapData, onSelectSeat, selectedSeats, trav
                                             onSelect={handleSelect}
                                             isExitRow={!!isExitRow}
                                             travelerPricing={pricing}
+                                            readOnly={readOnly}
                                         />
                                         {isExitRow && y === 0 && (
                                             <span className="absolute -left-6 top-1/2 -translate-y-1/2 text-[7px] font-black text-rose-500 uppercase tracking-tighter vertical-text leading-none opacity-60">EXIT</span>
@@ -348,8 +353,8 @@ export default function SeatMap({ seatMapData, onSelectSeat, selectedSeats, trav
                     <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />
 
                     <h4 className="text-slate-900 font-bold mb-4 flex items-center justify-between">
-                        Selection Details
-                        {selectedSeats[travelerId] && <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-tighter">Verified</span>}
+                        {readOnly ? 'Seat Details' : 'Selection Details'}
+                        {selectedSeats[travelerId] && <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-tighter">{readOnly ? 'Booked' : 'Verified'}</span>}
                     </h4>
 
                     {hoveredSeat ? (
@@ -394,7 +399,9 @@ export default function SeatMap({ seatMapData, onSelectSeat, selectedSeats, trav
                             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
                                 <FaCheckCircle size={32} />
                             </div>
-                            <p className="text-sm text-slate-400 italic">Hover over a seat to view features and pricing details.</p>
+                            <p className="text-sm text-slate-400 italic">
+                                {readOnly ? 'Hover over a seat to view its details.' : 'Hover over a seat to view features and pricing details.'}
+                            </p>
                         </div>
                     )}
                 </div>
@@ -402,14 +409,14 @@ export default function SeatMap({ seatMapData, onSelectSeat, selectedSeats, trav
                 {/* Selected Summary */}
                 {selectedSeats[travelerId] && (
                     <div className="bg-indigo-600 p-6 rounded-3xl text-white shadow-lg animate-in zoom-in-95 duration-300">
-                        <div className="uppercase text-[10px] font-bold tracking-widest opacity-80 mb-1">Traveler Assignment</div>
+                        <div className="uppercase text-[10px] font-bold tracking-widest opacity-80 mb-1">{readOnly ? 'Your Booked Seat' : 'Traveler Assignment'}</div>
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center font-bold text-xl">
                                 {selectedSeats[travelerId]}
                             </div>
                             <div>
                                 <div className="font-bold">Passenger {travelerId}</div>
-                                <div className="text-xs opacity-80">Seat reserved and locked</div>
+                                <div className="text-xs opacity-80">{readOnly ? 'Booked seat assignment' : 'Seat reserved and locked'}</div>
                             </div>
                         </div>
                     </div>
