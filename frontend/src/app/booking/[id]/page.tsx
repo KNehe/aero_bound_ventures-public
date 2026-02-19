@@ -9,7 +9,6 @@ import countryCodes from "@/data/countryCodes.json";
 import { apiClient, isUnauthorizedError, ApiClientError } from "@/lib/api";
 import SeatMap from "@/components/SeatMap";
 
-// Local interface for form state - simplified for the booking form
 interface BookingTraveler {
   id: string;
   travelerType: string; // ADULT, CHILD, INFANT - from API
@@ -35,13 +34,11 @@ interface BookingTraveler {
   };
 }
 
-// Helper function to transform BookingTraveler to API Traveler format
 const transformToApiTraveler = (bookingTraveler: BookingTraveler): ApiTraveler => {
-  // Smart defaults for optional fields
+
   const validityCountry = bookingTraveler.documents.validityCountry || bookingTraveler.documents.issuanceCountry;
   const issuanceLocation = bookingTraveler.documents.issuanceLocation || bookingTraveler.documents.birthPlace;
 
-  // Calculate issuance date if not provided (assume 10 years before expiry for new passports)
   let issuanceDate = bookingTraveler.documents.issuanceDate;
   if (!issuanceDate && bookingTraveler.documents.expiryDate) {
     const expiry = new Date(bookingTraveler.documents.expiryDate);
@@ -63,7 +60,7 @@ const transformToApiTraveler = (bookingTraveler: BookingTraveler): ApiTraveler =
       phones: [
         {
           deviceType: bookingTraveler.deviceType,
-          countryCallingCode: bookingTraveler.countryCallingCode.replace('+', ''), // Remove + prefix
+          countryCallingCode: bookingTraveler.countryCallingCode.replace('+', ''),
           number: bookingTraveler.phone,
         },
       ],
@@ -88,39 +85,66 @@ const transformToApiTraveler = (bookingTraveler: BookingTraveler): ApiTraveler =
 export default function BookingPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const resolvedParams = React.use(params);
-  const [currentStep, setCurrentStep] = useState(0); // Step 0: Traveler Info
+  const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Use Zustand stores
   const { isAuthenticated, logout } = useAuth();
   const selectedFlight = useFlights((state) => state.selectedFlight) as FlightOffer | null;
   const selectFlight = useFlights((state) => state.selectFlight);
 
-  // console.log("Selected Flight in Booking Page:", selectedFlight?.data.flightOffers[0]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize travelers based on flight offer
   const [travelers, setTravelers] = useState<BookingTraveler[]>([]);
+  const [travelerErrors, setTravelerErrors] = useState<Record<string, Record<string, string>>>({});
   const [seatMapData, setSeatMapData] = useState<any>(null);
-  const [selectedSeats, setSelectedSeats] = useState<Record<string, string>>({}); // travelerId -> seatNumber
+  const [selectedSeats, setSelectedSeats] = useState<Record<string, string>>({});
   const [isSeatMapLoading, setIsSeatMapLoading] = useState(false);
   const [isPricingLoading, setIsPricingLoading] = useState(false);
 
+  const validateTravelers = (): boolean => {
+    const errors: Record<string, Record<string, string>> = {};
+    let isValid = true;
 
-  // Check authentication on mount
+    travelers.forEach((traveler, index) => {
+      const fieldErrors: Record<string, string> = {};
+
+      if (!traveler.firstName.trim()) fieldErrors.firstName = 'First name is required';
+      if (!traveler.lastName.trim()) fieldErrors.lastName = 'Last name is required';
+      if (!traveler.dateOfBirth) fieldErrors.dateOfBirth = 'Date of birth is required';
+      if (!traveler.email.trim()) fieldErrors.email = 'Email is required';
+      if (!traveler.phone.trim()) fieldErrors.phone = 'Phone number is required';
+      if (!traveler.documents.number.trim()) fieldErrors['documents.number'] = 'Passport number is required';
+      if (!traveler.documents.expiryDate) fieldErrors['documents.expiryDate'] = 'Passport expiry date is required';
+      if (!traveler.documents.nationality) fieldErrors['documents.nationality'] = 'Nationality is required';
+      if (!traveler.documents.issuanceCountry) fieldErrors['documents.issuanceCountry'] = 'Issuance country is required';
+      if (!traveler.documents.birthPlace.trim()) fieldErrors['documents.birthPlace'] = 'Birth place is required';
+
+      if (Object.keys(fieldErrors).length > 0) {
+        errors[String(index)] = fieldErrors;
+        isValid = false;
+      }
+    });
+
+    setTravelerErrors(errors);
+    return isValid;
+  };
+
   useEffect(() => {
     if (!isAuthenticated) {
-      // Redirect to login with current page as redirect target
+
       const currentPath = `/booking/${resolvedParams.id}`;
       router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
     }
   }, [isAuthenticated, resolvedParams.id, router]);
 
-  // Initialize travelers based on selected flight offer
+  // Only initialize travelers on first load — skip when selectedFlight updates from re-pricing.
   useEffect(() => {
     if (selectedFlight) {
-      // Initialize travelers based on travelerPricings from the flight offer
-      if (selectedFlight.travelerPricings && selectedFlight.travelerPricings.length > 0) {
+      if (
+        travelers.length === 0 &&
+        selectedFlight.travelerPricings &&
+        selectedFlight.travelerPricings.length > 0
+      ) {
         const initialTravelers: BookingTraveler[] = selectedFlight.travelerPricings.map((pricing) => ({
           id: pricing.travelerId,
           travelerType: pricing.travelerType,
@@ -145,14 +169,12 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             holder: true,
           },
         }));
-        console.log(selectedFlight)
         setTravelers(initialTravelers);
       }
     }
     setIsLoading(false);
   }, [selectedFlight]);
 
-  // Fetch seat map data once flight is confirmed
   useEffect(() => {
     if (selectedFlight && currentStep === 1 && !seatMapData) {
       fetchSeatMap();
@@ -163,9 +185,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     setIsSeatMapLoading(true);
     try {
       const response = await apiClient.post<any>("/shopping/seatmaps", selectedFlight);
-      console.log("Pre-booking Seat Map Raw Response:", response);
 
-      // Handle various potential response structures gracefully
       let data = null;
       if (Array.isArray(response)) {
         data = response[0];
@@ -175,7 +195,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         data = response;
       }
 
-      console.log("Parsed Seat Map Data:", data);
       setSeatMapData(data);
     } catch (error: any) {
       console.error("Error fetching seat map:", error);
@@ -188,7 +207,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         console.error("Unexpected seat map error:", errorMessage);
       }
 
-      // Set seatMapData to null so UI shows appropriate message
       setSeatMapData(null);
     } finally {
       setIsSeatMapLoading(false);
@@ -205,13 +223,12 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const confirmPricingWithSeats = async () => {
     if (!selectedFlight) return true;
 
-    // Only need to re-price if seats are selected
     const hasSeats = Object.values(selectedSeats).some(s => s !== "");
     if (!hasSeats) return true;
 
     setIsPricingLoading(true);
     try {
-      // Create updated offer with seat selections
+
       const updatedOffer = {
         ...selectedFlight,
         travelerPricings: selectedFlight.travelerPricings.map((tp: any) => {
@@ -235,8 +252,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       const data = await apiClient.post<any>("/shopping/flight-offers/pricing", updatedOffer);
 
       if (data?.data?.flightOffers?.[0]) {
-        // Update the selected flight with the newly priced one
-        // This includes updated price and additionalServices details from Amadeus
         selectFlight(data.data.flightOffers[0]);
         return true;
       }
@@ -251,6 +266,10 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   };
 
   const handleNextStep = async () => {
+
+    if (currentStep === 0) {
+      if (!validateTravelers()) return;
+    }
     if (currentStep === 1) {
       const success = await confirmPricingWithSeats();
       if (!success) return;
@@ -260,7 +279,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  // Helper function to format date to YYYY-MM-DD format
   const formatDateForBackend = (date: string | Date): string => {
     if (!date) return '';
     const d = typeof date === 'string' ? new Date(date) : date;
@@ -270,9 +288,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     return `${year}-${month}-${day}`;
   };
 
-  // Helper functions for passport expiry date validation
   const getMinPassportExpiryDate = () => {
-    // Passport must be valid for at least 6 months beyond today
     const today = new Date();
     const minDate = new Date(today);
     minDate.setMonth(minDate.getMonth() + 6);
@@ -280,7 +296,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   };
 
   const getMaxPassportExpiryDate = () => {
-    // Passports typically valid for 10 years maximum from today
     const today = new Date();
     const maxDate = new Date(today);
     maxDate.setFullYear(maxDate.getFullYear() + 10);
@@ -296,9 +311,20 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       (updatedTravelers[index] as any)[field] = value;
     }
     setTravelers(updatedTravelers);
+
+    if (travelerErrors[String(index)]?.[field]) {
+      setTravelerErrors(prev => {
+        const updated = { ...prev };
+        if (updated[String(index)]) {
+          const { [field]: _, ...rest } = updated[String(index)];
+          updated[String(index)] = rest;
+          if (Object.keys(rest).length === 0) delete updated[String(index)];
+        }
+        return updated;
+      });
+    }
   };
 
-  // DEV ONLY: Populate test traveler data
   const populateTestData = () => {
     const testTravelerData: BookingTraveler = {
       id: "1",
@@ -334,19 +360,22 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateTravelers()) {
+      setCurrentStep(0);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // Transform booking travelers to API format
+
       const apiTravelers: ApiTraveler[] = travelers.map(transformToApiTraveler);
 
-      // Prepare booking payload with flight offer (already priced with seats from step 2)
       const bookingPayload: FlightBookingData = {
         flight_offer: selectedFlight!,
         travelers: apiTravelers,
       };
-
-      console.log("Booking Payload:", bookingPayload);
 
       if (!isAuthenticated) {
         const currentPath = `/booking/${resolvedParams.id}`;
@@ -354,10 +383,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         return;
       }
 
-      // Send booking request to API using centralized client
       const bookingResult = await apiClient.post<{ id: string }>('/booking/flight-orders', bookingPayload);
-
-      console.log("Booking Result:", bookingResult);
 
       router.push(`/booking/success/${bookingResult.id}`);
 
@@ -379,10 +405,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  const totalSteps = 3; // Traveler Info -> Seat Selection -> Review
+  const totalSteps = 3;
   const progress = (currentStep / (totalSteps - 1)) * 100;
 
-  // Show loading/redirecting state while checking authentication
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -394,7 +419,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     );
   }
 
-  // Show loading state while fetching flight offer
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -422,7 +446,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-6">
@@ -442,7 +466,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         </div>
       </div>
 
-      {/* Progress Bar */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-2">
@@ -460,8 +483,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       </div>
 
       <div className={`mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-all duration-300 ${currentStep === 1 ? 'max-w-7xl' : 'max-w-4xl'}`}>
-        <form onSubmit={handleSubmit} className="space-y-8">c
-          {/* Step 1: Traveler Information */}
+        <form onSubmit={handleSubmit} className="space-y-8">
           {currentStep === 0 && (
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <div className="flex items-center justify-between mb-6">
@@ -492,8 +514,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           required
                           value={traveler.firstName}
                           onChange={(e) => updateTraveler(index, 'firstName', e.target.value)}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                          className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 text-gray-900 ${travelerErrors[String(index)]?.firstName ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                         />
+                        {travelerErrors[String(index)]?.firstName && <p className="text-red-500 text-xs mt-1">{travelerErrors[String(index)].firstName}</p>}
                       </div>
 
                       <div>
@@ -503,8 +526,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           required
                           value={traveler.lastName}
                           onChange={(e) => updateTraveler(index, 'lastName', e.target.value)}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                          className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 text-gray-900 ${travelerErrors[String(index)]?.lastName ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                         />
+                        {travelerErrors[String(index)]?.lastName && <p className="text-red-500 text-xs mt-1">{travelerErrors[String(index)].lastName}</p>}
                       </div>
 
                       <div>
@@ -515,8 +539,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           max={formatDateForBackend(new Date())}
                           value={traveler.dateOfBirth}
                           onChange={(e) => updateTraveler(index, 'dateOfBirth', e.target.value)}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                          className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 text-gray-900 ${travelerErrors[String(index)]?.dateOfBirth ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                         />
+                        {travelerErrors[String(index)]?.dateOfBirth && <p className="text-red-500 text-xs mt-1">{travelerErrors[String(index)].dateOfBirth}</p>}
                       </div>
 
                       <div>
@@ -539,8 +564,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           required
                           value={traveler.email}
                           onChange={(e) => updateTraveler(index, 'email', e.target.value)}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                          className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 text-gray-900 ${travelerErrors[String(index)]?.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                         />
+                        {travelerErrors[String(index)]?.email && <p className="text-red-500 text-xs mt-1">{travelerErrors[String(index)].email}</p>}
                       </div>
 
                       <div>
@@ -562,13 +588,13 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             required
                             value={traveler.phone}
                             onChange={(e) => updateTraveler(index, 'phone', e.target.value)}
-                            className="flex-1 border border-gray-300 rounded-r-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                            className={`flex-1 border rounded-r-md px-3 py-2 focus:outline-none focus:ring-2 text-gray-900 ${travelerErrors[String(index)]?.phone ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                           />
                         </div>
+                        {travelerErrors[String(index)]?.phone && <p className="text-red-500 text-xs mt-1">{travelerErrors[String(index)].phone}</p>}
                       </div>
                     </div>
 
-                    {/* Document Information */}
                     <div className="mt-6 pt-6 border-t border-gray-200">
                       <h4 className="text-md font-semibold text-gray-800 mb-4">Travel Document</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -589,8 +615,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             required
                             value={traveler.documents.number}
                             onChange={(e) => updateTraveler(index, 'documents.number', e.target.value)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                            className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 text-gray-900 ${travelerErrors[String(index)]?.['documents.number'] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                           />
+                          {travelerErrors[String(index)]?.['documents.number'] && <p className="text-red-500 text-xs mt-1">{travelerErrors[String(index)]['documents.number']}</p>}
                         </div>
 
                         <div>
@@ -605,8 +632,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             max={getMaxPassportExpiryDate()}
                             value={traveler.documents.expiryDate}
                             onChange={(e) => updateTraveler(index, 'documents.expiryDate', e.target.value)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                            className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 text-gray-900 ${travelerErrors[String(index)]?.['documents.expiryDate'] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                           />
+                          {travelerErrors[String(index)]?.['documents.expiryDate'] && <p className="text-red-500 text-xs mt-1">{travelerErrors[String(index)]['documents.expiryDate']}</p>}
                           <p className="text-xs text-gray-500 mt-1">
                             Must be valid for at least 6 months from today
                           </p>
@@ -618,7 +646,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             required
                             value={traveler.documents.nationality}
                             onChange={(e) => updateTraveler(index, 'documents.nationality', e.target.value)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                            className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 text-gray-900 ${travelerErrors[String(index)]?.['documents.nationality'] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                           >
                             <option value="">Select Nationality</option>
                             {countryCodes.map((country, i) => (
@@ -627,6 +655,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                               </option>
                             ))}
                           </select>
+                          {travelerErrors[String(index)]?.['documents.nationality'] && <p className="text-red-500 text-xs mt-1">{travelerErrors[String(index)]['documents.nationality']}</p>}
                         </div>
 
                         <div>
@@ -635,7 +664,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             required
                             value={traveler.documents.issuanceCountry}
                             onChange={(e) => updateTraveler(index, 'documents.issuanceCountry', e.target.value)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                            className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 text-gray-900 ${travelerErrors[String(index)]?.['documents.issuanceCountry'] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                           >
                             <option value="">Select Issuance Country</option>
                             {countryCodes.map((country, i) => (
@@ -644,6 +673,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                               </option>
                             ))}
                           </select>
+                          {travelerErrors[String(index)]?.['documents.issuanceCountry'] && <p className="text-red-500 text-xs mt-1">{travelerErrors[String(index)]['documents.issuanceCountry']}</p>}
                         </div>
 
                         <div>
@@ -673,8 +703,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                             placeholder="City of birth"
                             value={traveler.documents.birthPlace}
                             onChange={(e) => updateTraveler(index, 'documents.birthPlace', e.target.value)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                            className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 text-gray-900 ${travelerErrors[String(index)]?.['documents.birthPlace'] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                           />
+                          {travelerErrors[String(index)]?.['documents.birthPlace'] && <p className="text-red-500 text-xs mt-1">{travelerErrors[String(index)]['documents.birthPlace']}</p>}
                         </div>
 
                         <div>
@@ -715,7 +746,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             </div>
           )}
 
-          {/* Step 2: Seat Selection */}
           {currentStep === 1 && (
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Choose Your Seats</h2>
@@ -759,13 +789,12 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             </div>
           )}
 
-          {/* Step 3: Review and Confirm */}
           {currentStep === 2 && (
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Review and Confirm</h2>
 
               <div className="space-y-6">
-                {/* Flight Summary */}
+
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-gray-800 mb-3">Flight Summary</h3>
                   <div className="text-sm text-gray-600">
@@ -775,7 +804,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                   </div>
                 </div>
 
-                {/* Traveler Summary */}
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-gray-800 mb-3">Traveler Information</h3>
                   {travelers.map((traveler, index) => (
@@ -795,7 +823,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                   ))}
                 </div>
 
-                {/* Terms and Conditions */}
                 <div className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-start">
                     <input
@@ -815,7 +842,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             </div>
           )}
 
-          {/* Navigation Buttons */}
           <div className="flex justify-between">
             <button
               type="button"
