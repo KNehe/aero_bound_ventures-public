@@ -32,6 +32,7 @@ export interface AmadeusOrderResponse {
       currency?: string;
       total?: string;
       base?: string;
+      grandTotal?: string;
     };
   }>;
 }
