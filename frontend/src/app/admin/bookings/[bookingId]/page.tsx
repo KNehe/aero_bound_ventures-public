@@ -310,6 +310,16 @@ export default function BookingDetailPage() {
                     {new Date(booking.created_at).toLocaleString()}
                   </p>
                 </div>
+                <div>
+                  <p className="text-sm text-gray-500">Total Price</p>
+                  <p className="font-medium text-gray-900">
+                    {booking.total_amount
+                      ? `$${booking.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      : flightOffers[0]?.price?.total
+                        ? `${flightOffers[0].price.currency || ''} ${flightOffers[0].price.total}`
+                        : 'N/A'}
+                  </p>
+                </div>
               </div>
 
               {travelers.length > 0 && (

@@ -28,6 +28,11 @@ export interface AmadeusOrderResponse {
         numberOfStops?: number;
       }>;
     }>;
+    price?: {
+      currency?: string;
+      total?: string;
+      base?: string;
+    };
   }>;
 }
 
