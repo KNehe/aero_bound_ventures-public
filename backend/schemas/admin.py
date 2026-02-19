@@ -18,6 +18,7 @@ class AdminBookingResponse(BaseModel):
     status: str
     created_at: datetime
     ticket_url: str | None
+    total_price: float
     user: AdminUserInfo
     amadeus_order_response: dict | None
 

@@ -313,11 +313,11 @@ export default function BookingDetailPage() {
                 <div>
                   <p className="text-sm text-gray-500">Total Price</p>
                   <p className="font-medium text-gray-900">
-                    {flightOffers[0]?.price?.grandTotal || flightOffers[0]?.price?.total
-                      ? `${flightOffers[0]?.price?.currency || 'USD'} ${flightOffers[0]?.price?.grandTotal || flightOffers[0]?.price?.total}`
-                      : booking.total_amount
-                        ? `$${booking.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                        : 'N/A'}
+                    {(() => {
+                      const currency = flightOffers[0]?.price?.currency || 'USD';
+                      const price = booking.total_price;
+                      return `${currency} ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    })()}
                   </p>
                 </div>
               </div>

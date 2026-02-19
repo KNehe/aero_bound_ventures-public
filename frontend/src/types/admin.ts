@@ -43,7 +43,7 @@ export interface Booking {
   status: string;
   created_at: string;
   ticket_url: string | null;
-  total_amount?: number;
+  total_price: number;
   user: BookingUser;
   amadeus_order_response: AmadeusOrderResponse;
 }
