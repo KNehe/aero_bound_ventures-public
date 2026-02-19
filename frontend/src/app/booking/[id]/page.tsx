@@ -88,7 +88,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, isHydrated } = useAuth();
   const selectedFlight = useFlights((state) => state.selectedFlight) as FlightOffer | null;
   const selectFlight = useFlights((state) => state.selectFlight);
 
@@ -130,12 +130,12 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   };
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (isHydrated && !isAuthenticated) {
 
       const currentPath = `/booking/${resolvedParams.id}`;
       router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
     }
-  }, [isAuthenticated, resolvedParams.id, router]);
+  }, [isAuthenticated, isHydrated, resolvedParams.id, router]);
 
   // Only initialize travelers on first load — skip when selectedFlight updates from re-pricing.
   useEffect(() => {
@@ -408,7 +408,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const totalSteps = 3;
   const progress = (currentStep / (totalSteps - 1)) * 100;
 
-  if (!isAuthenticated) {
+  if (!isHydrated || !isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

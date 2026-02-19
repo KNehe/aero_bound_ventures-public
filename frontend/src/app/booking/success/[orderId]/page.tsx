@@ -7,7 +7,6 @@ import { apiClient, isUnauthorizedError, ApiClientError } from "@/lib/api";
 import SeatMap from "@/components/SeatMap";
 
 // Pesapal uses server-side integration
-// No global window object needed for iframe approach
 
 interface PesapalPaymentRequest {
   booking_id: string;
@@ -103,12 +102,12 @@ export default function BookingSuccessPage() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [showPaymentIframe, setShowPaymentIframe] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
-  const [isHydrated, setIsHydrated] = useState(false);
+
   const [showSeatMap, setShowSeatMap] = useState(false);
   const [seatMapData, setSeatMapData] = useState<any>(null);
   const [isSeatMapLoading, setIsSeatMapLoading] = useState(false);
   const [selectedSeats, setSelectedSeats] = useState<Record<string, string>>({});
-  const { logout, isAuthenticated } = useAuth();
+  const { logout, isAuthenticated, isHydrated } = useAuth();
   const params = useParams();
   const { orderId } = params;
   const [isDownloading, setIsDownloading] = useState(false);
@@ -157,10 +156,7 @@ export default function BookingSuccessPage() {
     setTimeout(() => setIsViewingTicket(false), 1000);
   };
 
-  // Handle hydration
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
+
 
   // Handle Pesapal payment
   const handlePayment = async () => {
