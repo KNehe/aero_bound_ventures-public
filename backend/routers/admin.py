@@ -130,7 +130,6 @@ async def get_all_bookings(
                     status=booking.status,
                     created_at=booking.created_at,
                     ticket_url=booking.ticket_url,
-                    ticket_url=booking.ticket_url,
                     total_price=booking.total_price,
                     user={
                         "id": booking.user.id,
