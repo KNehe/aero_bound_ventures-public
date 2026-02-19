@@ -195,7 +195,7 @@ export default function AuthDemoPage() {
                 <ul className="text-sm text-gray-600 space-y-1">
                   <li>• Email/password login</li>
                   <li>• Social login options</li>
-                  <li>• Remember me functionality</li>
+                  <li>• Secure session handling</li>
                   <li>• Forgot password link</li>
                 </ul>
               </div>
