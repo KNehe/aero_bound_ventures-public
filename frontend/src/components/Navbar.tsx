@@ -87,7 +87,7 @@ export default function Navbar() {
     <nav className="z-50 w-full bg-white shadow flex items-center justify-between px-6 py-3">
       {/* Left: Logo and Name */}
       <Link href="/" className="flex items-center gap-2">
-        <Image src="/globe.svg" alt="Aero Bound Ventures Logo" width={32} height={32} />
+        <Image src="/logo.png" alt="Aero Bound Ventures Logo" width={40} height={40} className="object-contain" />
         <span className="text-2xl font-extrabold text-blue-700 tracking-wide">Aero Bound Ventures</span>
       </Link>
       {/* Desktop Nav Links */}

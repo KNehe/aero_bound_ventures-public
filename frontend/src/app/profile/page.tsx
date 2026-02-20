@@ -82,7 +82,7 @@ export default function ProfilePage() {
       setMessage("Password changed successfully! Redirecting to login...");
       setMessageType('success');
       setFormData({ old_password: "", new_password: "", confirm_password: "" });
-      
+
       // Session is invalidated by the backend, logout and redirect
       setTimeout(async () => {
         await logout();
@@ -112,7 +112,7 @@ export default function ProfilePage() {
         {/* Avatar and Email */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-24 h-24 mb-4 rounded-full overflow-hidden border-4 border-blue-500">
-            <Image src="/globe.svg" alt="User Avatar" width={96} height={96} />
+            <Image src="/logo.png" alt="User Avatar" width={96} height={96} className="object-contain" />
           </div>
           <div className="text-xl font-semibold text-gray-800">{userEmail}</div>
         </div>
@@ -120,13 +120,13 @@ export default function ProfilePage() {
         {/* Password Change Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <h2 className="text-2xl font-bold text-center text-gray-900">Change Password</h2>
-          
+
           {message && (
             <div className={`p-4 rounded-md ${messageType === 'success' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>
               {message}
             </div>
           )}
-          
+
           <div>
             <label htmlFor="old_password" className="block text-sm font-medium text-gray-700 mb-1">
               Old Password
