@@ -21,6 +21,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Aero Bound Ventures | Seamless Travel Services",
   description: "Discover premium travel services with Aero Bound Ventures. We specialize in air ticketing, hotel bookings, airport transfers, travel insurance, car rentals, tour & honeymoon packages, as well as passport and visa processing.",
+  icons: {
+    icon: [
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({
