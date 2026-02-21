@@ -100,7 +100,3 @@ app.include_router(api_v1_router)
 def hello():
     return {"message": "Flight Booking API"}
 
-
-@app.get("/dummy")
-def dummy():
-    return {"message": "This is a dummy endpoint for CD verification"}
