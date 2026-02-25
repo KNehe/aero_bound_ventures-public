@@ -701,8 +701,8 @@ export default function BookingSuccessPage() {
                     </a>
                   </div>
                 )}
-                {/* Show payment button if booking is confirmed but not yet paid */}
-                {bookingData.status === BOOKING_STATUS.CONFIRMED && (
+                {/* Show payment button if booking is confirmed or payment failed */}
+                {(bookingData.status === BOOKING_STATUS.CONFIRMED || bookingData.status === BOOKING_STATUS.FAILED) && (
                   <button
                     onClick={handlePayment}
                     disabled={isProcessingPayment}
