@@ -150,7 +150,11 @@ def createsuperuser():
         session.commit()
         session.refresh(user)
 
+        admin_group = ensure_admin_group(session)
+        UserPermissionCRUD.assign_group_to_user(session, user.id, admin_group.id)
+
         typer.echo(f"Superuser created successfully: {user.email}")
+        typer.echo(f"User has been assigned to the '{ADMIN_GROUP_NAME}' group.")
         typer.echo("This user has full access to all system features.")
 
 
