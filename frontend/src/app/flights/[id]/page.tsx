@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import useFlights from "@/store/flights";
 import { FlightOffer } from "@/types/flight_offer";
 
@@ -13,34 +14,39 @@ export default function FlightPricingPage({ params }: { params: Promise<{ id: st
   const selectedFlight = useFlights(state => state.selectedFlight) as FlightOffer
   const [flightOffer, setFlightOffer] = useState<FlightOffer>(selectedFlight);
   const selectFlight = useFlights(state => state.selectFlight);
-  const [isPricingLoading, setIsPricingLoading] = useState(true);
   const [isNavigating, setIsNavigating] = useState(false);
 
-  useEffect(() => {
-    confirmPrice()
-  }, [])
-
-  const confirmPrice = async () => {
-    setIsPricingLoading(true);
-    try {
-      const url = `${BASE_API_URL}/shopping/flight-offers/pricing`
-
-      const res = await fetch(url, {
-        method: "POST",
-        body: JSON.stringify(selectedFlight),
-        headers: {
-          "Content-Type": "application/json",
-        }
-      });
-      const data = await res.json()
-      if (data?.data?.flightOffers?.[0]) {
-        selectFlight(data.data.flightOffers[0])
+  const confirmPrice = async (flight: FlightOffer) => {
+    const url = `${BASE_API_URL}/shopping/flight-offers/pricing`;
+    const res = await fetch(url, {
+      method: "POST",
+      body: JSON.stringify(flight),
+      headers: {
+        "Content-Type": "application/json",
       }
-    } catch (error) {
-      console.error("Pricing confirmation error:", error);
-    } finally {
-      setIsPricingLoading(false);
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to confirm pricing");
     }
+    return res.json();
+  };
+
+  const { data: pricingData, isLoading: isPricingLoading, error } = useQuery({
+    queryKey: ['flightPricing', selectedFlight?.id],
+    queryFn: () => confirmPrice(selectedFlight),
+    enabled: !!selectedFlight,
+  });
+
+  useEffect(() => {
+    if (pricingData?.data?.flightOffers?.[0]) {
+      selectFlight(pricingData.data.flightOffers[0]);
+      setFlightOffer(pricingData.data.flightOffers[0]); // fallback explicit set although passing via selectFlight often suffices dependent on store shape
+    }
+  }, [pricingData, selectFlight]);
+
+  if (error) {
+    console.error("Pricing confirmation error:", error);
   }
 
 

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useMutation } from "@tanstack/react-query";
 import useAuth from "@/store/auth";
 import { LoginResponse } from "@/types/auth";
 import { ADMIN_GROUP_NAME, MIN_PASSWORD_LENGTH } from "@/constants/auth";
@@ -11,7 +12,6 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLogin, setIsLogin] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   // Use Zustand store
@@ -41,17 +41,11 @@ function LoginForm() {
     }
   }, [isAuthenticated, isHydrated, redirectTo, router]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setIsSubmitting(true);
-
-    try {
+  const loginMutation = useMutation({
+    mutationFn: async () => {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-      // OAuth2 Password Flow requires form-urlencoded format
       const formData = new URLSearchParams();
-      formData.append("username", email); // OAuth2 uses 'username' field
+      formData.append("username", email);
       formData.append("password", password);
 
       const response = await fetch(`${baseUrl}/token`, {
@@ -68,12 +62,11 @@ function LoginForm() {
         throw new Error(errorData.detail || "Invalid email or password");
       }
 
-      const data: LoginResponse = await response.json();
-
-      // Set user in store (token is now in HTTP-only cookie)
+      return response.json() as Promise<LoginResponse>;
+    },
+    onSuccess: (data: LoginResponse) => {
       setUser(data.user);
-
-      const isAdmin = data.user.groups.some(group => group.name === ADMIN_GROUP_NAME);
+      const isAdmin = data.user.groups.some((group: { name: string }) => group.name === ADMIN_GROUP_NAME);
 
       if (redirectTo && redirectTo !== '/') {
         router.push(redirectTo);
@@ -82,14 +75,42 @@ function LoginForm() {
       } else {
         router.push('/');
       }
-    } catch (err) {
+    },
+    onError: (err: unknown) => {
       setError(err instanceof Error ? err.message : "Login failed. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+    },
+    onMutate: () => {
+      setError("");
     }
+  });
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    loginMutation.mutate();
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const signupMutation = useMutation({
+    mutationFn: () => apiClient.post('/register/', {
+      email,
+      password,
+    }),
+    onSuccess: () => {
+      // After successful registration, automatically log in
+      loginMutation.mutate();
+    },
+    onError: (err) => {
+      if (err instanceof ApiClientError) {
+        setError(err.detail || "Registration failed");
+      } else {
+        setError(err instanceof Error ? err.message : "Signup failed. Please try again.");
+      }
+    },
+    onMutate: () => {
+      setError("");
+    }
+  });
+
+  const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -103,24 +124,7 @@ function LoginForm() {
       return;
     }
 
-    setIsSubmitting(true);
-
-    try {
-      await apiClient.post('/register/', {
-        email,
-        password,
-      });
-
-      // After successful registration, automatically log in
-      await handleLogin(e);
-    } catch (err) {
-      if (err instanceof ApiClientError) {
-        setError(err.detail || "Registration failed");
-      } else {
-        setError(err instanceof Error ? err.message : "Signup failed. Please try again.");
-      }
-      setIsSubmitting(false);
-    }
+    signupMutation.mutate();
   };
 
   return (
@@ -257,10 +261,10 @@ function LoginForm() {
 
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={loginMutation.isPending || signupMutation.isPending}
                   className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? (
+                  {loginMutation.isPending || signupMutation.isPending ? (
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       Logging in...
@@ -368,10 +372,10 @@ function LoginForm() {
 
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={loginMutation.isPending || signupMutation.isPending}
                   className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? (
+                  {loginMutation.isPending || signupMutation.isPending ? (
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       Creating account...

@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.21",
     "@types/nprogress": "^0.2.3",
     "next": "^16.1.6",
     "nprogress": "^0.2.0",

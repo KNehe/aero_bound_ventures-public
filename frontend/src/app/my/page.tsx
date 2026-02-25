@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import useAuth from '@/store/auth';
 import { apiClient, isUnauthorizedError } from '@/lib/api';
 
@@ -48,15 +49,8 @@ const BOOKING_STATUS = {
 export default function MyBookingsAndTicketsPage() {
   const { isAuthenticated, logout, isHydrated } = useAuth();
   const router = useRouter();
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
   const [navigating, setNavigating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [hasPrevious, setHasPrevious] = useState(false);
   const [cursorHistory, setCursorHistory] = useState<string[]>([]);
-  const [totalBookings, setTotalBookings] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
 
@@ -133,31 +127,50 @@ export default function MyBookingsAndTicketsPage() {
     setCancelError(null);
   };
 
-  const handleCancelBooking = async () => {
-    if (!cancelModal.bookingId) return;
+  const queryClient = useQueryClient();
 
-    setCancelModal(prev => ({ ...prev, isLoading: true }));
-    setCancelError(null);
+  const fetchBookings = async (cursor: string | null) => {
+    const url = cursor
+      ? `/bookings?cursor=${cursor}&limit=${PAGE_SIZE}&include_count=true`
+      : `/bookings?limit=${PAGE_SIZE}&include_count=true`;
+    return apiClient.get<CursorPaginatedBookingsResponse>(url);
+  };
 
-    try {
-      const response = await apiClient.delete<CancelBookingResponse>(
-        `/booking/flight-orders/${cancelModal.bookingId}`
-      );
+  const currentCursor = cursorHistory.length > 0 ? cursorHistory[cursorHistory.length - 1] : null;
 
-      setBookings(prev =>
-        prev.map(booking =>
-          booking.id === cancelModal.bookingId
-            ? { ...booking, status: BOOKING_STATUS.CANCELLED }
-            : booking
-        )
-      );
+  const { data, isLoading: queryLoading, error: queryError } = useQuery({
+    queryKey: ['bookings', currentCursor],
+    queryFn: () => fetchBookings(currentCursor),
+    enabled: isHydrated && isAuthenticated,
+  });
 
+  // Handle unauthorized errors by redirecting to login
+  if (queryError && isUnauthorizedError(queryError)) {
+    logout().then(() => {
+      router.push('/auth/login?redirect=/my');
+    });
+  }
+
+  // Derive values directly from query data
+  const bookings = data?.items ?? [];
+  const nextCursor = data?.next_cursor ?? null;
+  const hasMore = data?.has_more ?? false;
+  const hasPrevious = cursorHistory.length > 0;
+  const totalBookings = data?.total_count ?? 0;
+  const error = queryError && !isUnauthorizedError(queryError)
+    ? (queryError instanceof Error ? queryError.message : 'Failed to load bookings')
+    : null;
+
+  const cancelMutation = useMutation({
+    mutationFn: (bookingId: string) => apiClient.delete<CancelBookingResponse>(`/booking/flight-orders/${bookingId}`),
+    onSuccess: (response) => {
       closeCancelModal();
-
-      // Show success message
       setSuccessMessage(response.message || 'Booking cancelled successfully');
       setTimeout(() => setSuccessMessage(null), 5000);
-    } catch (err) {
+      // Invalidate queries to refresh the booking list
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+    onError: async (err) => {
       console.error('Error cancelling booking:', err);
       if (isUnauthorizedError(err)) {
         await logout();
@@ -166,110 +179,43 @@ export default function MyBookingsAndTicketsPage() {
       }
       setCancelError(err instanceof Error ? err.message : 'Failed to cancel booking');
       setCancelModal(prev => ({ ...prev, isLoading: false }));
+    },
+    onMutate: () => {
+      setCancelModal(prev => ({ ...prev, isLoading: true }));
+      setCancelError(null);
     }
+  });
+
+
+  const handleCancelBooking = () => {
+    if (!cancelModal.bookingId) return;
+    cancelMutation.mutate(cancelModal.bookingId);
   };
-
-
 
   useEffect(() => {
-    // Wait for hydration and check if user is authenticated
     if (!isHydrated) return;
-
     if (!isAuthenticated) {
       router.push('/auth/login?redirect=/my');
-      return;
     }
+  }, [isAuthenticated, isHydrated, router]);
 
-    const fetchBookings = async (cursor?: string | null) => {
-      try {
-        setLoading(true);
-        const url = cursor
-          ? `/bookings?cursor=${cursor}&limit=${PAGE_SIZE}&include_count=true`
-          : `/bookings?limit=${PAGE_SIZE}&include_count=true`;
-        const data = await apiClient.get<CursorPaginatedBookingsResponse>(url);
-        setBookings(data.items);
-        setNextCursor(data.next_cursor);
-        setHasMore(data.has_more);
-        setHasPrevious(data.has_previous);
-        setTotalBookings(data.total_count ?? 0);
-      } catch (err) {
-        console.error('Error fetching bookings:', err);
-        if (isUnauthorizedError(err)) {
-          await logout();
-          router.push('/auth/login?redirect=/my');
-          return;
-        }
-        setError(err instanceof Error ? err.message : 'Failed to load bookings');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBookings();
-  }, [isAuthenticated, isHydrated, router, logout]);
-
-  const goToNextPage = async () => {
-    if (!nextCursor || navigating) return;
-
-    try {
-      setNavigating(true);
-      const url = `/bookings?cursor=${nextCursor}&limit=${PAGE_SIZE}&include_count=true`;
-      const data = await apiClient.get<CursorPaginatedBookingsResponse>(url);
-
-      // Save current cursor to history for going back
-      setCursorHistory(prev => [...prev, nextCursor]);
-
-      setBookings(data.items);
-      setNextCursor(data.next_cursor);
-      setHasMore(data.has_more);
-      setHasPrevious(true);
-      setCurrentPage(prev => prev + 1);
-    } catch (err) {
-      console.error('Error loading next page:', err);
-      if (isUnauthorizedError(err)) {
-        await logout();
-        router.push('/auth/login?redirect=/my');
-        return;
-      }
-    } finally {
-      setNavigating(false);
-    }
+  const goToNextPage = () => {
+    if (!nextCursor || queryLoading) return;
+    setCursorHistory(prev => [...prev, nextCursor]);
+    setCurrentPage(prev => prev + 1);
   };
 
-  const goToPreviousPage = async () => {
-    if (cursorHistory.length === 0 || navigating) return;
-
-    try {
-      setNavigating(true);
-
-      // Pop the last cursor from history
-      const newHistory = [...cursorHistory];
+  const goToPreviousPage = () => {
+    if (cursorHistory.length === 0 || queryLoading) return;
+    setCursorHistory(prev => {
+      const newHistory = [...prev];
       newHistory.pop();
-      const previousCursor = newHistory.length > 0 ? newHistory[newHistory.length - 1] : null;
-
-      const url = previousCursor
-        ? `/bookings?cursor=${previousCursor}&limit=${PAGE_SIZE}&include_count=true`
-        : `/bookings?limit=${PAGE_SIZE}&include_count=true`;
-
-      const data = await apiClient.get<CursorPaginatedBookingsResponse>(url);
-
-      setCursorHistory(newHistory);
-      setBookings(data.items);
-      setNextCursor(data.next_cursor);
-      setHasMore(data.has_more);
-      setHasPrevious(newHistory.length > 0);
-      setCurrentPage(prev => prev - 1);
-    } catch (err) {
-      console.error('Error loading previous page:', err);
-      if (isUnauthorizedError(err)) {
-        await logout();
-        router.push('/auth/login?redirect=/my');
-        return;
-      }
-    } finally {
-      setNavigating(false);
-    }
+      return newHistory;
+    });
+    setCurrentPage(prev => prev - 1);
   };
+
+  const loading = queryLoading || !isHydrated;
 
   const getStatusColor = (status: string) => {
     switch (status) {

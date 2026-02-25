@@ -1,6 +1,7 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import useAuth from "@/store/auth";
 import { Booking, TicketUploadResponse } from "@/types/admin";
 import { apiClient, isUnauthorizedError, ApiClientError } from "@/lib/api";
@@ -10,10 +11,7 @@ export default function BookingDetailPage() {
   const router = useRouter();
   const { logout, isAuthenticated } = useAuth();
   const bookingId = params.bookingId as string;
-
-  const [booking, setBooking] = useState<Booking | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -22,11 +20,11 @@ export default function BookingDetailPage() {
   const [isViewingTicket, setIsViewingTicket] = useState(false);
 
   const handleDownloadTicket = async () => {
-    if (!booking?.ticket_url) return;
+    if (!bookingData?.ticket_url) return;
 
     setIsDownloading(true);
     try {
-      const response = await fetch(booking.ticket_url);
+      const response = await fetch(bookingData.ticket_url);
       const blob = await response.blob();
 
       // Detect file extension from content type or URL
@@ -36,14 +34,14 @@ export default function BookingDetailPage() {
         extension = 'jpg';
       } else if (contentType?.includes('image/png')) {
         extension = 'png';
-      } else if (booking.ticket_url.match(/\.(jpg|jpeg|png|pdf)$/i)) {
-        extension = booking.ticket_url.match(/\.(jpg|jpeg|png|pdf)$/i)![1].toLowerCase();
+      } else if (bookingData.ticket_url.match(/\.(jpg|jpeg|png|pdf)$/i)) {
+        extension = bookingData.ticket_url.match(/\.(jpg|jpeg|png|pdf)$/i)![1].toLowerCase();
       }
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `ticket-${booking.id}.${extension}`;
+      link.download = `ticket-${bookingData.id}.${extension}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -56,36 +54,33 @@ export default function BookingDetailPage() {
   };
 
   const handleViewTicket = () => {
-    if (!booking?.ticket_url) return;
+    if (!bookingData?.ticket_url) return;
     setIsViewingTicket(true);
-    window.open(booking.ticket_url, '_blank');
+    window.open(bookingData.ticket_url, '_blank');
     setTimeout(() => setIsViewingTicket(false), 1000);
   };
 
-  useEffect(() => {
-    const fetchBooking = async () => {
-      try {
-        setIsLoading(true);
-        const bookingData = await apiClient.get<Booking>(`/admin/bookings/${bookingId}`);
-        setBooking(bookingData);
-      } catch (err) {
-        if (isUnauthorizedError(err)) {
-          await logout();
-          router.push(`/auth/login?redirect=/admin/bookings/${bookingId}`);
-          return;
-        }
-        if (err instanceof ApiClientError && err.status === 404) {
-          setError("Booking not found");
-        } else {
-          setError(err instanceof Error ? err.message : "Failed to load booking");
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchBooking = async () => {
+    return apiClient.get<Booking>(`/admin/bookings/${bookingId}`);
+  };
 
-    fetchBooking();
-  }, [bookingId, logout, router]);
+  const { data: bookingData, isLoading, error: queryError } = useQuery({
+    queryKey: ['adminBooking', bookingId],
+    queryFn: fetchBooking,
+    enabled: isAuthenticated,
+  });
+
+  if (queryError && isUnauthorizedError(queryError)) {
+    logout().then(() => {
+      router.push(`/auth/login?redirect=/admin/bookings/${bookingId}`);
+    });
+  }
+
+  const error = queryError
+    ? (queryError instanceof ApiClientError && queryError.status === 404)
+      ? "Booking not found"
+      : (queryError instanceof Error ? queryError.message : "Failed to load booking")
+    : null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -124,12 +119,10 @@ export default function BookingDetailPage() {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const result = await apiClient.upload<TicketUploadResponse>(`/tickets/upload/${bookingId}`, formData);
+      await apiClient.upload<TicketUploadResponse>(`/tickets/upload/${bookingId}`, formData);
 
-      // Update booking with new ticket URL
-      setBooking((prev) =>
-        prev ? { ...prev, ticket_url: result.ticket_url } : null
-      );
+      // Invalidate the query cache to refetch fresh data with the new ticket URL
+      queryClient.invalidateQueries({ queryKey: ['adminBooking', bookingId] });
       setUploadSuccess(true);
       setSelectedFile(null);
 
@@ -165,7 +158,7 @@ export default function BookingDetailPage() {
     );
   }
 
-  if (error || !booking) {
+  if (error || !bookingData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center py-8 px-4">
         <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
@@ -200,15 +193,15 @@ export default function BookingDetailPage() {
   }
 
   const pnr =
-    booking.amadeus_order_response?.associatedRecords?.[0]?.reference || "N/A";
+    bookingData.amadeus_order_response?.associatedRecords?.[0]?.reference || "N/A";
   const travelers =
-    booking.amadeus_order_response?.travelers?.map((t) => ({
+    bookingData.amadeus_order_response?.travelers?.map((t: any) => ({
       name: `${t.name?.firstName || ""} ${t.name?.lastName || ""}`.trim(),
       type: t.travelerType,
     })) || [];
 
   // Extract flight itinerary details
-  const flightOffers = booking.amadeus_order_response?.flightOffers || [];
+  const flightOffers = bookingData.amadeus_order_response?.flightOffers || [];
   const itineraries = flightOffers[0]?.itineraries || [];
 
   const formatTime = (dateTimeString?: string) => {
@@ -275,12 +268,12 @@ export default function BookingDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Booking ID</p>
-                  <p className="font-medium text-gray-900 break-all">{booking.id}</p>
+                  <p className="font-medium text-gray-900 break-all">{bookingData.id}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Order ID</p>
                   <p className="font-medium text-gray-900 break-all">
-                    {booking.flight_order_id}
+                    {bookingData.flight_order_id}
                   </p>
                 </div>
                 <div>
@@ -290,24 +283,24 @@ export default function BookingDetailPage() {
                 <div>
                   <p className="text-sm text-gray-500">Status</p>
                   <span
-                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${booking.status === "confirmed" || booking.status === "paid"
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${bookingData.status === "confirmed" || bookingData.status === "paid"
                       ? "bg-green-100 text-green-800"
-                      : booking.status === "pending"
+                      : bookingData.status === "pending"
                         ? "bg-yellow-100 text-yellow-800"
                         : "bg-red-100 text-red-800"
                       }`}
                   >
-                    {booking.status.toUpperCase()}
+                    {bookingData.status.toUpperCase()}
                   </span>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Customer Email</p>
-                  <p className="font-medium text-gray-900 break-all">{booking.user.email}</p>
+                  <p className="font-medium text-gray-900 break-all">{bookingData.user.email}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Created At</p>
                   <p className="font-medium text-gray-900">
-                    {new Date(booking.created_at).toLocaleString()}
+                    {new Date(bookingData.created_at).toLocaleString()}
                   </p>
                 </div>
                 <div>
@@ -315,7 +308,7 @@ export default function BookingDetailPage() {
                   <p className="font-medium text-gray-900">
                     {(() => {
                       const currency = flightOffers[0]?.price?.currency || 'USD';
-                      const price = booking.total_price;
+                      const price = bookingData.total_price;
                       return `${currency} ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                     })()}
                   </p>
@@ -348,7 +341,7 @@ export default function BookingDetailPage() {
                   Ticket Status
                 </h2>
               </div>
-              {booking.ticket_url ? (
+              {bookingData.ticket_url ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-green-600">
                     <svg
@@ -583,7 +576,7 @@ export default function BookingDetailPage() {
             </div>
 
             <div className="p-6">
-              {booking.ticket_url && !uploadSuccess && (
+              {bookingData.ticket_url && !uploadSuccess && (
                 <div className="mb-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-md shadow-sm">
                   <div className="flex items-start gap-3">
                     <svg

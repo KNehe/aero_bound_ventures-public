@@ -1,10 +1,22 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from 'next/navigation'
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from 'next/navigation';
 import useFlights from "@/store/flights";
 
 interface BookingFormProps {
   prefillDestination: string;
+}
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
 }
 
 export default function BookingForm({ prefillDestination }: BookingFormProps) {
@@ -13,37 +25,27 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      // Check if click was outside both dropdowns
       if (originRef.current && !originRef.current.contains(event.target as Node) &&
         destinationRef.current && !destinationRef.current.contains(event.target as Node)) {
         setShowDropdown({ origin: false, destination: false });
       }
     }
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
     if (prefillDestination) {
-      setForm(prev => ({
-        ...prev,
-        destinationLocationCode: prefillDestination
-      }));
-      setDisplayValues(prev => ({
-        ...prev,
-        destination: prefillDestination
-      }));
+      setForm(prev => ({ ...prev, destinationLocationCode: prefillDestination }));
     }
   }, [prefillDestination]);
+
   const [form, setForm] = useState({
     originLocationCode: "",
     destinationLocationCode: "",
     departureDate: "",
     returnDate: "",
-    tripType: "roundtrip", // "oneway" or "roundtrip"
+    tripType: "roundtrip",
     adults: 1,
     children: 0,
     infants: 0,
@@ -51,76 +53,44 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
     currency: "USD",
     nonStop: false,
   });
-  const [displayValues, setDisplayValues] = useState({
-    origin: "",
-    destination: ""
-  });
+
+  // Debounce the raw input values instead of debouncing a function call
+  const debouncedOriginRaw = useDebounce(form.originLocationCode, 200);
+  const debouncedDestinationRaw = useDebounce(form.destinationLocationCode, 200);
+
   const [isSearching, setIsSearching] = useState(false);
-  const { setSearchParams, setLoading } = useFlights();
-  const [locationSearchResults, setLocationSearchResults] = useState<{ origin: any[]; destination: any[] }>({
-    origin: [],
-    destination: []
-  });
-  const [searchLoading, setSearchLoading] = useState<{ origin: boolean; destination: boolean }>({
-    origin: false,
-    destination: false
-  });
+  const { setSearchParams } = useFlights();
+
   const [showDropdown, setShowDropdown] = useState<{ origin: boolean; destination: boolean }>({
     origin: false,
     destination: false
   });
   const router = useRouter();
-
-
   const BASE_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-
-  const debounce = (callback: any, delay: number) => {
-    let timer: any;
-
-    return (...args: any[]) => {
-      window.clearTimeout(timer);
-
-      timer = window.setTimeout(() => {
-        callback(...args);
-      }, delay);
-    };
-  }
-
-  const debouncedSearchOrigin = useRef(
-    debounce((value: string) => searchLocations("origin", value), 300)
-  )
-  const debouncedSearchDestination = useRef(
-    debounce((value: string) => searchLocations("destination", value), 300)
-  )
-
-  const searchLocations = async (searchType: 'origin' | 'destination', query: string) => {
-    if (!query.trim()) return;
-
-    setSearchLoading(prev => ({ ...prev, [searchType]: true }));
-    try {
-      const response = await fetch(`${BASE_API_URL}/reference-data/locations?keyword=${query}`);
-      const data = await response.json();
-
-      const locations = Array.isArray(data) ? data : [];
-
-      setLocationSearchResults(prev => ({ ...prev, [searchType]: locations }));
-      setShowDropdown(prev => ({ ...prev, [searchType]: true }));
-    } catch (error) {
-      setLocationSearchResults(prev => ({ ...prev, [searchType]: [] }));
-    } finally {
-      setSearchLoading(prev => ({ ...prev, [searchType]: false }));
-    }
+  const fetchLocations = async (query: string) => {
+    if (!query.trim()) return [];
+    const response = await fetch(`${BASE_API_URL}/reference-data/locations?keyword=${query}`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
   };
+
+  const { data: originResults = [], isLoading: searchLoadingOrigin } = useQuery({
+    queryKey: ['locations', debouncedOriginRaw],
+    queryFn: () => fetchLocations(debouncedOriginRaw),
+    enabled: !!debouncedOriginRaw.trim(),
+  });
+
+  const { data: destinationResults = [], isLoading: searchLoadingDestination } = useQuery({
+    queryKey: ['locations', debouncedDestinationRaw],
+    queryFn: () => fetchLocations(debouncedDestinationRaw),
+    enabled: !!debouncedDestinationRaw.trim(),
+  });
 
   const handleLocationSelect = (searchType: 'origin' | 'destination', location: any) => {
     setForm(prev => ({
       ...prev,
       [`${searchType}LocationCode`]: location.iataCode
-    }));
-    setDisplayValues(prev => ({
-      ...prev,
-      [searchType]: location.subType === 'CITY' ? location.name : `${location.name}, ${location.address.cityName}`
     }));
     setShowDropdown(prev => ({ ...prev, [searchType]: false }));
   };
@@ -166,12 +136,9 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
       params.nonStop = form.nonStop.toString();
     }
 
-    // Store params and set loading state
     setSearchParams(params);
-    setLoading(true);
     setIsSearching(true);
 
-    // Immediate navigation
     router.push(`/flights`);
   }
 
@@ -227,9 +194,12 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
             value={form.originLocationCode}
             onChange={(e) => {
               const value = e.target.value;
-              setDisplayValues(prev => ({ ...prev, origin: value }));
               setForm(prev => ({ ...prev, originLocationCode: value }));
-              debouncedSearchOrigin.current(value)
+              if (value.trim()) {
+                setShowDropdown(prev => ({ ...prev, origin: true }));
+              } else {
+                setShowDropdown(prev => ({ ...prev, origin: false }));
+              }
             }}
             onFocus={(e) => {
               if (e.target.value) setShowDropdown(prev => ({ ...prev, origin: true }))
@@ -239,16 +209,16 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
               if (!originRef.current?.contains(e.relatedTarget)) {
                 setTimeout(() => {
                   setShowDropdown(prev => ({ ...prev, origin: false }));
-                }, 200);
+                }, 100);
               }
             }}
           />
           {showDropdown.origin && (
             <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              {searchLoading.origin ? (
+              {searchLoadingOrigin ? (
                 <div className="p-3 text-gray-500">Loading...</div>
-              ) : locationSearchResults.origin.length > 0 ? (
-                locationSearchResults.origin.map((location: any) => (
+              ) : originResults.length > 0 ? (
+                originResults.map((location: any) => (
                   <div
                     key={location.id}
                     className="p-3 hover:bg-gray-100 cursor-pointer"
@@ -273,9 +243,9 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
                     </div>
                   </div>
                 ))
-              ) : (
+              ) : debouncedOriginRaw.trim() ? (
                 <div className="p-3 text-gray-500">No results found</div>
-              )}
+              ) : null}
             </div>
           )}
         </div>
@@ -291,9 +261,12 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
             value={form.destinationLocationCode}
             onChange={(e) => {
               const value = e.target.value;
-              setDisplayValues(prev => ({ ...prev, destination: value }));
               setForm(prev => ({ ...prev, destinationLocationCode: value }));
-              debouncedSearchDestination.current(value)
+              if (value.trim()) {
+                setShowDropdown(prev => ({ ...prev, destination: true }));
+              } else {
+                setShowDropdown(prev => ({ ...prev, destination: false }));
+              }
             }}
             onFocus={(e) => {
               if (e.target.value) setShowDropdown(prev => ({ ...prev, destination: true }))
@@ -303,16 +276,16 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
               if (!destinationRef.current?.contains(e.relatedTarget)) {
                 setTimeout(() => {
                   setShowDropdown(prev => ({ ...prev, destination: false }));
-                }, 200);
+                }, 100);
               }
             }}
           />
           {showDropdown.destination && (
             <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              {searchLoading.destination ? (
+              {searchLoadingDestination ? (
                 <div className="p-3 text-gray-500">Loading...</div>
-              ) : locationSearchResults.destination.length > 0 ? (
-                locationSearchResults.destination.map((location: any) => (
+              ) : destinationResults.length > 0 ? (
+                destinationResults.map((location: any) => (
                   <div
                     key={location.id}
                     className="p-3 hover:bg-gray-100 cursor-pointer"
@@ -337,9 +310,9 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
                     </div>
                   </div>
                 ))
-              ) : (
+              ) : debouncedDestinationRaw.trim() ? (
                 <div className="p-3 text-gray-500">No results found</div>
-              )}
+              ) : null}
             </div>
           )}
         </div>

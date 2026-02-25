@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { FaPlane, FaCalendarAlt, FaUsers, FaArrowLeft } from 'react-icons/fa';
 import FlightOfferCard from '@/components/FlightOfferCard';
@@ -8,40 +9,24 @@ import useFlights from '@/store/flights';
 import type { FlightOffer } from '@/types/flight_offer';
 
 export default function FlightsPage() {
-  const {
-    flights,
-    isLoading,
-    error,
-    searchParams,
-    updateFlights,
-    setError
-  } = useFlights();
+  const { searchParams } = useFlights();
+  const BASE_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  useEffect(() => {
-    const fetchFlights = async () => {
-      if (!searchParams || !isLoading) return;
+  const fetchFlights = async (params: any) => {
+    const queryParams = new URLSearchParams(params);
+    const url = `${BASE_API_URL}/shopping/flight-offers?${queryParams.toString()}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch flights');
+    }
+    return response.json();
+  };
 
-      const BASE_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-      try {
-        const queryParams = new URLSearchParams(searchParams);
-        const url = `${BASE_API_URL}/shopping/flight-offers?${queryParams.toString()}`;
-
-        const response = await fetch(url);
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch flights');
-        }
-
-        const data = await response.json();
-        updateFlights(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred while fetching flights');
-      }
-    };
-
-    fetchFlights();
-  }, [searchParams, isLoading, updateFlights, setError]);
+  const { data: flights, error, isLoading } = useQuery<FlightOffer[]>({
+    queryKey: ['flights', searchParams],
+    queryFn: () => fetchFlights(searchParams),
+    enabled: !!searchParams,
+  });
 
   const formatDisplayDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString([], {
@@ -119,7 +104,7 @@ export default function FlightsPage() {
               </svg>
             </div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h2>
-            <p className="text-gray-600 mb-6">{error}</p>
+            <p className="text-gray-600 mb-6">{error.message}</p>
             <Link
               href="/"
               className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-colors"

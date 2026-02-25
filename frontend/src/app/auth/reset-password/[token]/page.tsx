@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { MIN_PASSWORD_LENGTH } from "@/constants/auth";
 
 interface PageProps {
@@ -14,7 +15,6 @@ export default function ResetPasswordPage({ params }: PageProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -90,24 +90,8 @@ export default function ResetPasswordPage({ params }: PageProps) {
     setPasswordStrength(strength);
   }, [password]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    // Validation
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`);
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
+  const resetPasswordMutation = useMutation({
+    mutationFn: async () => {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
       const response = await fetch(`${baseUrl}/reset-password/`, {
         method: "POST",
@@ -127,6 +111,9 @@ export default function ResetPasswordPage({ params }: PageProps) {
         throw new Error(data.detail || "Failed to reset password");
       }
 
+      return data;
+    },
+    onSuccess: (data: any) => {
       console.log("Password reset successful:", data);
       setSubmitted(true);
 
@@ -134,12 +121,32 @@ export default function ResetPasswordPage({ params }: PageProps) {
       setTimeout(() => {
         router.push("/auth/login");
       }, 3000);
-    } catch (err: any) {
+    },
+    onError: (err: any) => {
       console.error("Error resetting password:", err);
       setError(err.message || "An error occurred. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+    },
+    onMutate: () => {
+      setError("");
     }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    // Validation
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    resetPasswordMutation.mutate();
   };
 
   // Loading state while verifying token
@@ -282,7 +289,7 @@ export default function ResetPasswordPage({ params }: PageProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  disabled={isSubmitting}
+                  disabled={resetPasswordMutation.isPending}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   placeholder="Enter new password"
                 />
@@ -338,7 +345,7 @@ export default function ResetPasswordPage({ params }: PageProps) {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  disabled={isSubmitting}
+                  disabled={resetPasswordMutation.isPending}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   placeholder="Re-enter new password"
                 />
@@ -369,10 +376,10 @@ export default function ResetPasswordPage({ params }: PageProps) {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isSubmitting || password !== confirmPassword}
+              disabled={resetPasswordMutation.isPending || password !== confirmPassword}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors"
             >
-              {isSubmitting ? (
+              {resetPasswordMutation.isPending ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   Resetting Password...

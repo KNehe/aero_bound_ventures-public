@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ConstructionBanner from '@/components/ConstructionBanner';
 import NavigationProgress from '@/components/NavigationProgress';
-
+import Providers from '@/app/providers';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,17 +39,18 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <Suspense fallback={null}>
-          <NavigationProgress />
-        </Suspense>
-        <div className="sticky top-0 z-50 w-full">
-          <ConstructionBanner />
-          <Navbar />
-        </div>
-        {children}
+        <Providers>
+          <Suspense fallback={null}>
+            <NavigationProgress />
+          </Suspense>
+          <div className="sticky top-0 z-50 w-full">
+            <ConstructionBanner />
+            <Navbar />
+          </div>
+          {children}
 
-
-        <Footer />
+          <Footer />
+        </Providers>
       </body>
     </html>
   );

@@ -1,19 +1,15 @@
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
+import { useMutation } from "@tanstack/react-query";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setIsSubmitting(true);
-
-    try {
+  const forgotPasswordMutation = useMutation({
+    mutationFn: async () => {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
       const response = await fetch(`${baseUrl}/forgot-password/`, {
         method: "POST",
@@ -27,17 +23,25 @@ export default function ForgotPasswordPage() {
         throw new Error("Failed to send reset email");
       }
 
-      const data = await response.json();
+      return response.json();
+    },
+    onSuccess: (data: any) => {
       console.log("Password reset response:", data);
       setSubmitted(true);
-    } catch (err) {
+    },
+    onError: (err: unknown) => {
       console.error("Error requesting password reset:", err);
       setError("An error occurred. Please try again later.");
-    } finally {
-      setIsSubmitting(false);
+    },
+    onMutate: () => {
+      setError("");
     }
-  };
+  });
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    forgotPasswordMutation.mutate();
+  };
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
       <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md border border-gray-200">
@@ -135,7 +139,7 @@ export default function ForgotPasswordPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={isSubmitting}
+                disabled={forgotPasswordMutation.isPending}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="you@example.com"
               />
@@ -149,10 +153,10 @@ export default function ForgotPasswordPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={forgotPasswordMutation.isPending}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors"
             >
-              {isSubmitting ? (
+              {forgotPasswordMutation.isPending ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   Sending...
