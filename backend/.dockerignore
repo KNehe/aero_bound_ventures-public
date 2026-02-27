@@ -1,0 +1,11 @@
+.venv
+.env
+.git
+.env.example
+.ruff_cache
+.pytest_cache
+.pre-commit-config.yaml
+.logs
+__pycache__
+tests
+README.md
