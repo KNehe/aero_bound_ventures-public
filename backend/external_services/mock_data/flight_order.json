@@ -1,0 +1,177 @@
+{
+    "type": "flight-order",
+    "id": "MOCK_ORDER_001",
+    "associatedRecords": [
+        {
+            "reference": "MKPNR1",
+            "creationDate": "2026-08-15T10:30:00.000",
+            "originSystemCode": "GDS",
+            "flightOfferId": "1"
+        }
+    ],
+    "flightOffers": [
+        {
+            "type": "flight-offer",
+            "id": "1",
+            "source": "GDS",
+            "nonHomogeneous": false,
+            "lastTicketingDate": "2026-08-15",
+            "itineraries": [
+                {
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "NBO",
+                                "terminal": "1A",
+                                "at": "2026-09-01T06:00:00"
+                            },
+                            "arrival": {
+                                "iataCode": "LHR",
+                                "terminal": "4",
+                                "at": "2026-09-01T14:30:00"
+                            },
+                            "carrierCode": "KQ",
+                            "number": "100",
+                            "aircraft": {
+                                "code": "787"
+                            },
+                            "id": "1",
+                            "numberOfStops": 0,
+                            "co2Emissions": [
+                                {
+                                    "weight": "150",
+                                    "weightUnit": "KG",
+                                    "cabin": "ECONOMY"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "price": {
+                "currency": "USD",
+                "total": "685.50",
+                "base": "620.00",
+                "fees": [
+                    {
+                        "amount": "0.00",
+                        "type": "TICKETING"
+                    },
+                    {
+                        "amount": "0.00",
+                        "type": "SUPPLIER"
+                    },
+                    {
+                        "amount": "0.00",
+                        "type": "FORM_OF_PAYMENT"
+                    }
+                ],
+                "grandTotal": "685.50",
+                "billingCurrency": "USD"
+            },
+            "pricingOptions": {
+                "fareType": [
+                    "PUBLISHED"
+                ],
+                "includedCheckedBagsOnly": true
+            },
+            "validatingAirlineCodes": [
+                "KQ"
+            ],
+            "travelerPricings": [
+                {
+                    "travelerId": "1",
+                    "fareOption": "STANDARD",
+                    "travelerType": "ADULT",
+                    "price": {
+                        "currency": "USD",
+                        "total": "685.50",
+                        "base": "620.00",
+                        "taxes": [
+                            {
+                                "amount": "45.50",
+                                "code": "YQ"
+                            },
+                            {
+                                "amount": "20.00",
+                                "code": "KE"
+                            }
+                        ]
+                    },
+                    "fareDetailsBySegment": [
+                        {
+                            "segmentId": "1",
+                            "fareBasis": "YOWKE",
+                            "brandedFare": "ECONOMY",
+                            "class": "Y",
+                            "includedCheckedBags": {
+                                "quantity": 1
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "travelers": [
+        {
+            "id": "1",
+            "dateOfBirth": "1990-05-15",
+            "gender": "FEMALE",
+            "name": {
+                "firstName": "JANE",
+                "lastName": "DOE"
+            },
+            "documents": [
+                {
+                    "number": "A12345678",
+                    "issuanceDate": "2020-01-15",
+                    "expiryDate": "2030-01-15",
+                    "issuanceCountry": "KE",
+                    "issuanceLocation": "Nairobi",
+                    "nationality": "KE",
+                    "documentType": "PASSPORT",
+                    "holder": true
+                }
+            ],
+            "contact": {
+                "phones": [
+                    {
+                        "deviceType": "MOBILE",
+                        "countryCallingCode": "254",
+                        "number": "712345678"
+                    }
+                ],
+                "emailAddress": "jane.doe@example.com"
+            }
+        }
+    ],
+    "ticketingAgreement": {
+        "option": "DELAY_TO_CANCEL",
+        "delay": "6D"
+    },
+    "contacts": [
+        {
+            "addresseeName": {
+                "firstName": "JANE DOE"
+            },
+            "address": {
+                "lines": [
+                    "123 Kenyatta Avenue"
+                ],
+                "postalCode": "00100",
+                "countryCode": "KE",
+                "cityName": "Nairobi"
+            },
+            "purpose": "STANDARD",
+            "phones": [
+                {
+                    "deviceType": "MOBILE",
+                    "countryCallingCode": "254",
+                    "number": "712345678"
+                }
+            ],
+            "emailAddress": "jane.doe@example.com"
+        }
+    ]
+}

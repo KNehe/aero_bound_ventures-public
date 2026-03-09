@@ -1,0 +1,219 @@
+[
+    {
+        "type": "location",
+        "subType": "AIRPORT",
+        "name": "JOMO KENYATTA INTERNATIONAL",
+        "detailedName": "NAIROBI/KE:JOMO KENYATTA INTL",
+        "id": "ANBO",
+        "self": {
+            "href": "https://test.api.amadeus.com/v1/reference-data/locations/ANBO",
+            "methods": [
+                "GET"
+            ]
+        },
+        "timeZoneOffset": "+03:00",
+        "iataCode": "NBO",
+        "geoCode": {
+            "latitude": -1.31924,
+            "longitude": 36.92578
+        },
+        "address": {
+            "cityName": "NAIROBI",
+            "cityCode": "NBO",
+            "countryName": "KENYA",
+            "countryCode": "KE",
+            "regionCode": "AFRIC"
+        },
+        "analytics": {
+            "travelers": {
+                "score": 25
+            }
+        }
+    },
+    {
+        "type": "location",
+        "subType": "CITY",
+        "name": "NAIROBI",
+        "detailedName": "NAIROBI/KE",
+        "id": "CNBO",
+        "self": {
+            "href": "https://test.api.amadeus.com/v1/reference-data/locations/CNBO",
+            "methods": [
+                "GET"
+            ]
+        },
+        "timeZoneOffset": "+03:00",
+        "iataCode": "NBO",
+        "geoCode": {
+            "latitude": -1.28333,
+            "longitude": 36.81667
+        },
+        "address": {
+            "cityName": "NAIROBI",
+            "cityCode": "NBO",
+            "countryName": "KENYA",
+            "countryCode": "KE",
+            "regionCode": "AFRIC"
+        },
+        "analytics": {
+            "travelers": {
+                "score": 25
+            }
+        }
+    },
+    {
+        "type": "location",
+        "subType": "AIRPORT",
+        "name": "HEATHROW",
+        "detailedName": "LONDON/GB:HEATHROW",
+        "id": "ALHR",
+        "self": {
+            "href": "https://test.api.amadeus.com/v1/reference-data/locations/ALHR",
+            "methods": [
+                "GET"
+            ]
+        },
+        "timeZoneOffset": "+00:00",
+        "iataCode": "LHR",
+        "geoCode": {
+            "latitude": 51.47750,
+            "longitude": -0.46139
+        },
+        "address": {
+            "cityName": "LONDON",
+            "cityCode": "LON",
+            "countryName": "UNITED KINGDOM",
+            "countryCode": "GB",
+            "regionCode": "EUROP"
+        },
+        "analytics": {
+            "travelers": {
+                "score": 42
+            }
+        }
+    },
+    {
+        "type": "location",
+        "subType": "AIRPORT",
+        "name": "JOHN F KENNEDY INTL",
+        "detailedName": "NEW YORK/US:JOHN F KENNEDY INTL",
+        "id": "AJFK",
+        "self": {
+            "href": "https://test.api.amadeus.com/v1/reference-data/locations/AJFK",
+            "methods": [
+                "GET"
+            ]
+        },
+        "timeZoneOffset": "-05:00",
+        "iataCode": "JFK",
+        "geoCode": {
+            "latitude": 40.63983,
+            "longitude": -73.77874
+        },
+        "address": {
+            "cityName": "NEW YORK",
+            "cityCode": "NYC",
+            "countryName": "UNITED STATES OF AMERICA",
+            "countryCode": "US",
+            "regionCode": "NAMER"
+        },
+        "analytics": {
+            "travelers": {
+                "score": 38
+            }
+        }
+    },
+    {
+        "type": "location",
+        "subType": "AIRPORT",
+        "name": "DUBAI INTL",
+        "detailedName": "DUBAI/AE:DUBAI INTL",
+        "id": "ADXB",
+        "self": {
+            "href": "https://test.api.amadeus.com/v1/reference-data/locations/ADXB",
+            "methods": [
+                "GET"
+            ]
+        },
+        "timeZoneOffset": "+04:00",
+        "iataCode": "DXB",
+        "geoCode": {
+            "latitude": 25.25278,
+            "longitude": 55.36444
+        },
+        "address": {
+            "cityName": "DUBAI",
+            "cityCode": "DXB",
+            "countryName": "UNITED ARAB EMIRATES",
+            "countryCode": "AE",
+            "regionCode": "MEDE"
+        },
+        "analytics": {
+            "travelers": {
+                "score": 35
+            }
+        }
+    },
+    {
+        "type": "location",
+        "subType": "AIRPORT",
+        "name": "BOLE INTL",
+        "detailedName": "ADDIS ABABA/ET:BOLE INTL",
+        "id": "AADD",
+        "self": {
+            "href": "https://test.api.amadeus.com/v1/reference-data/locations/AADD",
+            "methods": [
+                "GET"
+            ]
+        },
+        "timeZoneOffset": "+03:00",
+        "iataCode": "ADD",
+        "geoCode": {
+            "latitude": 8.97789,
+            "longitude": 38.79928
+        },
+        "address": {
+            "cityName": "ADDIS ABABA",
+            "cityCode": "ADD",
+            "countryName": "ETHIOPIA",
+            "countryCode": "ET",
+            "regionCode": "AFRIC"
+        },
+        "analytics": {
+            "travelers": {
+                "score": 18
+            }
+        }
+    },
+    {
+        "type": "location",
+        "subType": "AIRPORT",
+        "name": "MURTALA MUHAMMED INTL",
+        "detailedName": "LAGOS/NG:MURTALA MUHAMMED INTL",
+        "id": "ALOS",
+        "self": {
+            "href": "https://test.api.amadeus.com/v1/reference-data/locations/ALOS",
+            "methods": [
+                "GET"
+            ]
+        },
+        "timeZoneOffset": "+01:00",
+        "iataCode": "LOS",
+        "geoCode": {
+            "latitude": 6.57737,
+            "longitude": 3.32116
+        },
+        "address": {
+            "cityName": "LAGOS",
+            "cityCode": "LOS",
+            "countryName": "NIGERIA",
+            "countryCode": "NG",
+            "regionCode": "AFRIC"
+        },
+        "analytics": {
+            "travelers": {
+                "score": 15
+            }
+        }
+    }
+]

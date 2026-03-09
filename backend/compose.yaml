@@ -10,6 +10,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      - FLIGHT_SERVICE_PROVIDER=${FLIGHT_SERVICE_PROVIDER:-amadeus}
     depends_on:
       - db
       - redis

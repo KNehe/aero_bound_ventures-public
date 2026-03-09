@@ -1,0 +1,80 @@
+[
+    {
+        "type": "air-traffic",
+        "subType": "TRAVELED",
+        "destination": "LHR",
+        "analytics": {
+            "flights": {
+                "score": 42
+            },
+            "travelers": {
+                "score": 42
+            }
+        }
+    },
+    {
+        "type": "air-traffic",
+        "subType": "TRAVELED",
+        "destination": "DXB",
+        "analytics": {
+            "flights": {
+                "score": 35
+            },
+            "travelers": {
+                "score": 35
+            }
+        }
+    },
+    {
+        "type": "air-traffic",
+        "subType": "TRAVELED",
+        "destination": "JFK",
+        "analytics": {
+            "flights": {
+                "score": 28
+            },
+            "travelers": {
+                "score": 28
+            }
+        }
+    },
+    {
+        "type": "air-traffic",
+        "subType": "TRAVELED",
+        "destination": "ADD",
+        "analytics": {
+            "flights": {
+                "score": 22
+            },
+            "travelers": {
+                "score": 22
+            }
+        }
+    },
+    {
+        "type": "air-traffic",
+        "subType": "TRAVELED",
+        "destination": "BOM",
+        "analytics": {
+            "flights": {
+                "score": 18
+            },
+            "travelers": {
+                "score": 18
+            }
+        }
+    },
+    {
+        "type": "air-traffic",
+        "subType": "TRAVELED",
+        "destination": "JNB",
+        "analytics": {
+            "flights": {
+                "score": 15
+            },
+            "travelers": {
+                "score": 15
+            }
+        }
+    }
+]

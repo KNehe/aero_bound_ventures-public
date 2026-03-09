@@ -1,0 +1,359 @@
+[
+    {
+        "type": "seatmap",
+        "flightOfferid": "1",
+        "segmentid": "1",
+        "carrierCode": "KQ",
+        "number": "100",
+        "class": "Y",
+        "aircraft": {
+            "code": "787"
+        },
+        "departure": {
+            "iataCode": "NBO",
+            "at": "2026-09-01T06:00:00"
+        },
+        "arrival": {
+            "iataCode": "LHR"
+        },
+        "decks": [
+            {
+                "deckType": "MAIN",
+                "deckConfiguration": {
+                    "width": 9,
+                    "length": 40,
+                    "startseatRow": 10,
+                    "endSeatRow": 40,
+                    "startWingsRow": 15,
+                    "endWingsRow": 30,
+                    "startWingsX": 5,
+                    "endWingsX": 25,
+                    "exitRowsX": [
+                        10,
+                        30
+                    ]
+                },
+                "facilities": [
+                    {
+                        "code": "LA",
+                        "column": "A",
+                        "row": "40",
+                        "position": "REAR",
+                        "coordinates": {
+                            "x": 35,
+                            "y": 0
+                        }
+                    },
+                    {
+                        "code": "LA",
+                        "column": "K",
+                        "row": "40",
+                        "position": "REAR",
+                        "coordinates": {
+                            "x": 35,
+                            "y": 8
+                        }
+                    },
+                    {
+                        "code": "GN",
+                        "column": "A",
+                        "row": "40",
+                        "position": "REAR",
+                        "coordinates": {
+                            "x": 37,
+                            "y": 0
+                        }
+                    },
+                    {
+                        "code": "GN",
+                        "column": "K",
+                        "row": "40",
+                        "position": "REAR",
+                        "coordinates": {
+                            "x": 37,
+                            "y": 8
+                        }
+                    }
+                ],
+                "seats": [
+                    {
+                        "cabin": "ECONOMY",
+                        "number": "10A",
+                        "characteristicsCodes": [
+                            "1",
+                            "CH",
+                            "LS",
+                            "W"
+                        ],
+                        "travelerPricing": [
+                            {
+                                "id": "1",
+                                "seatAvailabilityStatus": "AVAILABLE",
+                                "price": {
+                                    "currency": "USD",
+                                    "total": "25.00"
+                                }
+                            }
+                        ],
+                        "coordinates": {
+                            "x": 1,
+                            "y": 0
+                        }
+                    },
+                    {
+                        "cabin": "ECONOMY",
+                        "number": "10B",
+                        "characteristicsCodes": [
+                            "1",
+                            "9",
+                            "CH",
+                            "LS"
+                        ],
+                        "travelerPricing": [
+                            {
+                                "id": "1",
+                                "seatAvailabilityStatus": "AVAILABLE",
+                                "price": {
+                                    "currency": "USD",
+                                    "total": "25.00"
+                                }
+                            }
+                        ],
+                        "coordinates": {
+                            "x": 1,
+                            "y": 1
+                        }
+                    },
+                    {
+                        "cabin": "ECONOMY",
+                        "number": "10C",
+                        "characteristicsCodes": [
+                            "1",
+                            "A",
+                            "CH",
+                            "LS"
+                        ],
+                        "travelerPricing": [
+                            {
+                                "id": "1",
+                                "seatAvailabilityStatus": "AVAILABLE",
+                                "price": {
+                                    "currency": "USD",
+                                    "total": "25.00"
+                                }
+                            }
+                        ],
+                        "coordinates": {
+                            "x": 1,
+                            "y": 2
+                        }
+                    },
+                    {
+                        "cabin": "ECONOMY",
+                        "number": "10D",
+                        "characteristicsCodes": [
+                            "1",
+                            "A",
+                            "CH",
+                            "RS"
+                        ],
+                        "travelerPricing": [
+                            {
+                                "id": "1",
+                                "seatAvailabilityStatus": "BLOCKED"
+                            }
+                        ],
+                        "coordinates": {
+                            "x": 1,
+                            "y": 4
+                        }
+                    },
+                    {
+                        "cabin": "ECONOMY",
+                        "number": "10E",
+                        "characteristicsCodes": [
+                            "1",
+                            "9",
+                            "CH",
+                            "RS"
+                        ],
+                        "travelerPricing": [
+                            {
+                                "id": "1",
+                                "seatAvailabilityStatus": "AVAILABLE",
+                                "price": {
+                                    "currency": "USD",
+                                    "total": "25.00"
+                                }
+                            }
+                        ],
+                        "coordinates": {
+                            "x": 1,
+                            "y": 5
+                        }
+                    },
+                    {
+                        "cabin": "ECONOMY",
+                        "number": "10F",
+                        "characteristicsCodes": [
+                            "1",
+                            "CH",
+                            "RS",
+                            "W"
+                        ],
+                        "travelerPricing": [
+                            {
+                                "id": "1",
+                                "seatAvailabilityStatus": "AVAILABLE",
+                                "price": {
+                                    "currency": "USD",
+                                    "total": "25.00"
+                                }
+                            }
+                        ],
+                        "coordinates": {
+                            "x": 1,
+                            "y": 6
+                        }
+                    },
+                    {
+                        "cabin": "ECONOMY",
+                        "number": "11A",
+                        "characteristicsCodes": [
+                            "1",
+                            "CH",
+                            "LS",
+                            "W"
+                        ],
+                        "travelerPricing": [
+                            {
+                                "id": "1",
+                                "seatAvailabilityStatus": "AVAILABLE",
+                                "price": {
+                                    "currency": "USD",
+                                    "total": "15.00"
+                                }
+                            }
+                        ],
+                        "coordinates": {
+                            "x": 2,
+                            "y": 0
+                        }
+                    },
+                    {
+                        "cabin": "ECONOMY",
+                        "number": "11B",
+                        "characteristicsCodes": [
+                            "1",
+                            "9",
+                            "CH",
+                            "LS"
+                        ],
+                        "travelerPricing": [
+                            {
+                                "id": "1",
+                                "seatAvailabilityStatus": "BLOCKED"
+                            }
+                        ],
+                        "coordinates": {
+                            "x": 2,
+                            "y": 1
+                        }
+                    },
+                    {
+                        "cabin": "ECONOMY",
+                        "number": "11C",
+                        "characteristicsCodes": [
+                            "1",
+                            "A",
+                            "CH",
+                            "LS"
+                        ],
+                        "travelerPricing": [
+                            {
+                                "id": "1",
+                                "seatAvailabilityStatus": "AVAILABLE",
+                                "price": {
+                                    "currency": "USD",
+                                    "total": "15.00"
+                                }
+                            }
+                        ],
+                        "coordinates": {
+                            "x": 2,
+                            "y": 2
+                        }
+                    },
+                    {
+                        "cabin": "ECONOMY",
+                        "number": "11D",
+                        "characteristicsCodes": [
+                            "1",
+                            "A",
+                            "CH",
+                            "RS"
+                        ],
+                        "travelerPricing": [
+                            {
+                                "id": "1",
+                                "seatAvailabilityStatus": "AVAILABLE",
+                                "price": {
+                                    "currency": "USD",
+                                    "total": "15.00"
+                                }
+                            }
+                        ],
+                        "coordinates": {
+                            "x": 2,
+                            "y": 4
+                        }
+                    },
+                    {
+                        "cabin": "ECONOMY",
+                        "number": "11E",
+                        "characteristicsCodes": [
+                            "1",
+                            "9",
+                            "CH",
+                            "RS"
+                        ],
+                        "travelerPricing": [
+                            {
+                                "id": "1",
+                                "seatAvailabilityStatus": "BLOCKED"
+                            }
+                        ],
+                        "coordinates": {
+                            "x": 2,
+                            "y": 5
+                        }
+                    },
+                    {
+                        "cabin": "ECONOMY",
+                        "number": "11F",
+                        "characteristicsCodes": [
+                            "1",
+                            "CH",
+                            "RS",
+                            "W"
+                        ],
+                        "travelerPricing": [
+                            {
+                                "id": "1",
+                                "seatAvailabilityStatus": "AVAILABLE",
+                                "price": {
+                                    "currency": "USD",
+                                    "total": "15.00"
+                                }
+                            }
+                        ],
+                        "coordinates": {
+                            "x": 2,
+                            "y": 6
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+]

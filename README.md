@@ -130,7 +130,7 @@ Aero Bound Ventures is a production-grade flight booking application that integr
 
 | Service | Purpose |
 |---|---|
-| [Amadeus API](https://developers.amadeus.com/) | Flight search, pricing, booking, seat maps, cancellation |
+| [Amadeus API](https://developers.amadeus.com/) | Flight search, pricing, booking, seat maps, cancellation (⚠️ Self-Service sunset July 2026 — mock mode available) |
 | [Pesapal](https://developer.pesapal.com/) | Payment gateway (USD only) — IPN, refunds |
 | [Cloudinary](https://cloudinary.com/) | Ticket file uploads & CDN |
 | [Google OAuth 2.0](https://developers.google.com/identity) | Social login |
@@ -183,7 +183,10 @@ aero_bound_ventures/
 │   ├── schemas/                # Pydantic request/response schemas
 │   ├── crud/                   # Database access layer
 │   ├── external_services/      # Third-party API integrations
-│   │   ├── flight.py           # Amadeus SDK wrapper
+│   │   ├── interface.py        # FlightServiceProtocol (Strategy pattern)
+│   │   ├── flight.py           # Amadeus SDK wrapper + service factory
+│   │   ├── mock_flight_service.py # Mock flight service (demo mode)
+│   │   ├── mock_data/          # JSON fixtures for mock mode
 │   │   ├── pesapal.py          # Pesapal REST client
 │   │   ├── cloudinary_service.py # File upload service
 │   │   ├── email.py            # SMTP email sender
@@ -373,10 +376,13 @@ SECRET_KEY=<your-secret-key>
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 
-# Amadeus Flight API
+# Amadeus Flight API (not needed when using mock mode)
 AMADEUS_API_KEY=<your-key>
 AMADEUS_API_SECRET=<your-secret>
 AMADEUS_BASE_URL=test.api.amadeus.com
+
+# Flight Service Provider: "amadeus" (live API) or "mock" (demo fixtures)
+FLIGHT_SERVICE_PROVIDER=amadeus
 
 # Pesapal Payment Gateway
 PESAPAL_CONSUMER_KEY=<your-key>

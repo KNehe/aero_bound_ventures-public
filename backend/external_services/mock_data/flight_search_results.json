@@ -1,0 +1,346 @@
+[
+    {
+        "type": "flight-offer",
+        "id": "1",
+        "source": "GDS",
+        "instantTicketingRequired": false,
+        "nonHomogeneous": false,
+        "oneWay": false,
+        "isUpsellOffer": false,
+        "lastTicketingDate": "2026-08-15",
+        "lastTicketingDateTime": "2026-08-15",
+        "numberOfBookableSeats": 5,
+        "itineraries": [
+            {
+                "duration": "PT8H30M",
+                "segments": [
+                    {
+                        "departure": {
+                            "iataCode": "NBO",
+                            "terminal": "1A",
+                            "at": "2026-09-01T06:00:00"
+                        },
+                        "arrival": {
+                            "iataCode": "LHR",
+                            "terminal": "4",
+                            "at": "2026-09-01T14:30:00"
+                        },
+                        "carrierCode": "KQ",
+                        "number": "100",
+                        "aircraft": {
+                            "code": "787"
+                        },
+                        "operating": {
+                            "carrierCode": "KQ"
+                        },
+                        "duration": "PT8H30M",
+                        "id": "1",
+                        "numberOfStops": 0,
+                        "blacklistedInEU": false
+                    }
+                ]
+            }
+        ],
+        "price": {
+            "currency": "USD",
+            "total": "685.50",
+            "base": "620.00",
+            "fees": [
+                {
+                    "amount": "0.00",
+                    "type": "SUPPLIER"
+                },
+                {
+                    "amount": "0.00",
+                    "type": "TICKETING"
+                }
+            ],
+            "grandTotal": "685.50"
+        },
+        "pricingOptions": {
+            "fareType": [
+                "PUBLISHED"
+            ],
+            "includedCheckedBagsOnly": true
+        },
+        "validatingAirlineCodes": [
+            "KQ"
+        ],
+        "travelerPricings": [
+            {
+                "travelerId": "1",
+                "fareOption": "STANDARD",
+                "travelerType": "ADULT",
+                "price": {
+                    "currency": "USD",
+                    "total": "685.50",
+                    "base": "620.00"
+                },
+                "fareDetailsBySegment": [
+                    {
+                        "segmentId": "1",
+                        "cabin": "ECONOMY",
+                        "fareBasis": "YOWKE",
+                        "class": "Y",
+                        "includedCheckedBags": {
+                            "weight": 23,
+                            "weightUnit": "KG"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "type": "flight-offer",
+        "id": "2",
+        "source": "GDS",
+        "instantTicketingRequired": false,
+        "nonHomogeneous": false,
+        "oneWay": false,
+        "isUpsellOffer": false,
+        "lastTicketingDate": "2026-08-15",
+        "lastTicketingDateTime": "2026-08-15",
+        "numberOfBookableSeats": 3,
+        "itineraries": [
+            {
+                "duration": "PT13H45M",
+                "segments": [
+                    {
+                        "departure": {
+                            "iataCode": "NBO",
+                            "terminal": "1A",
+                            "at": "2026-09-01T22:55:00"
+                        },
+                        "arrival": {
+                            "iataCode": "DXB",
+                            "terminal": "3",
+                            "at": "2026-09-02T05:15:00"
+                        },
+                        "carrierCode": "EK",
+                        "number": "722",
+                        "aircraft": {
+                            "code": "77W"
+                        },
+                        "operating": {
+                            "carrierCode": "EK"
+                        },
+                        "duration": "PT5H20M",
+                        "id": "2",
+                        "numberOfStops": 0,
+                        "blacklistedInEU": false
+                    },
+                    {
+                        "departure": {
+                            "iataCode": "DXB",
+                            "terminal": "3",
+                            "at": "2026-09-02T07:30:00"
+                        },
+                        "arrival": {
+                            "iataCode": "LHR",
+                            "terminal": "3",
+                            "at": "2026-09-02T11:40:00"
+                        },
+                        "carrierCode": "EK",
+                        "number": "3",
+                        "aircraft": {
+                            "code": "388"
+                        },
+                        "operating": {
+                            "carrierCode": "EK"
+                        },
+                        "duration": "PT7H10M",
+                        "id": "3",
+                        "numberOfStops": 0,
+                        "blacklistedInEU": false
+                    }
+                ]
+            }
+        ],
+        "price": {
+            "currency": "USD",
+            "total": "542.30",
+            "base": "480.00",
+            "fees": [
+                {
+                    "amount": "0.00",
+                    "type": "SUPPLIER"
+                },
+                {
+                    "amount": "0.00",
+                    "type": "TICKETING"
+                }
+            ],
+            "grandTotal": "542.30"
+        },
+        "pricingOptions": {
+            "fareType": [
+                "PUBLISHED"
+            ],
+            "includedCheckedBagsOnly": true
+        },
+        "validatingAirlineCodes": [
+            "EK"
+        ],
+        "travelerPricings": [
+            {
+                "travelerId": "1",
+                "fareOption": "STANDARD",
+                "travelerType": "ADULT",
+                "price": {
+                    "currency": "USD",
+                    "total": "542.30",
+                    "base": "480.00"
+                },
+                "fareDetailsBySegment": [
+                    {
+                        "segmentId": "2",
+                        "cabin": "ECONOMY",
+                        "fareBasis": "TOWKE",
+                        "class": "T",
+                        "includedCheckedBags": {
+                            "weight": 30,
+                            "weightUnit": "KG"
+                        }
+                    },
+                    {
+                        "segmentId": "3",
+                        "cabin": "ECONOMY",
+                        "fareBasis": "TOWKE",
+                        "class": "T",
+                        "includedCheckedBags": {
+                            "weight": 30,
+                            "weightUnit": "KG"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "type": "flight-offer",
+        "id": "3",
+        "source": "GDS",
+        "instantTicketingRequired": false,
+        "nonHomogeneous": false,
+        "oneWay": false,
+        "isUpsellOffer": false,
+        "lastTicketingDate": "2026-08-20",
+        "lastTicketingDateTime": "2026-08-20",
+        "numberOfBookableSeats": 7,
+        "itineraries": [
+            {
+                "duration": "PT15H20M",
+                "segments": [
+                    {
+                        "departure": {
+                            "iataCode": "NBO",
+                            "terminal": "1A",
+                            "at": "2026-09-01T11:30:00"
+                        },
+                        "arrival": {
+                            "iataCode": "ADD",
+                            "terminal": "2",
+                            "at": "2026-09-01T13:40:00"
+                        },
+                        "carrierCode": "ET",
+                        "number": "303",
+                        "aircraft": {
+                            "code": "738"
+                        },
+                        "operating": {
+                            "carrierCode": "ET"
+                        },
+                        "duration": "PT2H10M",
+                        "id": "4",
+                        "numberOfStops": 0,
+                        "blacklistedInEU": false
+                    },
+                    {
+                        "departure": {
+                            "iataCode": "ADD",
+                            "terminal": "2",
+                            "at": "2026-09-01T22:50:00"
+                        },
+                        "arrival": {
+                            "iataCode": "JFK",
+                            "terminal": "1",
+                            "at": "2026-09-02T05:50:00"
+                        },
+                        "carrierCode": "ET",
+                        "number": "500",
+                        "aircraft": {
+                            "code": "77W"
+                        },
+                        "operating": {
+                            "carrierCode": "ET"
+                        },
+                        "duration": "PT13H00M",
+                        "id": "5",
+                        "numberOfStops": 0,
+                        "blacklistedInEU": false
+                    }
+                ]
+            }
+        ],
+        "price": {
+            "currency": "USD",
+            "total": "823.00",
+            "base": "750.00",
+            "fees": [
+                {
+                    "amount": "0.00",
+                    "type": "SUPPLIER"
+                },
+                {
+                    "amount": "0.00",
+                    "type": "TICKETING"
+                }
+            ],
+            "grandTotal": "823.00"
+        },
+        "pricingOptions": {
+            "fareType": [
+                "PUBLISHED"
+            ],
+            "includedCheckedBagsOnly": true
+        },
+        "validatingAirlineCodes": [
+            "ET"
+        ],
+        "travelerPricings": [
+            {
+                "travelerId": "1",
+                "fareOption": "STANDARD",
+                "travelerType": "ADULT",
+                "price": {
+                    "currency": "USD",
+                    "total": "823.00",
+                    "base": "750.00"
+                },
+                "fareDetailsBySegment": [
+                    {
+                        "segmentId": "4",
+                        "cabin": "ECONOMY",
+                        "fareBasis": "HOWKE",
+                        "class": "H",
+                        "includedCheckedBags": {
+                            "weight": 23,
+                            "weightUnit": "KG"
+                        }
+                    },
+                    {
+                        "segmentId": "5",
+                        "cabin": "ECONOMY",
+                        "fareBasis": "HOWKE",
+                        "class": "H",
+                        "includedCheckedBags": {
+                            "weight": 23,
+                            "weightUnit": "KG"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+]

@@ -139,6 +139,7 @@ jobs:
           CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
           ENVIRONMENT: ${{ secrets.ENVIRONMENT }}
+          FLIGHT_SERVICE_PROVIDER: ${{ secrets.FLIGHT_SERVICE_PROVIDER }}
         run: |
           echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
 
@@ -226,6 +227,7 @@ jobs:
           CORS_ORIGINS=${CORS_ORIGINS}
           FRONTEND_URL=${FRONTEND_URL}
           ENVIRONMENT=${ENVIRONMENT}
+          FLIGHT_SERVICE_PROVIDER=${FLIGHT_SERVICE_PROVIDER}
           EOF
 
             # 5. Deploy Docker containers

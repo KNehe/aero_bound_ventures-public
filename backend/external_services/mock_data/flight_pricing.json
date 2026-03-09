@@ -1,0 +1,105 @@
+{
+    "type": "flight-offers-pricing",
+    "flightOffers": [
+        {
+            "type": "flight-offer",
+            "id": "1",
+            "source": "GDS",
+            "instantTicketingRequired": false,
+            "nonHomogeneous": false,
+            "oneWay": false,
+            "isUpsellOffer": false,
+            "lastTicketingDate": "2026-08-15",
+            "lastTicketingDateTime": "2026-08-15",
+            "numberOfBookableSeats": 5,
+            "itineraries": [
+                {
+                    "duration": "PT8H30M",
+                    "segments": [
+                        {
+                            "departure": {
+                                "iataCode": "NBO",
+                                "terminal": "1A",
+                                "at": "2026-09-01T06:00:00"
+                            },
+                            "arrival": {
+                                "iataCode": "LHR",
+                                "terminal": "4",
+                                "at": "2026-09-01T14:30:00"
+                            },
+                            "carrierCode": "KQ",
+                            "number": "100",
+                            "aircraft": {
+                                "code": "787"
+                            },
+                            "operating": {
+                                "carrierCode": "KQ"
+                            },
+                            "duration": "PT8H30M",
+                            "id": "1",
+                            "numberOfStops": 0,
+                            "blacklistedInEU": false
+                        }
+                    ]
+                }
+            ],
+            "price": {
+                "currency": "USD",
+                "total": "685.50",
+                "base": "620.00",
+                "fees": [
+                    {
+                        "amount": "0.00",
+                        "type": "SUPPLIER"
+                    },
+                    {
+                        "amount": "0.00",
+                        "type": "TICKETING"
+                    }
+                ],
+                "grandTotal": "685.50",
+                "billingCurrency": "USD"
+            },
+            "pricingOptions": {
+                "fareType": [
+                    "PUBLISHED"
+                ],
+                "includedCheckedBagsOnly": true
+            },
+            "validatingAirlineCodes": [
+                "KQ"
+            ],
+            "travelerPricings": [
+                {
+                    "travelerId": "1",
+                    "fareOption": "STANDARD",
+                    "travelerType": "ADULT",
+                    "price": {
+                        "currency": "USD",
+                        "total": "685.50",
+                        "base": "620.00",
+                        "taxes": [
+                            {
+                                "amount": "65.50",
+                                "code": "YQ"
+                            }
+                        ]
+                    },
+                    "fareDetailsBySegment": [
+                        {
+                            "segmentId": "1",
+                            "cabin": "ECONOMY",
+                            "fareBasis": "YOWKE",
+                            "brandedFare": "ECONOMY",
+                            "class": "Y",
+                            "includedCheckedBags": {
+                                "weight": 23,
+                                "weightUnit": "KG"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
