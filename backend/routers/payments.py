@@ -105,9 +105,11 @@ async def initiate_pesapal_payment(
 
     try:
         # 7. Submit order to Pesapal
+        # FOR TESTING ONLY: Override the amount to 1.0
+        amount_to_charge = 1.0
         result = await pesapal_client.submit_order_request(
             merchant_reference=str(booking.id),
-            amount=payment_request.amount,
+            amount=amount_to_charge, # Overridden according to user specifications
             currency=payment_request.currency,
             description=f"Flight booking payment - {booking.id}",
             callback_url=callback_url,
