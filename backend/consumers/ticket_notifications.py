@@ -1,6 +1,7 @@
 from backend.utils.log_manager import get_app_logger
 from backend.schemas.events import TicketUploadedEvent
 from backend.external_services.email import send_email
+from backend.external_services.ai_service import get_ticket_upload_message
 from backend.crud.users import get_admin_users
 from backend.models.notifications import NotificationType
 from backend.utils.notification_service import create_and_publish_notification
@@ -29,8 +30,16 @@ async def process_ticket_notifications(message: dict):
 
 
 async def _handle_ticket_uploaded(event: TicketUploadedEvent):
-    # 1. Send Email to User
+    # 1. Generate Customer AI Message
+    ai_message = "Your ticket has been successfully uploaded and is now available in your account."
     if event.user_email:
+        try:
+            ai_message = await get_ticket_upload_message(event.pnr)
+        except Exception as e:
+            logger.error(
+                f"Customer AI ticket upload greeting failed, using fallback: {e}"
+            )
+
         try:
             await send_email(
                 recipients=[event.user_email],
@@ -39,6 +48,7 @@ async def _handle_ticket_uploaded(event: TicketUploadedEvent):
                 extra={
                     "pnr": event.pnr,
                     "booking_id": str(event.booking_id),
+                    "ai_personalized_message": ai_message,
                 },
             )
             logger.info(f"Ticket upload email sent to {event.user_email}")

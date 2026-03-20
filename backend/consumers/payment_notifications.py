@@ -3,6 +3,10 @@ from backend.schemas.events import PaymentSuccessEvent, PaymentFailedEvent
 
 
 from backend.external_services.email import send_email
+from backend.external_services.ai_service import (
+    get_payment_success_message,
+    get_admin_payment_message,
+)
 from backend.crud.users import get_admin_emails
 from backend.models.notifications import NotificationType
 from backend.utils.notification_service import create_and_publish_notification
@@ -35,8 +39,17 @@ async def process_payment_notifications(message: dict):
 
 
 async def _handle_payment_success(session, event: PaymentSuccessEvent):
-    # 1. Send Customer Email
+    # 1. Generate Customer AI Message
+    ai_message = (
+        "Thank you for your payment. Your transaction has been processed "
+        "and your booking is now confirmed."
+    )
     if event.user_email:
+        try:
+            ai_message = await get_payment_success_message(event.pnr)
+        except Exception as e:
+            logger.error(f"Customer AI payment greeting failed, using fallback: {e}")
+
         try:
             await send_email(
                 recipients=[event.user_email],
@@ -45,15 +58,24 @@ async def _handle_payment_success(session, event: PaymentSuccessEvent):
                 extra={
                     "pnr": event.pnr,
                     "booking_id": str(event.booking_id),
+                    "ai_personalized_message": ai_message,
                 },
             )
             logger.info(f"Payment success email sent to {event.user_email}")
         except Exception as e:
             logger.error(f"Failed to send payment success email: {e}")
 
-    # 2. Notify Admins
+    # 2. Generate Admin AI Message
     admin_emails = get_admin_emails(session)
     if admin_emails:
+        admin_ai_message = f"A payment has been successfully completed for booking {event.pnr} by {event.user_email}."
+        try:
+            admin_ai_message = await get_admin_payment_message(
+                event.pnr, event.user_email or "N/A"
+            )
+        except Exception as e:
+            logger.error(f"Admin AI payment alert failed, using fallback: {e}")
+
         try:
             await send_email(
                 recipients=admin_emails,
@@ -63,6 +85,7 @@ async def _handle_payment_success(session, event: PaymentSuccessEvent):
                     "pnr": event.pnr,
                     "user_email": event.user_email,
                     "booking_id": str(event.booking_id),
+                    "ai_personalized_message": admin_ai_message,
                 },
             )
             logger.info(

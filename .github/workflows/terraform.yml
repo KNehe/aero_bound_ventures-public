@@ -140,6 +140,7 @@ jobs:
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
           ENVIRONMENT: ${{ secrets.ENVIRONMENT }}
           FLIGHT_SERVICE_PROVIDER: ${{ secrets.FLIGHT_SERVICE_PROVIDER }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
 
@@ -228,6 +229,7 @@ jobs:
           FRONTEND_URL=${FRONTEND_URL}
           ENVIRONMENT=${ENVIRONMENT}
           FLIGHT_SERVICE_PROVIDER=${FLIGHT_SERVICE_PROVIDER}
+          GEMINI_API_KEY=${GEMINI_API_KEY}
           EOF
 
             # 5. Deploy Docker containers

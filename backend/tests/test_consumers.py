@@ -14,6 +14,20 @@ def mock_email(mocker):
 
 
 @pytest.fixture
+def mock_ai_service(mocker):
+    mocker.patch(
+        "backend.consumers.booking_notifications.get_booking_confirmation_message",
+        new_callable=AsyncMock,
+        return_value="AI generated greeting",
+    )
+    mocker.patch(
+        "backend.consumers.booking_notifications.get_booking_cancellation_message",
+        new_callable=AsyncMock,
+        return_value="AI generated cancellation message",
+    )
+
+
+@pytest.fixture
 def mock_notif_service(mocker):
     return mocker.patch(
         "backend.consumers.booking_notifications.create_and_publish_notification",
@@ -23,7 +37,7 @@ def mock_notif_service(mocker):
 
 @pytest.mark.asyncio
 async def test_process_booking_created_event(
-    session, mocker, mock_email, mock_notif_service
+    session, mocker, mock_email, mock_notif_service, mock_ai_service
 ):
     mock_session_ctx = MagicMock()
     mock_session_ctx.__enter__.return_value = session

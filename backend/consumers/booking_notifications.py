@@ -3,6 +3,12 @@ from backend.schemas.events import BookingCreatedEvent, BookingCancelledEvent
 
 
 from backend.external_services.email import send_email
+from backend.external_services.ai_service import (
+    get_booking_confirmation_message,
+    get_booking_cancellation_message,
+    get_admin_order_message,
+    get_admin_cancellation_message,
+)
 from backend.crud.users import get_admin_emails, get_admin_users
 from backend.models.notifications import NotificationType
 from backend.utils.notification_service import create_and_publish_notification
@@ -35,7 +41,16 @@ async def process_booking_notifications(message: dict):
 
 
 async def _handle_booking_created(event: BookingCreatedEvent):
-    # 1. Send Customer Confirmation Email
+    # 1. Generate AI personalized message (isolated so email still sends on failure)
+    ai_message = (
+        "Thank you for your order! Your booking has been successfully confirmed."
+    )
+    try:
+        ai_message = await get_booking_confirmation_message(event.pnr)
+    except Exception as e:
+        logger.error(f"AI greeting generation failed, using fallback: {e}")
+
+    # 2. Send Customer Confirmation Email
     try:
         await send_email(
             recipients=[event.user_email],
@@ -44,6 +59,7 @@ async def _handle_booking_created(event: BookingCreatedEvent):
             extra={
                 "pnr": event.pnr,
                 "booking_id": str(event.booking_id),
+                "ai_personalized_message": ai_message,
             },
         )
         logger.info(f"Booking confirmation email sent to {event.user_email}")
@@ -54,6 +70,14 @@ async def _handle_booking_created(event: BookingCreatedEvent):
     with Session(engine) as session:
         admin_emails = get_admin_emails(session)
         if admin_emails:
+            admin_ai_message = f"A new booking order has been placed for {event.pnr} by {event.user_email}."
+            try:
+                admin_ai_message = await get_admin_order_message(
+                    event.pnr, event.user_email
+                )
+            except Exception as e:
+                logger.error(f"Admin AI order alert failed, using fallback: {e}")
+
             try:
                 await send_email(
                     recipients=admin_emails,
@@ -63,6 +87,7 @@ async def _handle_booking_created(event: BookingCreatedEvent):
                         "pnr": event.pnr,
                         "user_email": event.user_email,
                         "booking_id": str(event.booking_id),
+                        "ai_personalized_message": admin_ai_message,
                     },
                 )
                 logger.info(
@@ -91,7 +116,14 @@ async def _handle_booking_cancelled(event: BookingCancelledEvent):
     """Handle booking cancelled event - send cancellation confirmation email to user and admins"""
     pnr_display = event.pnr or "N/A"
 
-    # 1. Send Customer Cancellation Confirmation Email
+    # 1. Generate AI personalized message (isolated so email still sends on failure)
+    ai_message = "Your booking has been successfully cancelled."
+    try:
+        ai_message = await get_booking_cancellation_message(pnr_display)
+    except Exception as e:
+        logger.error(f"AI greeting generation failed, using fallback: {e}")
+
+    # 2. Send Customer Cancellation Confirmation Email
     try:
         await send_email(
             recipients=[event.user_email],
@@ -100,6 +132,7 @@ async def _handle_booking_cancelled(event: BookingCancelledEvent):
             extra={
                 "pnr": pnr_display,
                 "booking_id": str(event.booking_id),
+                "ai_personalized_message": ai_message,
             },
         )
         logger.info(f"Booking cancellation email sent to {event.user_email}")
@@ -110,6 +143,16 @@ async def _handle_booking_cancelled(event: BookingCancelledEvent):
     with Session(engine) as session:
         admin_emails = get_admin_emails(session)
         if admin_emails:
+            admin_ai_message = (
+                f"A booking has been cancelled for {pnr_display} by {event.user_email}."
+            )
+            try:
+                admin_ai_message = await get_admin_cancellation_message(
+                    pnr_display, event.user_email
+                )
+            except Exception as e:
+                logger.error(f"Admin AI cancellation alert failed, using fallback: {e}")
+
             try:
                 await send_email(
                     recipients=admin_emails,
@@ -119,6 +162,7 @@ async def _handle_booking_cancelled(event: BookingCancelledEvent):
                         "pnr": pnr_display,
                         "user_email": event.user_email,
                         "booking_id": str(event.booking_id),
+                        "ai_personalized_message": admin_ai_message,
                     },
                 )
                 logger.info(

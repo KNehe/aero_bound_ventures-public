@@ -1,7 +1,14 @@
+import html
+import os
+
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 from pydantic import EmailStr
 from dotenv import load_dotenv
-import os
+
+from backend.external_services.ai_service import (
+    get_password_reset_message,
+    get_welcome_message,
+)
 
 load_dotenv()
 
@@ -42,14 +49,16 @@ async def send_password_reset_email(email: EmailStr, reset_token: str):
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
     reset_link = f"{frontend_url}/auth/reset-password?token={reset_token}"
 
+    ai_message = html.escape(await get_password_reset_message())
+
     subject = "Password Reset Request - Aero Bound Ventures"
     recipients = [email]
 
-    html = f"""
+    html_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333;">Password Reset Request</h2>
         <p>Hello,</p>
-        <p>We received a request to reset your password for your Aero Bound Ventures account.</p>
+        <p>{ai_message}</p>
         <p>Click the button below to reset your password:</p>
         <div style="margin: 30px 0;">
             <a href="{reset_link}" 
@@ -73,7 +82,7 @@ async def send_password_reset_email(email: EmailStr, reset_token: str):
     """
 
     message = MessageSchema(
-        subject=subject, recipients=recipients, body=html, subtype=MessageType.html
+        subject=subject, recipients=recipients, body=html_body, subtype=MessageType.html
     )
 
     fm = FastMail(conf)
@@ -83,6 +92,8 @@ async def send_password_reset_email(email: EmailStr, reset_token: str):
 async def send_welcome_email(email: EmailStr):
     """Send welcome email to new user."""
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+    ai_message = await get_welcome_message()
 
     subject = "Welcome to Aero Bound Ventures! ✈️"
     recipients = [email]
@@ -94,6 +105,7 @@ async def send_welcome_email(email: EmailStr):
         html = file.read()
 
     html = html.replace("{{frontend_url}}", frontend_url)
+    html = html.replace("{{ai_personalized_message}}", ai_message)
 
     message = MessageSchema(
         subject=subject, recipients=recipients, body=html, subtype=MessageType.html
