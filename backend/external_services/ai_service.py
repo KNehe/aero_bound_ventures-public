@@ -54,7 +54,7 @@ async def generate_personalized_greeting(prompt: str, fallback: str) -> str:
     try:
         response = await asyncio.wait_for(
             _client.aio.models.generate_content(
-                model="gemini-1.5-flash",
+                model="gemini-2.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.7,
@@ -158,6 +158,7 @@ async def get_admin_payment_message(pnr: str, email: str) -> str:
         f"confirming that a payment was successfully processed for booking PNR '{pnr}' "
         f"by customer '{email}' on 'Aero Bound Ventures'. "
         "Keep it professional and concise."
+        "Don't include subject lines, signatures, or greetings like 'Hi'."
     )
     return await generate_personalized_greeting(prompt, fallback)
 
@@ -170,6 +171,7 @@ async def get_ticket_upload_message(pnr: str) -> str:
         f"that their flight ticket for PNR '{pnr}' has been successfully uploaded "
         f"and is ready for viewing on 'Aero Bound Ventures'. "
         "Make it sound premium and reassuring."
+        "Don't include subject lines, signatures, or greetings like 'Hi'."
     )
     return await generate_personalized_greeting(prompt, fallback)
 
@@ -182,6 +184,7 @@ async def get_admin_order_message(pnr: str, email: str) -> str:
         f"notifying them that a new booking order has been placed for PNR '{pnr}' "
         f"by customer '{email}' on 'Aero Bound Ventures'. "
         "Keep it professional and action-oriented."
+        "Don't include subject lines, signatures, or greetings like 'Hi'."
     )
     return await generate_personalized_greeting(prompt, fallback)
 
@@ -194,5 +197,6 @@ async def get_admin_cancellation_message(pnr: str, email: str) -> str:
         f"notifying them that a booking for PNR '{pnr}' has been cancelled "
         f"by customer '{email}' on 'Aero Bound Ventures'. "
         "Include a reminder to review or process any applicable refunds."
+        "Don't include subject lines, signatures, or greetings like 'Hi'."
     )
     return await generate_personalized_greeting(prompt, fallback)
