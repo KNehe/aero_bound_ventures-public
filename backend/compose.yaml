@@ -6,22 +6,22 @@ services:
     ports:
       - "8000:80"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+      - DATABASE_URL=${DATABASE_URL}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       - FLIGHT_SERVICE_PROVIDER=${FLIGHT_SERVICE_PROVIDER:-amadeus}
     depends_on:
-      - db
       - redis
     volumes:
       - .:/app/backend
       - /app/backend/.venv  # Exclude virtual environment from volume mount
     command: ["/app/backend/.venv/bin/fastapi", "run", "main.py", "--port", "80", "--host", "0.0.0.0"]
   db:
-    image: postgres:16
+    image: postgres:17
     container_name: postgres-db
     restart: always
+    profiles: ["local"]
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
