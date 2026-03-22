@@ -49,7 +49,7 @@ async def get_booking_stats(
         total_revenue = sum(
             booking.total_price 
             for booking in bookings 
-            if booking.status == BookingStatus.PAID
+            if booking.status == BookingStatus.PAID and booking.status != BookingStatus.CANCELLED
         )
 
         # Calculate active users (unique users who have made bookings)
