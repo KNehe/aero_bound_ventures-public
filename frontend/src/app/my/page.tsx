@@ -163,10 +163,24 @@ export default function MyBookingsAndTicketsPage() {
 
   const cancelMutation = useMutation({
     mutationFn: (bookingId: string) => apiClient.delete<CancelBookingResponse>(`/booking/flight-orders/${bookingId}`),
-    onSuccess: (response) => {
+    onSuccess: (response, variables) => {
       closeCancelModal();
       setSuccessMessage(response.message || 'Booking cancelled successfully');
       setTimeout(() => setSuccessMessage(null), 5000);
+      
+      // Optimistically update cache to immediately show the cancelled status
+      queryClient.setQueriesData({ queryKey: ['bookings'] }, (oldData: any) => {
+        if (!oldData || !oldData.items) return oldData;
+        return {
+          ...oldData,
+          items: oldData.items.map((booking: any) => 
+            booking.id === variables
+              ? { ...booking, status: response.status || 'cancelled' }
+              : booking
+          ),
+        };
+      });
+
       // Invalidate queries to refresh the booking list
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
     },
