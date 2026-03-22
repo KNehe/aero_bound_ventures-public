@@ -54,11 +54,11 @@ async def generate_personalized_greeting(prompt: str, fallback: str) -> str:
     try:
         response = await asyncio.wait_for(
             _client.aio.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.1-flash-lite-preview",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.7,
-                    max_output_tokens=150,
+                    max_output_tokens=200,
                 ),
             ),
             timeout=AI_TIMEOUT_SECONDS,
