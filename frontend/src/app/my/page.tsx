@@ -142,6 +142,7 @@ export default function MyBookingsAndTicketsPage() {
     queryKey: ['bookings', currentCursor],
     queryFn: () => fetchBookings(currentCursor),
     enabled: isHydrated && isAuthenticated,
+    staleTime: 0, // Always refetch on mount to show latest records
   });
 
   // Handle unauthorized errors by redirecting to login

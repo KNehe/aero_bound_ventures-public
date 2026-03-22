@@ -162,6 +162,10 @@ async def flight_order(
 
         pnr = response.get("associatedRecords", [{}])[0].get("reference", "N/A")
 
+        # Invalidate user's booking cache list following a new booking
+        pattern = f"user_bookings:{str(current_user.id)}*"
+        redis_cache.delete_pattern(pattern)
+
         kafka_producer.send(
             KafkaTopics.BOOKING_EVENTS,
             {
