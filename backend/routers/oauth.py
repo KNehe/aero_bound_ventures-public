@@ -173,7 +173,7 @@ async def google_callback(
             logger.warning(f"Failed to decode state '{state}': {e}")
             redirect_to = "/"
 
-    redirect_url = f"{FRONTEND_URL}/auth/google/callback?user={user_data.model_dump_json()}&redirect={quote(redirect_to)}"
+    redirect_url = f"{FRONTEND_URL}/auth/google/callback?user={quote(user_data.model_dump_json())}&redirect={quote(redirect_to)}"
     response = RedirectResponse(url=redirect_url)
 
     cookie_settings = get_cookie_settings()
