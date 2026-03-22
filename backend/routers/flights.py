@@ -441,8 +441,8 @@ async def cancel_flight_order(
         session.refresh(booking)
 
         # 7. Invalidate user's booking cache
-        cache_key = build_redis_key({"user_bookings": str(current_user.id)})
-        redis_cache.delete(cache_key)
+        pattern = f"user_bookings:{str(current_user.id)}*"
+        redis_cache.delete_pattern(pattern)
 
         # 8. Send Kafka event for notification (user and admins)
         kafka_producer.send(

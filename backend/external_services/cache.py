@@ -40,6 +40,26 @@ class RedisCache:
             print(f"Redis connection error: {e}")
             return False
 
+    def delete_pattern(self, pattern: str) -> int:
+        """
+        Delete keys from Redis cache matching a pattern
+
+        Args:
+            pattern: The pattern to match keys against
+
+        Returns:
+            Number of keys deleted
+        """
+        try:
+            count = 0
+            for key in self.r.scan_iter(match=pattern):
+                self.r.delete(key)
+                count += 1
+            return count
+        except redis.exceptions.ConnectionError as e:
+            print(f"Redis connection error: {e}")
+            return 0
+
 
 host = os.getenv("REDIS_HOST", "redis")
 port = os.getenv("REDIS_PORT", 6379)
