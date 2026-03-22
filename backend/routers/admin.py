@@ -46,7 +46,11 @@ async def get_booking_stats(
 
         total_bookings = len(bookings)
 
-        total_revenue = sum(booking.total_price for booking in bookings)
+        total_revenue = sum(
+            booking.total_price 
+            for booking in bookings 
+            if booking.status == BookingStatus.PAID
+        )
 
         # Calculate active users (unique users who have made bookings)
         unique_user_ids = set(booking.user_id for booking in bookings)
