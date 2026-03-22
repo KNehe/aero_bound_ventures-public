@@ -6,7 +6,7 @@ from backend.crud.bookings import (
     get_all_bookings_cursor,
 )
 from backend.utils.pagination import MAX_PAGINATION_LIMIT
-from backend.models.bookings import Booking
+from backend.models.bookings import Booking, BookingStatus
 from backend.models.constants import ADMIN_GROUP_NAME
 from backend.schemas.admin import (
     BookingStatsResponse,

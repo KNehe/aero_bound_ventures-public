@@ -3,10 +3,6 @@ from amadeus import Client, ResponseError
 from dotenv import load_dotenv
 import requests
 from amadeus import Location
-from backend.external_services.interface import FlightServiceProtocol
-from backend.utils.log_manager import get_app_logger
-
-logger = get_app_logger(__name__)
 
 load_dotenv()
 
@@ -14,7 +10,6 @@ load_dotenv()
 class AmadeusFlightService:
     def __init__(self):
         self.api_key, self.api_secret = self.get_amadeus_credentials()
-        logger.info("Amadeus FlightService initialized")
 
         try:
             self.amadeus = Client(client_id=self.api_key, client_secret=self.api_secret)
@@ -55,7 +50,6 @@ class AmadeusFlightService:
             raise e
 
     def search_flights(self, request_body: dict) -> dict:
-        logger.info("Amadeus FlightService search_flights")
         try:
             response = self.amadeus.shopping.flight_offers_search.post(request_body)
             return response
@@ -64,7 +58,6 @@ class AmadeusFlightService:
             raise Exception(f"{api_error}")
 
     def confirm_price(self, request_body: dict):
-        logger.info("Amadeus FlightService confirm_price")
         try:
             response = self.amadeus.shopping.flight_offers.pricing.post(request_body)
             return response
@@ -123,15 +116,9 @@ class AmadeusFlightService:
     def view_seat_map_post(self, flight_offer: dict) -> dict:
         try:
             body = {"data": [flight_offer]}
-            print("=" * 80)
-            print("SEAT MAP REQUEST BODY:")
-            print(f"Flight Offer Keys: {flight_offer.keys()}")
-            print(f"Full body being sent to Amadeus: {body}")
-            print("=" * 80)
             response = self.amadeus.shopping.seatmaps.post(body).data
             return response
         except ResponseError as error:
-            print(f"Amadeus Seat Map Error: {error}")
             raise error
 
     def get_flight_order(self, flight_orderId: str) -> dict:
@@ -217,23 +204,4 @@ class AmadeusFlightService:
             raise error
 
 
-def get_flight_service() -> FlightServiceProtocol:
-    """
-    Factory function that returns the appropriate flight service implementation
-    based on the FLIGHT_SERVICE_PROVIDER environment variable.
-
-    Supported values:
-        - "amadeus" (default): Uses the real Amadeus Self-Service API
-        - "mock": Uses pre-built JSON fixtures for demo/development mode
-    """
-    provider = "amadeus"
-
-    if provider == "mock":
-        from backend.external_services.mock_flight_service import MockFlightService
-
-        return MockFlightService()
-
-    return AmadeusFlightService()
-
-
-amadeus_flight_service = get_flight_service()
+amadeus_flight_service = AmadeusFlightService()
