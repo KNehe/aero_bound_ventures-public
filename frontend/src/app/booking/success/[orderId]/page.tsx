@@ -106,54 +106,6 @@ export default function BookingSuccessPage() {
   const { logout, isAuthenticated, isHydrated } = useAuth();
   const params = useParams();
   const { orderId } = params;
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [isViewingTicket, setIsViewingTicket] = useState(false);
-
-  const handleDownloadTicket = async () => {
-    const ticketUrl = (bookingData as any)?.ticket_url;
-    if (!ticketUrl) return;
-
-    setIsDownloading(true);
-    try {
-      const response = await fetch(ticketUrl);
-      const blob = await response.blob();
-
-      // Detect file extension from content type or URL
-      let extension = 'pdf';
-      const contentType = response.headers.get('content-type');
-      if (contentType?.includes('image/jpeg') || contentType?.includes('image/jpg')) {
-        extension = 'jpg';
-      } else if (contentType?.includes('image/png')) {
-        extension = 'png';
-      } else if (ticketUrl.match(/\.(jpg|jpeg|png|pdf)$/i)) {
-        extension = ticketUrl.match(/\.(jpg|jpeg|png|pdf)$/i)![1].toLowerCase();
-      }
-
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `ticket-${orderId}.${extension}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error downloading ticket:', error);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  const handleViewTicket = () => {
-    const ticketUrl = (bookingData as any)?.ticket_url;
-    if (!ticketUrl) return;
-    setIsViewingTicket(true);
-    window.open(ticketUrl, '_blank');
-    setTimeout(() => setIsViewingTicket(false), 1000);
-  };
-
-
-
   // Handle Pesapal payment
   const handlePayment = async () => {
     if (!bookingData) return;
@@ -317,6 +269,7 @@ export default function BookingSuccessPage() {
   const isPaid = bookingData.status === BOOKING_STATUS.PAID;
   // Helper to check if ticket is available
   const hasTicket = Boolean((bookingData as any).ticket_url);
+  const hasPrintableTicket = isPaid && hasTicket;
   // Show processing message only if status is PAID and ticket is not present
   const showProcessingMessage = bookingData.status === BOOKING_STATUS.PAID && !hasTicket;
 
@@ -667,38 +620,18 @@ export default function BookingSuccessPage() {
                     {isProcessingPayment ? 'Processing...' : 'Pay Now'}
                   </button>
                 )}
-                {/* Show download button if ticket is available */}
-                {isPaid && hasTicket && (
-                  <div className="w-full flex gap-2">
-                    <button
-                      onClick={handleViewTicket}
-                      disabled={isViewingTicket}
-                      className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white font-semibold py-2 px-4 rounded-lg text-center transition-colors"
+                {hasPrintableTicket && (
+                  <>
+                    <Link
+                      href={`/my/tickets/${bookingData.orderId}`}
+                      className="w-full inline-flex items-center justify-center bg-slate-900 hover:bg-slate-950 text-white font-semibold py-3 px-4 rounded-lg text-center transition-colors"
                     >
-                      {isViewingTicket ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          Opening...
-                        </div>
-                      ) : (
-                        "View Ticket"
-                      )}
-                    </button>
-                    <button
-                      onClick={handleDownloadTicket}
-                      disabled={isDownloading}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2 px-4 rounded-lg text-center transition-colors"
-                    >
-                      {isDownloading ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          Downloading...
-                        </div>
-                      ) : (
-                        "Download Ticket"
-                      )}
-                    </button>
-                  </div>
+                      Open Ticket
+                    </Link>
+                    <p className="text-xs text-gray-500 text-center">
+                      View, print, download, or scan your ticket from one place.
+                    </p>
+                  </>
                 )}
                 {/* Show processing message only if status is PAID and ticket is not present */}
                 {showProcessingMessage && (
