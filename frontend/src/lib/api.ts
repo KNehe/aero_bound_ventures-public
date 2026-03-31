@@ -29,6 +29,7 @@ export class ApiClientError extends Error {
 }
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+type RequestBody = unknown | FormData | URLSearchParams | string;
 
 interface RequestOptions {
   headers?: Record<string, string>;
@@ -41,7 +42,7 @@ interface RequestOptions {
 async function request<T>(
   method: HttpMethod,
   endpoint: string,
-  body?: unknown,
+  body?: RequestBody,
   options: RequestOptions = {}
 ): Promise<T> {
   const url = new URL(`${API_BASE_URL}${endpoint}`);
@@ -58,15 +59,35 @@ async function request<T>(
   };
 
   // Add Content-Type for requests with body
-  if (body && !(body instanceof FormData)) {
+  if (
+    body &&
+    !(body instanceof FormData) &&
+    !(body instanceof URLSearchParams) &&
+    typeof body !== 'string'
+  ) {
     headers['Content-Type'] = 'application/json';
   }
+
+  if (body instanceof URLSearchParams && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/x-www-form-urlencoded';
+  }
+
+  const requestBody =
+    body instanceof FormData
+      ? body
+      : body instanceof URLSearchParams
+        ? body.toString()
+        : typeof body === 'string'
+          ? body
+          : body
+            ? JSON.stringify(body)
+            : undefined;
 
   const response = await fetch(url.toString(), {
     method,
     headers,
     credentials: 'include', 
-    body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
+    body: requestBody,
   });
 
   // Handle non-OK responses
@@ -91,7 +112,13 @@ async function request<T>(
     return {} as T;
   }
 
-  return response.json();
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    return response.json();
+  }
+
+  return response.text() as T;
 }
 
 /**
@@ -137,6 +164,10 @@ export const apiClient = {
    * Upload a file using FormData.
    */
   upload<T>(endpoint: string, formData: FormData, options?: RequestOptions): Promise<T> {
+    return request<T>('POST', endpoint, formData, options);
+  },
+
+  postForm<T>(endpoint: string, formData: URLSearchParams, options?: RequestOptions): Promise<T> {
     return request<T>('POST', endpoint, formData, options);
   },
 };

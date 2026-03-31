@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import useAuth from '@/store/auth';
 import { apiClient, isUnauthorizedError } from '@/lib/api';
+import { queryKeys } from "@/lib/queryKeys";
 
 interface Booking {
   id: string;
@@ -139,18 +140,24 @@ export default function MyBookingsAndTicketsPage() {
   const currentCursor = cursorHistory.length > 0 ? cursorHistory[cursorHistory.length - 1] : null;
 
   const { data, isLoading: queryLoading, error: queryError } = useQuery({
-    queryKey: ['bookings', currentCursor],
+    queryKey: queryKeys.userBookings(currentCursor),
     queryFn: () => fetchBookings(currentCursor),
     enabled: isHydrated && isAuthenticated,
     staleTime: 0, // Always refetch on mount to show latest records
   });
 
-  // Handle unauthorized errors by redirecting to login
-  if (queryError && isUnauthorizedError(queryError)) {
-    logout().then(() => {
+  useEffect(() => {
+    if (!queryError || !isUnauthorizedError(queryError)) {
+      return;
+    }
+
+    const redirectToLogin = async () => {
+      await logout();
       router.push('/auth/login?redirect=/my');
-    });
-  }
+    };
+
+    void redirectToLogin();
+  }, [logout, queryError, router]);
 
   // Derive values directly from query data
   const bookings = data?.items ?? [];

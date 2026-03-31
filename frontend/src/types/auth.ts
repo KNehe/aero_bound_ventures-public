@@ -20,3 +20,18 @@ export interface LoginResponse {
   token_type: string;
   user: UserInfo;
 }
+
+export interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface VerifyResetTokenResponse {
+  valid: boolean;
+  message: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}

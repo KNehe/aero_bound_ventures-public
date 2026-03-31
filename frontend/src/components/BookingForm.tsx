@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from 'next/navigation';
+import { apiClient } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 import useFlights from "@/store/flights";
 
 interface BookingFormProps {
@@ -66,23 +68,21 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
     destination: false
   });
   const router = useRouter();
-  const BASE_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
   const fetchLocations = async (query: string) => {
     if (!query.trim()) return [];
-    const response = await fetch(`${BASE_API_URL}/reference-data/locations?keyword=${query}`);
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
+    return apiClient.get<any[]>("/reference-data/locations", {
+      params: { keyword: query },
+    });
   };
 
   const { data: originResults = [], isLoading: searchLoadingOrigin } = useQuery({
-    queryKey: ['locations', debouncedOriginRaw],
+    queryKey: queryKeys.locationSearch(debouncedOriginRaw),
     queryFn: () => fetchLocations(debouncedOriginRaw),
     enabled: !!debouncedOriginRaw.trim(),
   });
 
   const { data: destinationResults = [], isLoading: searchLoadingDestination } = useQuery({
-    queryKey: ['locations', debouncedDestinationRaw],
+    queryKey: queryKeys.locationSearch(debouncedDestinationRaw),
     queryFn: () => fetchLocations(debouncedDestinationRaw),
     enabled: !!debouncedDestinationRaw.trim(),
   });
@@ -137,8 +137,6 @@ export default function BookingForm({ prefillDestination }: BookingFormProps) {
     }
 
     setSearchParams(params);
-    setIsSearching(true);
-
     router.push(`/flights`);
   }
 

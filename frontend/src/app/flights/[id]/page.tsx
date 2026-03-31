@@ -3,38 +3,27 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 import useFlights from "@/store/flights";
 import { FlightOffer } from "@/types/flight_offer";
 
+interface FlightPricingResponse {
+  data?: {
+    flightOffers?: FlightOffer[];
+  };
+}
 
-const BASE_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL
-
-export default function FlightPricingPage({ params }: { params: Promise<{ id: string }> }) {
+export default function FlightPricingPage() {
   const router = useRouter();
   const selectedFlight = useFlights(state => state.selectedFlight) as FlightOffer
   const [flightOffer, setFlightOffer] = useState<FlightOffer>(selectedFlight);
   const selectFlight = useFlights(state => state.selectFlight);
   const [isNavigating, setIsNavigating] = useState(false);
 
-  const confirmPrice = async (flight: FlightOffer) => {
-    const url = `${BASE_API_URL}/shopping/flight-offers/pricing`;
-    const res = await fetch(url, {
-      method: "POST",
-      body: JSON.stringify(flight),
-      headers: {
-        "Content-Type": "application/json",
-      }
-    });
-
-    if (!res.ok) {
-      throw new Error("Failed to confirm pricing");
-    }
-    return res.json();
-  };
-
-  const { data: pricingData, isLoading: isPricingLoading, error } = useQuery({
-    queryKey: ['flightPricing', selectedFlight?.id],
-    queryFn: () => confirmPrice(selectedFlight),
+  const { data: pricingData, isLoading: isPricingLoading, error } = useQuery<FlightPricingResponse>({
+    queryKey: queryKeys.flightPricing(selectedFlight?.id),
+    queryFn: () => apiClient.post<FlightPricingResponse>("/shopping/flight-offers/pricing", selectedFlight),
     enabled: !!selectedFlight,
   });
 

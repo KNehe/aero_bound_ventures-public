@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { FaMapMarkerAlt } from "react-icons/fa";
+import { queryKeys } from "@/lib/queryKeys";
 import { fetchPopularDestinations } from "../utils/fetchPopularDestinations";
 
 type Destination = {
@@ -65,26 +66,15 @@ interface PopularDestinationsSectionProps {
 }
 
 export default function PopularDestinationsSection({ setPrefillDestination }: PopularDestinationsSectionProps) {
-  const [destinations, setDestinations] = useState<Destination[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const currentPeriod = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-  useEffect(() => {
-    const currentPeriod = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  const { data, isLoading, error } = useQuery({
+    queryKey: queryKeys.popularDestinations("DXB", currentPeriod),
+    queryFn: () => fetchPopularDestinations("DXB", currentPeriod),
+  });
 
-    fetchPopularDestinations("DXB", currentPeriod)
-      .then((data) => {
-        if (data && data.length > 0) {
-          setDestinations(data);
-        } else {
-          setDestinations(DEFAULT_DESTINATIONS);
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        setLoading(false);
-      });
-  }, []);
+  const destinations = data && data.length > 0 ? data : DEFAULT_DESTINATIONS;
+
   return (
     <section className="w-full bg-gray-100 py-20 px-4 md:px-0">
       <div className="max-w-5xl mx-auto text-center mb-12">
@@ -93,10 +83,12 @@ export default function PopularDestinationsSection({ setPrefillDestination }: Po
           Discover our most sought-after destinations and start planning your next adventure
         </p>
       </div>
-      {loading ? (
+      {isLoading ? (
         <div className="text-center text-blue-700 py-10">Loading...</div>
       ) : error ? (
-        <div className="text-center text-red-600 py-10">{error}</div>
+        <div className="text-center text-red-600 py-10">
+          {error instanceof Error ? error.message : "Failed to load destinations"}
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           {destinations.map((destination) => (

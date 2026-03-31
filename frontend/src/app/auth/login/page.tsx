@@ -43,26 +43,11 @@ function LoginForm() {
 
   const loginMutation = useMutation({
     mutationFn: async () => {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
       const formData = new URLSearchParams();
       formData.append("username", email);
       formData.append("password", password);
 
-      const response = await fetch(`${baseUrl}/token`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        credentials: "include",
-        body: formData.toString(),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Invalid email or password");
-      }
-
-      return response.json() as Promise<LoginResponse>;
+      return apiClient.postForm<LoginResponse>("/token", formData);
     },
     onSuccess: (data: LoginResponse) => {
       setUser(data.user);
@@ -77,6 +62,11 @@ function LoginForm() {
       }
     },
     onError: (err: unknown) => {
+      if (err instanceof ApiClientError) {
+        setError(err.detail || "Invalid email or password");
+        return;
+      }
+
       setError(err instanceof Error ? err.message : "Login failed. Please try again.");
     },
     onMutate: () => {

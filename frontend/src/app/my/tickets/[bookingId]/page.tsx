@@ -4,17 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import QRCode from "qrcode";
+import { useQuery } from "@tanstack/react-query";
 
 import useAuth from "@/store/auth";
 import { apiClient, isUnauthorizedError } from "@/lib/api";
-
-interface TicketPageData {
-  orderId: string;
-  pnr: string;
-  bookingDate: string;
-  status: "confirmed" | "pending" | "cancelled" | "paid" | "reversed" | "failed" | "refunded";
-  ticket_url?: string;
-}
+import { queryKeys } from "@/lib/queryKeys";
+import { TicketPageData } from "@/types/booking";
 
 export default function TicketDocumentPage() {
   const params = useParams();
@@ -22,47 +17,41 @@ export default function TicketDocumentPage() {
   const { logout, isAuthenticated, isHydrated } = useAuth();
   const bookingId = params.bookingId as string;
 
-  const [ticketData, setTicketData] = useState<TicketPageData | null>(null);
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [printError, setPrintError] = useState<string | null>(null);
 
+  const {
+    data: ticketData,
+    error,
+    isLoading: loading,
+  } = useQuery({
+    queryKey: queryKeys.bookingDetails(bookingId),
+    queryFn: () => apiClient.get<TicketPageData>(`/booking/flight-orders/${bookingId}`),
+    enabled: Boolean(bookingId && isHydrated),
+  });
+
+  const { data: qrCodeUrl } = useQuery({
+    queryKey: queryKeys.ticketQrCode(ticketData?.ticket_url ?? ""),
+    queryFn: () =>
+      QRCode.toDataURL(ticketData!.ticket_url!, {
+        width: 180,
+        margin: 1,
+        errorCorrectionLevel: "M",
+      }),
+    enabled: Boolean(ticketData?.ticket_url),
+  });
+
   useEffect(() => {
-    if (!bookingId || !isHydrated) return;
+    if (!error || !isUnauthorizedError(error)) {
+      return;
+    }
 
-    const loadTicket = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const data = await apiClient.get<TicketPageData>(`/booking/flight-orders/${bookingId}`);
-        setTicketData(data);
-
-        if (data.ticket_url) {
-          const qrDataUrl = await QRCode.toDataURL(data.ticket_url, {
-            width: 180,
-            margin: 1,
-            errorCorrectionLevel: "M",
-          });
-          setQrCodeUrl(qrDataUrl);
-        } else {
-          setQrCodeUrl(null);
-        }
-      } catch (err) {
-        if (isUnauthorizedError(err)) {
-          await logout();
-          router.push(`/auth/login?redirect=${encodeURIComponent(`/my/tickets/${bookingId}`)}`);
-          return;
-        }
-        setError(err instanceof Error ? err.message : "Failed to load ticket");
-      } finally {
-        setLoading(false);
-      }
+    const redirectToLogin = async () => {
+      await logout();
+      router.push(`/auth/login?redirect=${encodeURIComponent(`/my/tickets/${bookingId}`)}`);
     };
 
-    loadTicket();
-  }, [bookingId, isHydrated, logout, router]);
+    void redirectToLogin();
+  }, [bookingId, error, logout, router]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -222,7 +211,9 @@ export default function TicketDocumentPage() {
       <div className="min-h-screen bg-stone-100 flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
           <h1 className="text-xl font-semibold text-stone-900 mb-2">Ticket unavailable</h1>
-          <p className="text-sm text-stone-600 mb-4">{error || "Unable to load ticket."}</p>
+          <p className="text-sm text-stone-600 mb-4">
+            {error instanceof Error ? error.message : "Unable to load ticket."}
+          </p>
           <Link
             href={`/booking/success/${bookingId}`}
             className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium"

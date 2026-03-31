@@ -1,9 +1,11 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import useAuth from "@/store/auth";
 import { Booking, BookingStats, CursorPaginatedBookingsResponse } from "@/types/admin";
 import { apiClient, isUnauthorizedError, getApiBaseUrl } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 const BOOKING_STATUS = {
   CONFIRMED: "confirmed",
@@ -17,20 +19,49 @@ const BOOKING_STATUS = {
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { logout, userInfo, isAuthenticated } = useAuth();
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const { logout, userInfo } = useAuth();
   const [filter, setFilter] = useState<"all" | "processing" | "ready" | "failed">("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [stats, setStats] = useState<BookingStats | null>(null);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
-  const [statsError, setStatsError] = useState<string | null>(null);
-  const [isLoadingBookings, setIsLoadingBookings] = useState(true);
-  const [bookingsError, setBookingsError] = useState<string | null>(null);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
   const PAGE_SIZE = 20;
 
-  const filteredBookings = bookings.filter(booking => {
+  const {
+    data: stats,
+    error: statsError,
+    isLoading: isLoadingStats,
+  } = useQuery({
+    queryKey: queryKeys.adminStats,
+    queryFn: () => apiClient.get<BookingStats>("/admin/stats/bookings"),
+  });
+
+  const {
+    data: bookingsPages,
+    error: bookingsError,
+    isLoading: isLoadingBookings,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useInfiniteQuery({
+    queryKey: queryKeys.adminBookings(PAGE_SIZE),
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => {
+      const params: Record<string, string> = { limit: String(PAGE_SIZE) };
+      if (pageParam) {
+        params.cursor = pageParam;
+      }
+
+      return apiClient.get<CursorPaginatedBookingsResponse>("/admin/bookings", {
+        params,
+      });
+    },
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+  });
+
+  const bookings = useMemo(
+    () => bookingsPages?.pages.flatMap((page) => page.items) ?? [],
+    [bookingsPages]
+  );
+
+  const filteredBookings = bookings.filter((booking) => {
     const matchesFilter = filter === "all" ? true : booking.ticket_url ? "ready" : "processing";
     const pnr = booking.amadeus_order_response?.associatedRecords?.[0]?.reference || "";
     const matchesSearch =
@@ -114,57 +145,19 @@ export default function AdminDashboard() {
     router.push(`/admin/bookings/${bookingId}`);
   };
 
-  // Fetch booking statistics from API
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setIsLoadingStats(true);
-        setStatsError(null);
-
-        const data = await apiClient.get<BookingStats>('/admin/stats/bookings');
-        setStats(data);
-      } catch (error) {
-        console.error("Error fetching booking stats:", error);
-        if (isUnauthorizedError(error)) {
-          await logout();
-          router.push('/auth/login?redirect=/admin');
-          return;
-        }
-        setStatsError(error instanceof Error ? error.message : "Failed to load statistics");
-      } finally {
-        setIsLoadingStats(false);
-      }
-    };
-
-    fetchStats();
-  }, [logout, router]);
-
-  const fetchBookings = async (cursor?: string | null) => {
-    try {
-      setIsLoadingBookings(true);
-      setBookingsError(null);
-      const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
-      if (cursor) params.append('cursor', cursor);
-      const data = await apiClient.get<CursorPaginatedBookingsResponse>(`/admin/bookings?${params.toString()}`);
-      setBookings(prev => cursor ? [...prev, ...data.items] : data.items);
-      setNextCursor(data.next_cursor);
-      setHasMore(data.has_more);
-    } catch (error) {
-      console.error("Error fetching bookings:", error);
-      if (isUnauthorizedError(error)) {
-        await logout();
-        router.push('/auth/login?redirect=/admin');
+    const handleUnauthorized = async () => {
+      const authError = statsError ?? bookingsError;
+      if (!authError || !isUnauthorizedError(authError)) {
         return;
       }
-      setBookingsError(error instanceof Error ? error.message : "Failed to load bookings");
-    } finally {
-      setIsLoadingBookings(false);
-    }
-  };
 
-  useEffect(() => {
-    fetchBookings();
-  }, [logout, router]);
+      await logout();
+      router.push("/auth/login?redirect=/admin");
+    };
+
+    void handleUnauthorized();
+  }, [bookingsError, logout, router, statsError]);
 
   useEffect(() => {
     const url = `${getApiBaseUrl()}/notifications/${userInfo?.id}`;
@@ -216,7 +209,9 @@ export default function AdminDashboard() {
               <svg className="w-5 h-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
-              <p className="text-sm text-red-700">{statsError}</p>
+              <p className="text-sm text-red-700">
+                {statsError instanceof Error ? statsError.message : "Failed to load statistics"}
+              </p>
             </div>
           </div>
         )}
@@ -380,7 +375,9 @@ export default function AdminDashboard() {
                 <svg className="w-5 h-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
-                <p className="text-sm text-red-700">{bookingsError}</p>
+                <p className="text-sm text-red-700">
+                  {bookingsError instanceof Error ? bookingsError.message : "Failed to load bookings"}
+                </p>
               </div>
             </div>
           )}
@@ -488,14 +485,14 @@ export default function AdminDashboard() {
           )}
 
           {/* Pagination Controls */}
-          {hasMore && (
+          {hasNextPage && (
             <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-center">
               <button
-                onClick={() => fetchBookings(nextCursor)}
-                disabled={isLoadingBookings}
+                onClick={() => void fetchNextPage()}
+                disabled={isFetchingNextPage}
                 className="px-6 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {isLoadingBookings ? 'Loading...' : 'Load More'}
+                {isFetchingNextPage ? 'Loading...' : 'Load More'}
               </button>
             </div>
           )}

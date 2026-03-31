@@ -2,9 +2,11 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import useAuth from "@/store/auth";
 import { apiClient, isUnauthorizedError, ApiClientError } from "@/lib/api";
-
+import { queryKeys } from "@/lib/queryKeys";
+import { BookingSuccessData } from "@/types/booking";
 
 // Pesapal uses server-side integration
 
@@ -36,54 +38,6 @@ interface PesapalPaymentResponse {
   };
 }
 
-
-interface BookingSuccessData {
-  orderId: string;
-  pnr: string;
-  bookingDate: string;
-  status: "confirmed" | "pending" | "cancelled" | "paid" | "reversed" | "failed" | "refunded";
-  ticket_url?: string;
-  flightDetails: {
-    outbound: {
-      date: string;
-      segments: Array<{
-        departure: { airport: string; time: string; terminal?: string };
-        arrival: { airport: string; time: string; terminal?: string };
-        flight: string;
-        duration: string;
-      }>;
-    };
-    return?: {
-      date: string;
-      segments: Array<{
-        departure: { airport: string; time: string; terminal?: string };
-        arrival: { airport: string; time: string; terminal?: string };
-        flight: string;
-        duration: string;
-      }>;
-    };
-  };
-  passengers: Array<{
-    id: string;
-    type: string;
-    name: string;
-    seat?: string;
-  }>;
-  pricing: {
-    total: string;
-    currency: string;
-    breakdown: Array<{
-      item: string;
-      amount: string;
-    }>;
-  };
-  contact: {
-    name: string;
-    email: string;
-    phone: string;
-  };
-}
-
 export default function BookingSuccessPage() {
   // Status constants to avoid hardcoded strings (matching backend BookingStatus class)
   const BOOKING_STATUS = {
@@ -96,110 +50,108 @@ export default function BookingSuccessPage() {
     REFUNDED: "refunded",
   } as const;
   const router = useRouter();
-  const [bookingData, setBookingData] = useState<BookingSuccessData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [showPaymentIframe, setShowPaymentIframe] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
 
-  const { logout, isAuthenticated, isHydrated } = useAuth();
+  const { logout, isHydrated } = useAuth();
   const params = useParams();
-  const { orderId } = params;
-  // Handle Pesapal payment
-  const handlePayment = async () => {
-    if (!bookingData) return;
+  const orderId = params.orderId as string;
 
-    try {
-      setIsProcessingPayment(true);
+  const {
+    data: bookingData,
+    error,
+    isLoading: loading,
+  } = useQuery({
+    queryKey: queryKeys.bookingDetails(orderId),
+    queryFn: () => apiClient.get<BookingSuccessData>(`/booking/flight-orders/${orderId}`),
+    enabled: Boolean(orderId && isHydrated),
+  });
 
-      // Use first passenger's information (primary traveler) for Pesapal billing
-      const firstPassenger = bookingData.passengers[0];
-      const nameParts = firstPassenger?.name.split(' ') || bookingData.contact.name.split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ') || firstName;
+  useEffect(() => {
+    if (!error || !isUnauthorizedError(error)) {
+      return;
+    }
 
-      // Extract country calling code from phone number (format: +256 712345678)
-      const phoneMatch = bookingData.contact.phone.match(/^\+?(\d{1,3})\s?(.+)$/);
-      const countryCode = phoneMatch ? phoneMatch[1] : '256'; // Default to Uganda
-      const phoneNumber = phoneMatch ? phoneMatch[2].replace(/\s/g, '') : bookingData.contact.phone;
+    const redirectToLogin = async () => {
+      await logout();
+      router.push(`/auth/login?redirect=${encodeURIComponent(`/booking/success/${orderId}`)}`);
+    };
 
-      // Create payment request on backend using apiClient
-      const data = await apiClient.post<PesapalPaymentResponse>('/payments/pesapal/initiate', {
-        booking_id: bookingData.orderId,
-        amount: parseFloat(bookingData.pricing.total),
-        currency: 'USD',
-        description: `Flight booking ${bookingData.pnr}`,
-        callback_url: `${window.location.origin}/booking/payment/callback`,
-        billing_address: {
-          email_address: bookingData.contact.email,
-          phone_number: phoneNumber,
-          country_code: countryCode,
-          first_name: firstName,
-          last_name: lastName,
-        },
-      });
+    void redirectToLogin();
+  }, [error, logout, orderId, router]);
 
-      console.log('Payment response:', data);
+  const paymentMutation = useMutation({
+    mutationFn: async (request: PesapalPaymentRequest) => {
+      const data = await apiClient.post<PesapalPaymentResponse>(
+        "/payments/pesapal/initiate",
+        request
+      );
 
       if (data.error) {
-        throw new Error(data.error.message || 'Payment initiation failed');
+        throw new Error(data.error.message || "Payment initiation failed");
       }
 
-      // Show payment iframe instead of redirecting
+      return data;
+    },
+    onMutate: () => {
+      setIsProcessingPayment(true);
+    },
+    onSuccess: (data) => {
       setPaymentUrl(data.redirect_url);
       setShowPaymentIframe(true);
-    } catch (error) {
-      console.error('Payment error:', error);
-      if (isUnauthorizedError(error)) {
+    },
+    onError: async (mutationError) => {
+      console.error("Payment error:", mutationError);
+      if (isUnauthorizedError(mutationError)) {
         await logout();
         router.push(`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`);
         return;
       }
-      if (error instanceof ApiClientError) {
-        alert(error.detail || 'Failed to initiate payment');
+      if (mutationError instanceof ApiClientError) {
+        alert(mutationError.detail || "Failed to initiate payment");
       } else {
-        alert(error instanceof Error ? error.message : 'Failed to initiate payment. Please try again.');
+        alert(
+          mutationError instanceof Error
+            ? mutationError.message
+            : "Failed to initiate payment. Please try again."
+        );
       }
+    },
+    onSettled: () => {
       setIsProcessingPayment(false);
-    }
+    },
+  });
+
+  const handlePayment = async () => {
+    if (!bookingData) return;
+
+    const firstPassenger = bookingData.passengers[0];
+    const nameParts = firstPassenger?.name.split(" ") || bookingData.contact.name.split(" ");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || firstName;
+
+    const phoneMatch = bookingData.contact.phone.match(/^\+?(\d{1,3})\s?(.+)$/);
+    const countryCode = phoneMatch ? phoneMatch[1] : "256";
+    const phoneNumber = phoneMatch
+      ? phoneMatch[2].replace(/\s/g, "")
+      : bookingData.contact.phone;
+
+    await paymentMutation.mutateAsync({
+      booking_id: bookingData.orderId,
+      amount: parseFloat(bookingData.pricing.total),
+      currency: "USD",
+      description: `Flight booking ${bookingData.pnr}`,
+      callback_url: `${window.location.origin}/booking/payment/callback`,
+      billing_address: {
+        email_address: bookingData.contact.email,
+        phone_number: phoneNumber,
+        country_code: countryCode,
+        first_name: firstName,
+        last_name: lastName,
+      },
+    });
   };
-
-
-
-
-  useEffect(() => {
-    if (!orderId || !isHydrated) return;
-
-
-    const fetchBookingData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const currentPath = `/booking/success/${orderId}`;
-
-        const data = await apiClient.get<BookingSuccessData>(`/booking/flight-orders/${orderId}`);
-        setBookingData(data);
-
-
-
-        console.log("Fetched booking data:", data);
-
-      } catch (err) {
-        if (isUnauthorizedError(err)) {
-          await logout();
-          router.push(`/auth/login?redirect=${encodeURIComponent(`/booking/success/${orderId}`)}`);
-          return;
-        }
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBookingData();
-  }, [isHydrated, orderId, logout, router]);
 
   if (loading) {
     return (
@@ -222,7 +174,9 @@ export default function BookingSuccessPage() {
             </svg>
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Unable to Load Booking</h2>
-          <p className="text-gray-600 mb-4">{error || "Booking not found"}</p>
+          <p className="text-gray-600 mb-4">
+            {error instanceof Error ? error.message : "Booking not found"}
+          </p>
           <Link href="/" className="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors">
             Return Home
           </Link>

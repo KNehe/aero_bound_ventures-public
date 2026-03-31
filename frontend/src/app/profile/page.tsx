@@ -6,6 +6,7 @@ import useAuth from '@/store/auth';
 import { MIN_PASSWORD_LENGTH } from '@/constants/auth';
 import { apiClient, isUnauthorizedError, ApiClientError } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { useMutation } from "@tanstack/react-query";
 
 interface FormData {
   old_password: string;
@@ -30,12 +31,43 @@ export default function ProfilePage() {
     confirm_password: ""
   });
   const [errors, setErrors] = useState<FormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'success' | 'error' | null>(null);
+
+  const changePasswordMutation = useMutation({
+    mutationFn: () =>
+      apiClient.post('/change-password/', {
+        old_password: formData.old_password,
+        new_password: formData.new_password,
+        confirm_password: formData.confirm_password,
+      }),
+    onSuccess: () => {
+      setMessage("Password changed successfully! Redirecting to login...");
+      setMessageType('success');
+      setFormData({ old_password: "", new_password: "", confirm_password: "" });
+
+      window.setTimeout(async () => {
+        await logout();
+        router.push('/auth/login');
+      }, 2000);
+    },
+    onError: async (error) => {
+      if (isUnauthorizedError(error)) {
+        await logout();
+        router.push('/auth/login?redirect=/profile');
+        return;
+      }
+      if (error instanceof ApiClientError) {
+        setMessage(error.detail || "Failed to change password");
+      } else {
+        setMessage(error instanceof Error ? error.message : "Failed to change password. Please try again.");
+      }
+      setMessageType('error');
+    },
+  });
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -66,47 +98,15 @@ export default function ProfilePage() {
     return newErrors;
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-    setIsSubmitting(true);
     setMessage(null); // Clear previous messages
-    try {
-      await apiClient.post('/change-password/', {
-        old_password: formData.old_password,
-        new_password: formData.new_password,
-        confirm_password: formData.confirm_password,
-      });
-
-      setMessage("Password changed successfully! Redirecting to login...");
-      setMessageType('success');
-      setFormData({ old_password: "", new_password: "", confirm_password: "" });
-
-      // Session is invalidated by the backend, logout and redirect
-      setTimeout(async () => {
-        await logout();
-        router.push('/auth/login');
-      }, 2000);
-    } catch (error) {
-      console.error('Password change error:', error);
-      if (isUnauthorizedError(error)) {
-        await logout();
-        router.push('/auth/login?redirect=/profile');
-        return;
-      }
-      if (error instanceof ApiClientError) {
-        setMessage(error.detail || "Failed to change password");
-      } else {
-        setMessage(error instanceof Error ? error.message : "Failed to change password. Please try again.");
-      }
-      setMessageType('error');
-    } finally {
-      setIsSubmitting(false);
-    }
+    changePasswordMutation.mutate();
   };
 
   return (
@@ -219,10 +219,10 @@ export default function ProfilePage() {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={changePasswordMutation.isPending}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isSubmitting ? "Changing Password..." : "Change Password"}
+            {changePasswordMutation.isPending ? "Changing Password..." : "Change Password"}
           </button>
         </form>
       </div>

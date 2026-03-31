@@ -1,10 +1,11 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import useAuth from "@/store/auth";
 import { Booking, TicketUploadResponse } from "@/types/admin";
 import { apiClient, isUnauthorizedError, ApiClientError } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 export default function BookingDetailPage() {
   const params = useParams();
@@ -60,27 +61,60 @@ export default function BookingDetailPage() {
     setTimeout(() => setIsViewingTicket(false), 1000);
   };
 
-  const fetchBooking = async () => {
-    return apiClient.get<Booking>(`/admin/bookings/${bookingId}`);
-  };
-
   const { data: bookingData, isLoading, error: queryError } = useQuery({
-    queryKey: ['adminBooking', bookingId],
-    queryFn: fetchBooking,
+    queryKey: queryKeys.adminBooking(bookingId),
+    queryFn: () => apiClient.get<Booking>(`/admin/bookings/${bookingId}`),
     enabled: isAuthenticated,
   });
 
-  if (queryError && isUnauthorizedError(queryError)) {
-    logout().then(() => {
+  useEffect(() => {
+    if (!queryError || !isUnauthorizedError(queryError)) {
+      return;
+    }
+
+    const redirectToLogin = async () => {
+      await logout();
       router.push(`/auth/login?redirect=/admin/bookings/${bookingId}`);
-    });
-  }
+    };
+
+    void redirectToLogin();
+  }, [bookingId, logout, queryError, router]);
 
   const error = queryError
     ? (queryError instanceof ApiClientError && queryError.status === 404)
       ? "Booking not found"
       : (queryError instanceof Error ? queryError.message : "Failed to load booking")
     : null;
+
+  const uploadMutation = useMutation({
+    mutationFn: (formData: FormData) =>
+      apiClient.upload<TicketUploadResponse>(`/tickets/upload/${bookingId}`, formData),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminBooking(bookingId) });
+      setUploadSuccess(true);
+      setSelectedFile(null);
+
+      const fileInput = document.getElementById("ticket-file") as HTMLInputElement | null;
+      if (fileInput) {
+        fileInput.value = "";
+      }
+    },
+    onError: async (err) => {
+      if (isUnauthorizedError(err)) {
+        await logout();
+        router.push(`/auth/login?redirect=/admin/bookings/${bookingId}`);
+        return;
+      }
+      if (err instanceof ApiClientError) {
+        setUploadError(err.detail || "Upload failed");
+      } else {
+        setUploadError(err instanceof Error ? err.message : "Upload failed");
+      }
+    },
+    onSettled: () => {
+      setIsUploading(false);
+    },
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -118,33 +152,8 @@ export default function BookingDetailPage() {
     try {
       const formData = new FormData();
       formData.append("file", selectedFile);
-
-      await apiClient.upload<TicketUploadResponse>(`/tickets/upload/${bookingId}`, formData);
-
-      // Invalidate the query cache to refetch fresh data with the new ticket URL
-      queryClient.invalidateQueries({ queryKey: ['adminBooking', bookingId] });
-      setUploadSuccess(true);
-      setSelectedFile(null);
-
-      // Reset file input
-      const fileInput = document.getElementById("ticket-file") as HTMLInputElement;
-      if (fileInput) {
-        fileInput.value = "";
-      }
-    } catch (err) {
-      if (isUnauthorizedError(err)) {
-        await logout();
-        router.push(`/auth/login?redirect=/admin/bookings/${bookingId}`);
-        return;
-      }
-      if (err instanceof ApiClientError) {
-        setUploadError(err.detail || "Upload failed");
-      } else {
-        setUploadError(err instanceof Error ? err.message : "Upload failed");
-      }
-    } finally {
-      setIsUploading(false);
-    }
+      await uploadMutation.mutateAsync(formData);
+    } catch {}
   };
 
   if (isLoading) {

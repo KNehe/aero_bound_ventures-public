@@ -2,6 +2,15 @@
 import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+
+import { apiClient } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
+
+interface PaymentCallbackResponse {
+  status: "success" | "failed" | "pending" | "error" | "reversed";
+  message: string;
+}
 
 function PaymentCallbackContent() {
   const router = useRouter();
@@ -9,70 +18,75 @@ function PaymentCallbackContent() {
   const [status, setStatus] = useState<"processing" | "success" | "failed">("processing");
   const [message, setMessage] = useState("Processing your payment...");
   const [originalBookingId, setOriginalBookingId] = useState<string>("");
+  const orderTrackingId = searchParams.get("OrderTrackingId");
+  const orderMerchantReference = searchParams.get("OrderMerchantReference");
 
   useEffect(() => {
-    const orderTrackingId = searchParams.get("OrderTrackingId");
-    const orderMerchantReference = searchParams.get("OrderMerchantReference");
+    if (!orderMerchantReference) {
+      return;
+    }
 
+    const bookingId = orderMerchantReference.includes("-")
+      ? orderMerchantReference.substring(0, orderMerchantReference.lastIndexOf("-"))
+      : orderMerchantReference;
+
+    setOriginalBookingId(bookingId);
+  }, [orderMerchantReference]);
+
+  const { data, error } = useQuery({
+    queryKey: queryKeys.paymentCallback(orderTrackingId ?? "", orderMerchantReference ?? ""),
+    queryFn: () =>
+      apiClient.get<PaymentCallbackResponse>("/payments/pesapal/callback", {
+        params: {
+          OrderTrackingId: orderTrackingId!,
+          OrderMerchantReference: orderMerchantReference!,
+        },
+      }),
+    enabled: Boolean(orderTrackingId && orderMerchantReference),
+  });
+
+  useEffect(() => {
     if (!orderTrackingId || !orderMerchantReference) {
       setStatus("failed");
       setMessage("Invalid payment callback");
       return;
     }
 
-    // Extract original booking ID from merchant reference (format: booking_id-timestamp)
-    const originalBookingId = orderMerchantReference.includes('-')
-      ? orderMerchantReference.substring(0, orderMerchantReference.lastIndexOf('-'))
-      : orderMerchantReference;
+    if (error) {
+      setStatus("failed");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to verify payment. Please contact support."
+      );
+      return;
+    }
 
-    setOriginalBookingId(originalBookingId);
+    if (!data) {
+      return;
+    }
 
-    // Call backend to verify payment
-    const verifyPayment = async () => {
-      try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-        const response = await fetch(
-          `${baseUrl}/payments/pesapal/callback?OrderTrackingId=${orderTrackingId}&OrderMerchantReference=${orderMerchantReference}`
-        );
+    if (data.status === "success") {
+      setStatus("success");
+      setMessage("Payment completed successfully!");
+      window.setTimeout(() => {
+        router.push(`/booking/success/${originalBookingId}?payment=success`);
+      }, 5000);
+      return;
+    }
 
-        if (!response.ok) {
-          throw new Error("Failed to verify payment");
-        }
+    if (data.status === "pending") {
+      setStatus("processing");
+      setMessage("Payment is pending. Please complete the payment to confirm your booking.");
+      window.setTimeout(() => {
+        router.push(`/booking/success/${originalBookingId}?payment=pending`);
+      }, 5000);
+      return;
+    }
 
-        const data = await response.json();
-
-        if (data.status === "success") {
-          setStatus("success");
-          setMessage("Payment completed successfully!");
-
-          // Redirect to booking success page after 2 seconds (use original booking ID)
-          setTimeout(() => {
-            router.push(`/booking/success/${originalBookingId}?payment=success`);
-          }, 5000);
-        } else if (data.status === "failed") {
-          setStatus("failed");
-          setMessage("Payment failed. Please try again.");
-        } else if (data.status === "pending") {
-          setStatus("processing");
-          setMessage("Payment is pending. Please complete the payment to confirm your booking.");
-
-          // Redirect to booking page (use original booking ID)
-          setTimeout(() => {
-            router.push(`/booking/success/${originalBookingId}?payment=pending`);
-          }, 5000);
-        } else {
-          setStatus("failed");
-          setMessage(data.message || "Payment verification failed. Please contact support.");
-        }
-      } catch (error) {
-        console.error("Payment verification error:", error);
-        setStatus("failed");
-        setMessage("Unable to verify payment. Please contact support.");
-      }
-    };
-
-    verifyPayment();
-  }, [searchParams, router]);
+    setStatus("failed");
+    setMessage(data.message || "Payment verification failed. Please contact support.");
+  }, [data, error, orderMerchantReference, orderTrackingId, originalBookingId, router]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">

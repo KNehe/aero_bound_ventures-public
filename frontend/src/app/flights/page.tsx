@@ -5,26 +5,20 @@ import Link from 'next/link';
 import { FaPlane, FaCalendarAlt, FaUsers, FaArrowLeft } from 'react-icons/fa';
 import FlightOfferCard from '@/components/FlightOfferCard';
 import FlightCardSkeleton from '@/components/FlightCardSkeleton';
+import { apiClient } from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
 import useFlights from '@/store/flights';
 import type { FlightOffer } from '@/types/flight_offer';
 
 export default function FlightsPage() {
   const { searchParams } = useFlights();
-  const BASE_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-  const fetchFlights = async (params: any) => {
-    const queryParams = new URLSearchParams(params);
-    const url = `${BASE_API_URL}/shopping/flight-offers?${queryParams.toString()}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error('Failed to fetch flights');
-    }
-    return response.json();
-  };
 
   const { data: flights, error, isLoading } = useQuery<FlightOffer[]>({
-    queryKey: ['flights', searchParams],
-    queryFn: () => fetchFlights(searchParams),
+    queryKey: queryKeys.flights(searchParams ?? {}),
+    queryFn: () =>
+      apiClient.get<FlightOffer[]>('/shopping/flight-offers', {
+        params: searchParams ?? {},
+      }),
     enabled: !!searchParams,
   });
 
