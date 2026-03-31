@@ -8,7 +8,14 @@
  * - TypeScript support
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+function normalizeApiBaseUrl(rawBaseUrl?: string): string {
+  const fallbackBaseUrl = 'http://localhost:8000/api/v1';
+  const baseUrl = (rawBaseUrl || fallbackBaseUrl).replace(/\/$/, '');
+
+  return baseUrl.endsWith('/api/v1') ? baseUrl : `${baseUrl}/api/v1`;
+}
+
+const API_BASE_URL = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL);
 
 export interface ApiError {
   status: number;

@@ -71,6 +71,7 @@ export default function PopularDestinationsSection({ setPrefillDestination }: Po
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.popularDestinations("DXB", currentPeriod),
     queryFn: () => fetchPopularDestinations("DXB", currentPeriod),
+    retry: 1,
   });
 
   const destinations = data && data.length > 0 ? data : DEFAULT_DESTINATIONS;
@@ -85,12 +86,14 @@ export default function PopularDestinationsSection({ setPrefillDestination }: Po
       </div>
       {isLoading ? (
         <div className="text-center text-blue-700 py-10">Loading...</div>
-      ) : error ? (
-        <div className="text-center text-red-600 py-10">
-          {error instanceof Error ? error.message : "Failed to load destinations"}
-        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        <div className="space-y-6">
+          {error && (
+            <div className="max-w-6xl mx-auto rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              Live destination analytics are temporarily unavailable. Showing featured destinations instead.
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           {destinations.map((destination) => (
             <div key={destination.destination} className="bg-white rounded-2xl shadow-lg overflow-hidden transition-transform hover:-translate-y-2 hover:shadow-xl">
               <div className="relative h-48 overflow-hidden">
@@ -121,6 +124,7 @@ export default function PopularDestinationsSection({ setPrefillDestination }: Po
               </div>
             </div>
           ))}
+          </div>
         </div>
       )}
     </section>

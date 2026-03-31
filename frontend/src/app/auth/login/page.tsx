@@ -6,7 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import useAuth from "@/store/auth";
 import { LoginResponse } from "@/types/auth";
 import { ADMIN_GROUP_NAME, MIN_PASSWORD_LENGTH } from "@/constants/auth";
-import { apiClient, ApiClientError } from "@/lib/api";
+import { apiClient, ApiClientError, getApiBaseUrl } from "@/lib/api";
 
 function LoginForm() {
   const router = useRouter();
@@ -175,7 +175,7 @@ function LoginForm() {
                   type="button"
                   onClick={() => {
                     const redirect = redirectTo !== "/" ? `?redirect=${encodeURIComponent(redirectTo)}` : "";
-                    window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/google${redirect}`;
+                    window.location.href = `${getApiBaseUrl()}/auth/google${redirect}`;
                   }}
                   className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 font-medium py-3 px-4 rounded-md hover:bg-gray-50 transition-colors"
                 >
