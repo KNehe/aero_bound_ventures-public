@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { queryKeys } from "@/lib/queryKeys";
 import { fetchPopularDestinations } from "../utils/fetchPopularDestinations";
+import { useHomePrefill } from "@/components/home/HomePrefillProvider";
 
 type Destination = {
   destination: string;
@@ -60,12 +61,8 @@ const IATA_TO_CITY: Record<string, string> = {
   // Add more as needed
 };
 
-
-interface PopularDestinationsSectionProps {
-  setPrefillDestination: (destination: string) => void;
-}
-
-export default function PopularDestinationsSection({ setPrefillDestination }: PopularDestinationsSectionProps) {
+export default function PopularDestinationsSection() {
+  const { setPrefillDestination } = useHomePrefill();
   const currentPeriod = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
   const { data, isLoading, error } = useQuery({
