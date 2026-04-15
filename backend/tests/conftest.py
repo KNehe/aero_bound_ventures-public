@@ -5,6 +5,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel
 from fastapi.testclient import TestClient
 
+# Change this when migrating to a new API version (e.g., "/api/v2").
+API_V1_PREFIX = "/api/v1"
 TEST_DB_NAME = "test_db"
 PG_HOST = "127.0.0.1"
 URL = os.getenv(
