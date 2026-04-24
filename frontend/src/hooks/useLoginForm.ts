@@ -28,7 +28,7 @@ export function useLoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/";
 
-  const { setUser, isAuthenticated, isHydrated } = useAuth();
+  const { setUser, checkAuth, isAuthenticated, isHydrated } = useAuth();
 
   const [mode, setMode] = useState<AuthMode>("login");
   const [error, setError] = useState("");
@@ -37,6 +37,10 @@ export function useLoginForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const handleAuthenticatedRedirect = (groups: Array<{ name: string }>) => {
+    router.push(getRedirectTarget(redirectTo, groups));
+  };
 
   useEffect(() => {
     if (!isHydrated || !isAuthenticated) {
@@ -52,19 +56,39 @@ export function useLoginForm() {
   }, [isAuthenticated, isHydrated, redirectTo, router]);
 
   const loginMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({
+      loginEmail,
+      loginPassword,
+    }: {
+      loginEmail: string;
+      loginPassword: string;
+    }) => {
       const formData = new URLSearchParams();
-      formData.append("username", email);
-      formData.append("password", password);
+      formData.append("username", loginEmail);
+      formData.append("password", loginPassword);
 
       return apiClient.postForm<LoginResponse>("/token", formData);
     },
     onSuccess: (data) => {
       setUser(data.user);
       toast.success("Signed in successfully");
-      router.push(getRedirectTarget(redirectTo, data.user.groups));
+      handleAuthenticatedRedirect(data.user.groups);
     },
-    onError: (err: unknown) => {
+    onError: async (err: unknown) => {
+      if (err instanceof TypeError) {
+        const isAuthenticatedAfterError = await checkAuth();
+
+        if (isAuthenticatedAfterError) {
+          const userInfo = useAuth.getState().userInfo;
+
+          if (userInfo) {
+            toast.success("Signed in successfully");
+            handleAuthenticatedRedirect(userInfo.groups);
+            return;
+          }
+        }
+      }
+
       const message =
         err instanceof ApiClientError
           ? err.detail || "Invalid email or password"
@@ -90,7 +114,7 @@ export function useLoginForm() {
       toast.success("Account created", {
         description: "Signing you in now.",
       });
-      loginMutation.mutate();
+      loginMutation.mutate({ loginEmail: email, loginPassword: password });
     },
     onError: (err: unknown) => {
       const message =
@@ -110,7 +134,16 @@ export function useLoginForm() {
 
   const handleLogin = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    loginMutation.mutate();
+
+    if (loginMutation.isPending) {
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    const loginEmail = String(formData.get("email") || "").trim();
+    const loginPassword = String(formData.get("password") || "");
+
+    loginMutation.mutate({ loginEmail, loginPassword });
   };
 
   const handleSignup = (event: FormEvent<HTMLFormElement>) => {

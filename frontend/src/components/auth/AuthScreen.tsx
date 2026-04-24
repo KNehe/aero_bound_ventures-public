@@ -42,6 +42,7 @@ export default function AuthScreen() {
           <div className="bg-white rounded-lg shadow-xl p-8">
             <div className="flex border-b border-gray-200 mb-6">
               <button
+                type="button"
                 onClick={() => switchMode("login")}
                 className={`flex-1 py-3 text-center font-medium transition-colors ${
                   isLogin
@@ -52,6 +53,7 @@ export default function AuthScreen() {
                 Login
               </button>
               <button
+                type="button"
                 onClick={() => switchMode("signup")}
                 className={`flex-1 py-3 text-center font-medium transition-colors ${
                   !isLogin
@@ -105,6 +107,7 @@ export default function AuthScreen() {
                   </label>
                   <input
                     id="email"
+                    name="email"
                     type="email"
                     required
                     value={email}
@@ -124,6 +127,7 @@ export default function AuthScreen() {
                   <div className="relative">
                     <input
                       id="password"
+                      name="password"
                       type={showPassword ? "text" : "password"}
                       required
                       value={password}
