@@ -66,6 +66,9 @@ security_config = SecurityConfig(
     auto_ban_duration=int(os.getenv("AUTO_BAN_DURATION", 86400)),
     enable_penetration_detection=bool(os.getenv("ENABLE_PENETRATION_DETECTION", True)),
     custom_log_file=None,
+    enable_agent=bool(os.getenv("FASTAPI_GUARD_ENABLE_AGENT", False)),
+    agent_api_key=os.getenv("FASTAPI_GUARD_AGENT_API_KEY", ""),
+    agent_project_encryption_key=os.getenv("FASTAPI_GUARD_AGENT_PROJECT_ENCRYPTION_KEY", ""),
     # Log suspicious activity but don't block for testing
     passive_mode=bool(os.getenv("PASSIVE_MODE", True)),
 )
