@@ -69,6 +69,9 @@ security_config = SecurityConfig(
     enable_agent=bool(os.getenv("FASTAPI_GUARD_ENABLE_AGENT", False)),
     agent_api_key=os.getenv("FASTAPI_GUARD_AGENT_API_KEY", ""),
     agent_project_encryption_key=os.getenv("FASTAPI_GUARD_AGENT_PROJECT_ENCRYPTION_KEY", ""),
+    agent_project_id=os.getenv("FASTAPI_GUARD_AGENT_PROJECT_ID", ""),
+    agent_endpoint=os.getenv("FASTAPI_GUARD_AGENT_ENDPOINT", ""),
+    enable_rate_limiting=bool(os.getenv("ENABLE_RATE_LIMITING", True)),
     # Log suspicious activity but don't block for testing
     passive_mode=bool(os.getenv("PASSIVE_MODE", True)),
 )
