@@ -3,7 +3,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
 import useAuth from "@/store/auth";
 import { ADMIN_GROUP_NAME, MIN_PASSWORD_LENGTH } from "@/constants/auth";
 import { LoginResponse } from "@/types/auth";
@@ -71,7 +70,6 @@ export function useLoginForm() {
     },
     onSuccess: (data) => {
       setUser(data.user);
-      toast.success("Signed in successfully");
       handleAuthenticatedRedirect(data.user.groups);
     },
     onError: async (err: unknown) => {
@@ -82,7 +80,6 @@ export function useLoginForm() {
           const userInfo = useAuth.getState().userInfo;
 
           if (userInfo) {
-            toast.success("Signed in successfully");
             handleAuthenticatedRedirect(userInfo.groups);
             return;
           }
@@ -97,7 +94,6 @@ export function useLoginForm() {
             : "Login failed. Please try again.";
 
       setError(message);
-      toast.error("Unable to sign in", { description: message });
     },
     onMutate: () => {
       setError("");
@@ -111,9 +107,6 @@ export function useLoginForm() {
         password,
       }),
     onSuccess: () => {
-      toast.success("Account created", {
-        description: "Signing you in now.",
-      });
       loginMutation.mutate({ loginEmail: email, loginPassword: password });
     },
     onError: (err: unknown) => {
@@ -125,7 +118,6 @@ export function useLoginForm() {
             : "Signup failed. Please try again.";
 
       setError(message);
-      toast.error("Unable to create account", { description: message });
     },
     onMutate: () => {
       setError("");
@@ -153,14 +145,12 @@ export function useLoginForm() {
     if (password !== confirmPassword) {
       const message = "Passwords do not match";
       setError(message);
-      toast.error(message);
       return;
     }
 
     if (password.length < MIN_PASSWORD_LENGTH) {
       const message = `Password must be at least ${MIN_PASSWORD_LENGTH} characters long`;
       setError(message);
-      toast.error("Password is too short", { description: message });
       return;
     }
 

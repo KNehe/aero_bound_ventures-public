@@ -1,13 +1,11 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import useAuth from "@/store/auth";
 import { Booking, BookingStats, CursorPaginatedBookingsResponse } from "@/types/admin";
 import { apiClient, isUnauthorizedError } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
-import { useNotifications } from "@/hooks/useNotifications";
 
 const BOOKING_STATUS = {
   CONFIRMED: "confirmed",
@@ -25,9 +23,6 @@ export default function AdminDashboard() {
   const [filter, setFilter] = useState<"all" | "processing" | "ready" | "failed">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const PAGE_SIZE = 20;
-  const { notifications, error: notificationsError } = useNotifications();
-  const hasPrimedNotifications = useRef(false);
-  const seenNotificationIds = useRef<Set<string>>(new Set());
 
   const {
     data: stats,
@@ -163,41 +158,6 @@ export default function AdminDashboard() {
 
     void handleUnauthorized();
   }, [bookingsError, logout, router, statsError]);
-
-  useEffect(() => {
-    if (!notifications.length) {
-      return;
-    }
-
-    if (!hasPrimedNotifications.current) {
-      notifications.forEach((notification) => {
-        seenNotificationIds.current.add(notification.id);
-      });
-      hasPrimedNotifications.current = true;
-      return;
-    }
-
-    const unseenNotifications = notifications.filter(
-      (notification) => !seenNotificationIds.current.has(notification.id)
-    );
-
-    unseenNotifications.forEach((notification) => {
-      seenNotificationIds.current.add(notification.id);
-      toast.info("New admin update", {
-        description: notification.message,
-      });
-    });
-  }, [notifications]);
-
-  useEffect(() => {
-    if (!notificationsError) {
-      return;
-    }
-
-    toast.error("Notification stream unavailable", {
-      description: notificationsError,
-    });
-  }, [notificationsError]);
 
   // Use API stats only - no fallback to mock data
   const statsTotalBookings = stats?.total_bookings;

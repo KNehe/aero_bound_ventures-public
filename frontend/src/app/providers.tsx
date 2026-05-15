@@ -1,10 +1,12 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { Toaster } from 'sonner';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname();
     const [queryClient] = useState(
         () =>
             new QueryClient({
@@ -17,10 +19,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             }),
     );
 
+    const shouldRenderToaster = pathname !== '/auth/login';
+
     return (
         <QueryClientProvider client={queryClient}>
             {children}
-            <Toaster position="top-right" richColors closeButton />
+            {shouldRenderToaster ? <Toaster position="top-right" richColors closeButton /> : null}
         </QueryClientProvider>
     );
 }
