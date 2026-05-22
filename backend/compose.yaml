@@ -6,7 +6,7 @@ services:
     ports:
       - "8000:80"
     environment:
-      - DATABASE_URL=${DATABASE_URL}
+      - DOPPLER_TOKEN=${DOPPLER_TOKEN}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
@@ -16,7 +16,6 @@ services:
     volumes:
       - .:/app/backend
       - /app/backend/.venv  # Exclude virtual environment from volume mount
-    command: ["/app/backend/.venv/bin/fastapi", "run", "main.py", "--port", "80", "--host", "0.0.0.0"]
   db:
     image: postgres:17
     container_name: postgres-db

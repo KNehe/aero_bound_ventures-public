@@ -113,40 +113,7 @@ jobs:
           HOST: ${{ needs.deploy-infrastructure.outputs.ec2_public_ip }}
           USER: ubuntu
           GH_PAT: ${{ secrets.GH_PAT }}
-          CERTBOT_EMAIL: ${{ secrets.MAIL_FROM }}
-          # Env vars for .env file generation
-          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
-          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
-          MAIL_FROM: ${{ secrets.MAIL_FROM }}
-          MAIL_PORT: ${{ secrets.MAIL_PORT }}
-          MAIL_SERVER: ${{ secrets.MAIL_SERVER }}
-          ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          ALGORITHM: ${{ secrets.ALGORITHM }}
-          AMADEUS_API_KEY: ${{ secrets.AMADEUS_API_KEY }}
-          AMADEUS_API_SECRET: ${{ secrets.AMADEUS_API_SECRET }}
-          AMADEUS_BASE_URL: ${{ secrets.AMADEUS_BASE_URL }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          PESAPAL_CONSUMER_KEY: ${{ secrets.PESAPAL_CONSUMER_KEY }}
-          PESAPAL_CONSUMER_SECRET: ${{ secrets.PESAPAL_CONSUMER_SECRET }}
-          PESAPAL_BASE_URL: ${{ secrets.PESAPAL_BASE_URL }}
-          PESAPAL_IPN_ID: ${{ secrets.PESAPAL_IPN_ID }}
-          CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
-          REDIS_URL: ${{ secrets.REDIS_URL }}
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
-          CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
-          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
-          ENVIRONMENT: ${{ secrets.ENVIRONMENT }}
-          FLIGHT_SERVICE_PROVIDER: ${{ secrets.FLIGHT_SERVICE_PROVIDER }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          FASTAPI_GUARD_ENABLE_AGENT: ${{ secrets.FASTAPI_GUARD_ENABLE_AGENT }}
-          FASTAPI_GUARD_AGENT_API_KEY: ${{ secrets.FASTAPI_GUARD_AGENT_API_KEY }}
-          FASTAPI_GUARD_AGENT_PROJECT_ENCRYPTION_KEY: ${{ secrets.FASTAPI_GUARD_AGENT_PROJECT_ENCRYPTION_KEY }}
-          FASTAPI_GUARD_AGENT_PROJECT_ID: ${{ secrets.FASTAPI_GUARD_AGENT_PROJECT_ID }}
-          FASTAPI_GUARD_AGENT_ENDPOINT: ${{ secrets.FASTAPI_GUARD_AGENT_ENDPOINT }}
-          ENABLE_RATE_LIMITING: ${{ secrets.ENABLE_RATE_LIMITING }}
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: |
           echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
 
@@ -189,6 +156,13 @@ jobs:
                 sudo usermod -aG docker ubuntu
             fi
 
+            if ! command -v doppler &> /dev/null; then
+                echo 'Doppler CLI not found. Installing...'
+                curl -Ls --tlsv1.2 --proto '=https' --retry 3 https://packages.doppler.com/public/cli/install.deb.sh | sudo bash
+                sudo apt-get update -y
+                sudo apt-get install -y doppler
+            fi
+
             # Debug Info
             echo 'Debug: Checking permissions...'
             id
@@ -208,52 +182,21 @@ jobs:
 
             cd backend
 
-            # 4. Generate .env file dynamically
-            cat <<EOF > .env
-          MAIL_USERNAME=${MAIL_USERNAME}
-          MAIL_PASSWORD=${MAIL_PASSWORD}
-          MAIL_FROM=${MAIL_FROM}
-          MAIL_PORT=${MAIL_PORT}
-          MAIL_SERVER=${MAIL_SERVER}
-          ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
-          SECRET_KEY=${SECRET_KEY}
-          ALGORITHM=${ALGORITHM}
-          AMADEUS_API_KEY=${AMADEUS_API_KEY}
-          AMADEUS_API_SECRET=${AMADEUS_API_SECRET}
-          AMADEUS_BASE_URL=${AMADEUS_BASE_URL}
-          DATABASE_URL=${DATABASE_URL}
-          PESAPAL_CONSUMER_KEY=${PESAPAL_CONSUMER_KEY}
-          PESAPAL_CONSUMER_SECRET=${PESAPAL_CONSUMER_SECRET}
-          PESAPAL_BASE_URL=${PESAPAL_BASE_URL}
-          PESAPAL_IPN_ID=${PESAPAL_IPN_ID}
-          CLOUDINARY_URL=${CLOUDINARY_URL}
-          REDIS_URL=${REDIS_URL}
-          GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-          GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-          GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
-          CORS_ORIGINS=${CORS_ORIGINS}
-          FRONTEND_URL=${FRONTEND_URL}
-          ENVIRONMENT=${ENVIRONMENT}
-          FLIGHT_SERVICE_PROVIDER=${FLIGHT_SERVICE_PROVIDER}
-          GEMINI_API_KEY=${GEMINI_API_KEY}
-          FASTAPI_GUARD_ENABLE_AGENT=${FASTAPI_GUARD_ENABLE_AGENT}
-          FASTAPI_GUARD_AGENT_API_KEY=${FASTAPI_GUARD_AGENT_API_KEY}
-          FASTAPI_GUARD_AGENT_PROJECT_ENCRYPTION_KEY=${FASTAPI_GUARD_AGENT_PROJECT_ENCRYPTION_KEY}
-          FASTAPI_GUARD_AGENT_PROJECT_ID=${FASTAPI_GUARD_AGENT_PROJECT_ID}
-          FASTAPI_GUARD_AGENT_ENDPOINT=${FASTAPI_GUARD_AGENT_ENDPOINT}
-          ENABLE_RATE_LIMITING=${ENABLE_RATE_LIMITING}
-          EOF
+            # 4. Use Doppler-managed runtime secrets for Docker Compose
+            export DOPPLER_TOKEN='${DOPPLER_TOKEN}'
+            doppler secrets download --no-file --format env > /dev/null
+            CERTBOT_EMAIL=$(doppler secrets get MAIL_FROM --plain)
 
             # 5. Deploy Docker containers
             # Use 'docker compose' (v2) if available, otherwise 'docker-compose'
             if docker compose version &> /dev/null; then
               echo 'Using docker compose v2'
-              sudo docker compose down
-              sudo docker compose up -d --build
+              sudo --preserve-env=DOPPLER_TOKEN doppler run -- docker compose down
+              sudo --preserve-env=DOPPLER_TOKEN doppler run -- docker compose up -d --build
             else
               echo 'Using legacy docker-compose'
-              sudo docker-compose down
-              sudo docker-compose up -d --build
+              sudo --preserve-env=DOPPLER_TOKEN doppler run -- docker-compose down
+              sudo --preserve-env=DOPPLER_TOKEN doppler run -- docker-compose up -d --build
             fi
 
             # 6. Setup Nginx reverse proxy + SSL
@@ -312,4 +255,3 @@ jobs:
             echo '--- Nginx setup complete ---'
             sudo systemctl status nginx --no-pager
           "
-
