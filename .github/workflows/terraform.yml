@@ -16,6 +16,10 @@ on:
       - 'terraform/**'
       - '.github/workflows/terraform.yml'
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   TF_VAR_key_pair_name: ${{ secrets.KEY_PAIR_NAME }}
   AWS_REGION: us-east-2
@@ -32,9 +36,9 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: github-actions-terraform-plan
           
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -60,9 +64,9 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: github-actions-terraform-deploy
           
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3

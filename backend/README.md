@@ -86,6 +86,12 @@ Required GitHub secret for backend runtime secrets:
 
 That token should be a Doppler service token scoped only to the backend production config.
 
+Required GitHub secret for AWS authentication in GitHub Actions:
+- `AWS_ROLE_TO_ASSUME`
+
+Create that IAM role manually in AWS with a trust policy that allows GitHub Actions OIDC for this repository, and attach the IAM permissions needed for Terraform state access plus the EC2 actions this stack uses. Then paste the role ARN into the secret.
+The workflow uses that role with `aws-actions/configure-aws-credentials`, so long-lived AWS access keys are not needed in GitHub Secrets.
+
 The workflow also resolves the Certbot contact email from the Doppler secret `MAIL_FROM`, so that value no longer needs to be duplicated as a separate GitHub Actions secret.
 
 For direct host usage outside GitHub Actions:
