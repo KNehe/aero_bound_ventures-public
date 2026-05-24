@@ -146,7 +146,6 @@ Instrumentator().instrument(app).expose(app)
 
 security_config = build_security_config()
 
-app.add_middleware(SecurityMiddleware, config=security_config)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_csv_env("CORS_ORIGINS"),
@@ -154,6 +153,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SecurityMiddleware, config=security_config)
 
 api_v1_router = APIRouter(prefix="/api/v1", tags=["Version One"])
 
