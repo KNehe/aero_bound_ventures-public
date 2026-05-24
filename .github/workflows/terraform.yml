@@ -195,7 +195,7 @@ jobs:
 
             # 4. Use Doppler-managed runtime secrets for Docker Compose
             export DOPPLER_TOKEN='${DOPPLER_TOKEN}'
-            CERTBOT_EMAIL="$(doppler secrets get MAIL_FROM --plain)"
+            CERTBOT_EMAIL="\$(doppler secrets get MAIL_FROM --plain)"
 
             # 5. Deploy Docker containers
             # Use 'docker compose' (v2) if available, otherwise 'docker-compose'
@@ -257,7 +257,7 @@ jobs:
               -d api.aeroboundventures.com \
               --non-interactive \
               --agree-tos \
-              --email ${CERTBOT_EMAIL} \
+              --email \${CERTBOT_EMAIL} \
               --cert-name aeroboundventures-api \
               --redirect \
               || echo 'WARNING: Certbot failed. DNS may not be pointing to this server yet. Nginx is still running on HTTP.'
