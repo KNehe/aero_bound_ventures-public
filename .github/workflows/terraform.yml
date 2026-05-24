@@ -112,6 +112,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Deploy to EC2
         env:
           PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
