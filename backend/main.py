@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
 from backend.routers import users, oauth
 from backend.crud.database import init_db
 from backend.routers import flights, payments, admin, tickets, notifications, health
@@ -72,11 +73,7 @@ def build_security_config() -> SecurityConfig:
         "agent_enable_metrics": get_bool_env(
             "FASTAPI_GUARD_AGENT_ENABLE_METRICS", True
         ),
-        "enable_cors": True,
-        "cors_allow_origins": get_csv_env("CORS_ORIGINS"),
-        "cors_allow_methods": ["*"],
-        "cors_allow_headers": ["*"],
-        "cors_allow_credentials": True,
+        "enable_cors": False,
     }
 
     model_fields = getattr(SecurityConfig, "model_fields", {})
@@ -150,6 +147,13 @@ Instrumentator().instrument(app).expose(app)
 security_config = build_security_config()
 
 app.add_middleware(SecurityMiddleware, config=security_config)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_csv_env("CORS_ORIGINS"),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 api_v1_router = APIRouter(prefix="/api/v1", tags=["Version One"])
 
