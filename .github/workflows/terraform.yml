@@ -133,6 +133,8 @@ jobs:
           done
 
           ssh -o StrictHostKeyChecking=no -i private_key ${USER}@${HOST} "
+            set -eu
+
             # Set non-interactive to avoid prompts
             export DEBIAN_FRONTEND=noninteractive
 
@@ -163,7 +165,10 @@ jobs:
 
             if ! command -v doppler &> /dev/null; then
                 echo 'Doppler CLI not found. Installing...'
-                curl -Ls --tlsv1.2 --proto '=https' --retry 3 https://packages.doppler.com/public/cli/install.deb.sh | sudo bash
+                sudo apt-get update -y
+                sudo apt-get install -y apt-transport-https ca-certificates curl gnupg
+                curl -sLf --retry 3 --tlsv1.2 --proto '=https' 'https://packages.doppler.com/public/cli/gpg.DE2A7741A397C129.key' | sudo gpg --dearmor -o /usr/share/keyrings/doppler-archive-keyring.gpg
+                echo "deb [signed-by=/usr/share/keyrings/doppler-archive-keyring.gpg] https://packages.doppler.com/public/cli/deb/debian any-version main" | sudo tee /etc/apt/sources.list.d/doppler-cli.list > /dev/null
                 sudo apt-get update -y
                 sudo apt-get install -y doppler
             fi
@@ -178,10 +183,11 @@ jobs:
             if [ -d 'aero_bound_ventures' ]; then
               echo 'Repo exists, pulling...'
               cd aero_bound_ventures
+              git remote set-url origin https://x-access-token:${GH_PAT}@github.com/KNehe/aero_bound_ventures.git
               git pull origin main
             else
               echo 'Repo missing, cloning...'
-              git clone https://${GH_PAT}@github.com/KNehe/aero_bound_ventures.git
+              git clone https://x-access-token:${GH_PAT}@github.com/KNehe/aero_bound_ventures.git
               cd aero_bound_ventures
             fi
 
@@ -189,8 +195,7 @@ jobs:
 
             # 4. Use Doppler-managed runtime secrets for Docker Compose
             export DOPPLER_TOKEN='${DOPPLER_TOKEN}'
-            doppler secrets download --no-file --format env > /dev/null
-            CERTBOT_EMAIL=$(doppler secrets get MAIL_FROM --plain)
+            CERTBOT_EMAIL="$(doppler secrets get MAIL_FROM --plain)"
 
             # 5. Deploy Docker containers
             # Use 'docker compose' (v2) if available, otherwise 'docker-compose'
