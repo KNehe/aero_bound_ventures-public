@@ -25,6 +25,7 @@ from backend.utils.security import create_access_token
 from backend.utils.cookies import get_cookie_settings, get_cookie_domain
 from backend.schemas.auth import UserResponse, GroupResponse
 from backend.utils.log_manager import get_app_logger
+from backend.security.guard import guard
 
 router = APIRouter(prefix="/auth", tags=["oauth"])
 logger = get_app_logger(__name__)
@@ -72,6 +73,7 @@ async def google_login(redirect: str | None = None):
 
 
 @router.get("/google/callback")
+@guard.detection_exclusion(params={"scope"})
 async def google_callback(
     code: str | None = None,
     error: str | None = None,

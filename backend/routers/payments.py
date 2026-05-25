@@ -21,6 +21,7 @@ from backend.models.users import UserInDB
 
 from backend.utils.log_manager import get_app_logger
 from backend.utils.kafka import kafka_producer
+from backend.security.guard import guard
 
 from backend.utils.constants import KafkaTopics, KafkaEventTypes
 
@@ -32,6 +33,7 @@ router = APIRouter(prefix="/payments", tags=["payments"])
 
 
 @router.post("/pesapal/initiate", response_model=PesapalPaymentResponse)
+@guard.detection_exclusion(body_fields={"callback_url"})
 async def initiate_pesapal_payment(
     payment_request: PesapalPaymentRequest,
     session: Session = Depends(get_session),
