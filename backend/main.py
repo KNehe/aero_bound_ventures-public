@@ -14,7 +14,7 @@ from backend.consumers.payment_notifications import process_payment_notification
 from backend.consumers.ticket_notifications import process_ticket_notifications
 from backend.consumers.user_notifications import process_user_notifications
 from backend.crud.database import init_db
-from backend.security.guard import security_config
+from backend.security.guard import guard, security_config
 from backend.utils.constants import KafkaTopics
 from backend.utils.dependencies import notification_consumer
 from backend.utils.kafka import kafka_producer
@@ -114,5 +114,6 @@ app.include_router(api_v1_router)
 
 
 @app.get("/")
+@guard.bypass(["all"])
 def hello():
     return {"message": "Flight Booking API"}

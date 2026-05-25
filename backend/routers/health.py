@@ -1,15 +1,19 @@
-from fastapi import APIRouter, Depends
-import redis
-from backend.crud.database import get_session
-from backend.utils.kafka import kafka_producer
-import time
-from sqlmodel import text, Session
 import os
+import time
+
+import redis
+from fastapi import APIRouter, Depends
+from sqlmodel import Session, text
+
+from backend.crud.database import get_session
+from backend.security.guard import guard
+from backend.utils.kafka import kafka_producer
 
 router = APIRouter(prefix="/health", tags=["Health"])
 
 
 @router.get("")
+@guard.bypass(["all"])
 async def health_check(session: Session = Depends(get_session)):
     """
     Comprehensive health check for the system.
