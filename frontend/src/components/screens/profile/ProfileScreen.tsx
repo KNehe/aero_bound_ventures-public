@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState, ChangeEvent, FormEvent } from "react";
 import useAuth from '@/store/auth';
 import { MIN_PASSWORD_LENGTH } from '@/constants/auth';
-import { apiClient, isUnauthorizedError, ApiClientError } from '@/lib/api';
+import { apiClient, getApiErrorMessage, isUnauthorizedError } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useMutation } from "@tanstack/react-query";
 
@@ -60,11 +60,7 @@ export default function ProfilePage() {
         router.push('/auth/login?redirect=/profile');
         return;
       }
-      if (error instanceof ApiClientError) {
-        setMessage(error.detail || "Failed to change password");
-      } else {
-        setMessage(error instanceof Error ? error.message : "Failed to change password. Please try again.");
-      }
+      setMessage(getApiErrorMessage(error));
       setMessageType('error');
     },
   });

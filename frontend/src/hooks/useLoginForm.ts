@@ -7,8 +7,7 @@ import useAuth from "@/store/auth";
 import { ADMIN_GROUP_NAME, MIN_PASSWORD_LENGTH } from "@/constants/auth";
 import { LoginResponse } from "@/types/auth";
 import {
-  API_UNAVAILABLE_MESSAGE,
-  ApiClientError,
+  getApiErrorMessage,
   apiClient,
   getApiBaseUrl,
 } from "@/lib/api";
@@ -25,42 +24,6 @@ function getRedirectTarget(
 
   const isAdmin = groups.some((group) => group.name === ADMIN_GROUP_NAME);
   return isAdmin ? "/admin" : "/";
-}
-
-function getLoginErrorMessage(error: unknown): string {
-  if (error instanceof ApiClientError) {
-    if (error.status === 0 || error.status >= 500) {
-      return API_UNAVAILABLE_MESSAGE;
-    }
-
-    if (error.status === 401) {
-      return "Invalid email or password";
-    }
-
-    return error.detail || "Unable to sign in. Please try again.";
-  }
-
-  if (error instanceof Error) {
-    return error.message || "Unable to sign in. Please try again.";
-  }
-
-  return "Unable to sign in. Please try again.";
-}
-
-function getSignupErrorMessage(error: unknown): string {
-  if (error instanceof ApiClientError) {
-    if (error.status === 0 || error.status >= 500) {
-      return API_UNAVAILABLE_MESSAGE;
-    }
-
-    return error.detail || "Signup failed. Please try again.";
-  }
-
-  if (error instanceof Error) {
-    return error.message || "Signup failed. Please try again.";
-  }
-
-  return "Signup failed. Please try again.";
 }
 
 export function useLoginForm() {
@@ -114,7 +77,11 @@ export function useLoginForm() {
       handleAuthenticatedRedirect(data.user.groups);
     },
     onError: (err: unknown) => {
-      setError(getLoginErrorMessage(err));
+      setError(
+        getApiErrorMessage(err, {
+          unauthorizedMessage: "Incorrect email or password.",
+        })
+      );
     },
     onMutate: () => {
       setError("");
@@ -131,7 +98,7 @@ export function useLoginForm() {
       loginMutation.mutate({ loginEmail: email, loginPassword: password });
     },
     onError: (err: unknown) => {
-      setError(getSignupErrorMessage(err));
+      setError(getApiErrorMessage(err));
     },
     onMutate: () => {
       setError("");

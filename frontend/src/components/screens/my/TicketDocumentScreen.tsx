@@ -7,7 +7,7 @@ import QRCode from "qrcode";
 import { useQuery } from "@tanstack/react-query";
 
 import useAuth from "@/store/auth";
-import { apiClient, isUnauthorizedError } from "@/lib/api";
+import { apiClient, getApiErrorMessage, isUnauthorizedError } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { TicketPageData } from "@/types/booking";
 
@@ -212,7 +212,7 @@ export default function TicketDocumentPage() {
         <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
           <h1 className="text-xl font-semibold text-stone-900 mb-2">Ticket unavailable</h1>
           <p className="text-sm text-stone-600 mb-4">
-            {error instanceof Error ? error.message : "Unable to load ticket."}
+            {getApiErrorMessage(error)}
           </p>
           <Link
             href={`/booking/success/${bookingId}`}

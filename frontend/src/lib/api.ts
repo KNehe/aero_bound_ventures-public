@@ -17,7 +17,7 @@ function normalizeApiBaseUrl(rawBaseUrl?: string): string {
 
 const API_BASE_URL = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL);
 export const API_UNAVAILABLE_MESSAGE =
-  'We are having trouble reaching the service right now. Please try again in a moment.';
+  "We couldn't complete this action right now. Please try again in a moment.";
 
 export interface ApiError {
   status: number;
@@ -202,6 +202,34 @@ export function isUnauthorizedError(error: unknown): boolean {
  */
 export function getApiBaseUrl(): string {
   return API_BASE_URL;
+}
+
+interface ApiErrorMessageOptions {
+  unauthorizedMessage?: string;
+  notFoundMessage?: string;
+}
+
+/**
+ * Return a user-facing error message for API failures.
+ *
+ * Ordinary request failures use a consistent product-level fallback so the UI
+ * does not leak backend details or HTTP terminology.
+ */
+export function getApiErrorMessage(
+  error: unknown,
+  options: ApiErrorMessageOptions = {}
+): string {
+  if (error instanceof ApiClientError) {
+    if (error.status === 401 && options.unauthorizedMessage) {
+      return options.unauthorizedMessage;
+    }
+
+    if (error.status === 404 && options.notFoundMessage) {
+      return options.notFoundMessage;
+    }
+  }
+
+  return API_UNAVAILABLE_MESSAGE;
 }
 
 export default apiClient;

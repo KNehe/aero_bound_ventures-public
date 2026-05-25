@@ -7,7 +7,7 @@ import type { Traveler as ApiTraveler, FlightBookingData, FlightOffer } from "@/
 import useFlights from "@/store/flights";
 import useAuth from "@/store/auth";
 import countryCodes from "@/data/countryCodes.json";
-import { apiClient, isUnauthorizedError, ApiClientError } from "@/lib/api";
+import { apiClient, getApiErrorMessage, isUnauthorizedError } from "@/lib/api";
 import SeatMap from "@/components/SeatMap";
 
 interface BookingTraveler {
@@ -398,18 +398,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
         return;
       }
-      if (error instanceof ApiClientError) {
-        toast.error("Failed to create booking", {
-          description: error.detail || "Please review your details and try again.",
-        });
-      } else {
-        toast.error("Failed to create booking", {
-          description:
-            error instanceof Error
-              ? error.message
-              : "An error occurred while creating your booking. Please try again.",
-        });
-      }
+      toast.error("Unable to create booking", {
+        description: getApiErrorMessage(error),
+      });
     } finally {
       setIsSubmitting(false);
     }

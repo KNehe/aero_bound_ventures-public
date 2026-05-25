@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { FaPlane, FaCalendarAlt, FaUsers, FaArrowLeft } from 'react-icons/fa';
 import FlightOfferCard from '@/components/FlightOfferCard';
 import FlightCardSkeleton from '@/components/FlightCardSkeleton';
-import { apiClient } from '@/lib/api';
+import { apiClient, getApiErrorMessage } from '@/lib/api';
 import { queryKeys } from '@/lib/queryKeys';
 import useFlights from '@/store/flights';
 import type { FlightOffer } from '@/types/flight_offer';
@@ -98,7 +98,7 @@ export default function FlightsPage() {
               </svg>
             </div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h2>
-            <p className="text-gray-600 mb-6">{error.message}</p>
+            <p className="text-gray-600 mb-6">{getApiErrorMessage(error)}</p>
             <Link
               href="/"
               className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-colors"

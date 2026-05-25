@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import useAuth from "@/store/auth";
-import { apiClient, isUnauthorizedError, ApiClientError } from "@/lib/api";
+import { API_UNAVAILABLE_MESSAGE, apiClient, getApiErrorMessage, isUnauthorizedError } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { BookingSuccessData } from "@/types/booking";
 
@@ -90,7 +90,7 @@ export default function BookingSuccessPage() {
       );
 
       if (data.error) {
-        throw new Error(data.error.message || "Payment initiation failed");
+        throw new Error(API_UNAVAILABLE_MESSAGE);
       }
 
       return data;
@@ -109,18 +109,9 @@ export default function BookingSuccessPage() {
         router.push(`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`);
         return;
       }
-      if (mutationError instanceof ApiClientError) {
-        toast.error("Failed to initiate payment", {
-          description: mutationError.detail || "Please try again.",
-        });
-      } else {
-        toast.error("Failed to initiate payment", {
-          description:
-            mutationError instanceof Error
-              ? mutationError.message
-              : "Failed to initiate payment. Please try again.",
-        });
-      }
+      toast.error("Unable to start payment", {
+        description: getApiErrorMessage(mutationError),
+      });
     },
     onSettled: () => {
       setIsProcessingPayment(false);
@@ -179,7 +170,7 @@ export default function BookingSuccessPage() {
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Unable to Load Booking</h2>
           <p className="text-gray-600 mb-4">
-            {error instanceof Error ? error.message : "Booking not found"}
+            {getApiErrorMessage(error, { notFoundMessage: "Booking not found" })}
           </p>
           <Link href="/" className="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors">
             Return Home

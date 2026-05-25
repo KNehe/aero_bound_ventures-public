@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import useAuth from "@/store/auth";
 import { ADMIN_GROUP_NAME } from "@/constants/auth";
+import { API_UNAVAILABLE_MESSAGE } from "@/lib/api";
 
 interface User {
     id: string;
@@ -29,13 +30,13 @@ function GoogleCallbackContent() {
             const errorParam = searchParams.get("error");
 
             if (errorParam) {
-                setError(`OAuth error: ${errorParam}`);
+                setError(API_UNAVAILABLE_MESSAGE);
                 setIsProcessing(false);
                 return;
             }
 
             if (!userParam) {
-                setError("Missing authentication data");
+                setError(API_UNAVAILABLE_MESSAGE);
                 setIsProcessing(false);
                 return;
             }
@@ -68,7 +69,7 @@ function GoogleCallbackContent() {
                 }
             } catch (err) {
                 console.error("Error processing OAuth callback:", err);
-                setError("Failed to process authentication");
+                setError(API_UNAVAILABLE_MESSAGE);
                 setIsProcessing(false);
             }
         };

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import useAuth from "@/store/auth";
 import { Notification } from "@/types/notifications";
-import { apiClient, getApiBaseUrl } from "@/lib/api";
+import { API_UNAVAILABLE_MESSAGE, apiClient, getApiBaseUrl, getApiErrorMessage } from "@/lib/api";
 
 const API_BASE_URL = getApiBaseUrl();
 
@@ -50,7 +50,7 @@ export function useNotifications(): UseNotificationsReturn {
             setNotifications(data.items);
             setError(null);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to fetch notifications");
+            setError(getApiErrorMessage(err));
         } finally {
             setIsLoading(false);
         }
@@ -139,7 +139,7 @@ export function useNotifications(): UseNotificationsReturn {
                     }
                 }, delay);
             } else {
-                setError("Connection lost. Please refresh the page.");
+                setError(API_UNAVAILABLE_MESSAGE);
             }
         };
 

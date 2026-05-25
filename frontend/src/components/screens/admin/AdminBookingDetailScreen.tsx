@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import useAuth from "@/store/auth";
 import { Booking, TicketUploadResponse } from "@/types/admin";
-import { apiClient, isUnauthorizedError, ApiClientError } from "@/lib/api";
+import { apiClient, getApiErrorMessage, isUnauthorizedError } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 
 export default function BookingDetailPage() {
@@ -81,9 +81,7 @@ export default function BookingDetailPage() {
   }, [bookingId, logout, queryError, router]);
 
   const error = queryError
-    ? (queryError instanceof ApiClientError && queryError.status === 404)
-      ? "Booking not found"
-      : (queryError instanceof Error ? queryError.message : "Failed to load booking")
+    ? getApiErrorMessage(queryError, { notFoundMessage: "Booking not found" })
     : null;
 
   const uploadMutation = useMutation({
@@ -105,11 +103,7 @@ export default function BookingDetailPage() {
         router.push(`/auth/login?redirect=/admin/bookings/${bookingId}`);
         return;
       }
-      if (err instanceof ApiClientError) {
-        setUploadError(err.detail || "Upload failed");
-      } else {
-        setUploadError(err instanceof Error ? err.message : "Upload failed");
-      }
+      setUploadError(getApiErrorMessage(err));
     },
     onSettled: () => {
       setIsUploading(false);

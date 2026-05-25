@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import useAuth from '@/store/auth';
-import { apiClient, isUnauthorizedError } from '@/lib/api';
+import { apiClient, getApiErrorMessage, isUnauthorizedError } from '@/lib/api';
 import { queryKeys } from "@/lib/queryKeys";
 
 interface Booking {
@@ -166,7 +166,7 @@ export default function MyBookingsAndTicketsPage() {
   const hasPrevious = cursorHistory.length > 0;
   const totalBookings = data?.total_count ?? 0;
   const error = queryError && !isUnauthorizedError(queryError)
-    ? (queryError instanceof Error ? queryError.message : 'Failed to load bookings')
+    ? getApiErrorMessage(queryError)
     : null;
 
   const cancelMutation = useMutation({
@@ -199,7 +199,7 @@ export default function MyBookingsAndTicketsPage() {
         router.push('/auth/login?redirect=/my');
         return;
       }
-      setCancelError(err instanceof Error ? err.message : 'Failed to cancel booking');
+      setCancelError(getApiErrorMessage(err));
       setCancelModal(prev => ({ ...prev, isLoading: false }));
     },
     onMutate: () => {

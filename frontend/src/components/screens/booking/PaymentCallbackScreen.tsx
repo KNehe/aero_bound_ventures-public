@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
-import { apiClient } from "@/lib/api";
+import { API_UNAVAILABLE_MESSAGE, apiClient, getApiErrorMessage } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 
 interface PaymentCallbackResponse {
@@ -54,11 +54,7 @@ function PaymentCallbackContent() {
 
     if (error) {
       setStatus("failed");
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to verify payment. Please contact support."
-      );
+      setMessage(getApiErrorMessage(error));
       return;
     }
 
@@ -85,7 +81,7 @@ function PaymentCallbackContent() {
     }
 
     setStatus("failed");
-    setMessage(data.message || "Payment verification failed. Please contact support.");
+    setMessage(API_UNAVAILABLE_MESSAGE);
   }, [data, error, orderMerchantReference, orderTrackingId, originalBookingId, router]);
 
   return (

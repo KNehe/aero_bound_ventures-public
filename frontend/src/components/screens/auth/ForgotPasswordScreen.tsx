@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
-import { ApiClientError, apiClient } from "@/lib/api";
+import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { ForgotPasswordResponse } from "@/types/auth";
 
 export default function ForgotPasswordPage() {
@@ -17,12 +17,7 @@ export default function ForgotPasswordPage() {
       setSubmitted(true);
     },
     onError: (err: unknown) => {
-      if (err instanceof ApiClientError) {
-        setError(err.detail || "An error occurred. Please try again later.");
-        return;
-      }
-
-      setError("An error occurred. Please try again later.");
+      setError(getApiErrorMessage(err));
     },
     onMutate: () => {
       setError("");

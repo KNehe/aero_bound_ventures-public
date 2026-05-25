@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { MIN_PASSWORD_LENGTH } from "@/constants/auth";
-import { ApiClientError, apiClient } from "@/lib/api";
+import { apiClient, getApiErrorMessage } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import {
   ResetPasswordResponse,
@@ -73,16 +73,7 @@ export default function ResetPasswordForm({ token }: ResetPasswordFormProps) {
       }, 3000);
     },
     onError: (mutationError) => {
-      if (mutationError instanceof ApiClientError) {
-        setError(mutationError.detail || "Failed to reset password");
-        return;
-      }
-
-      setError(
-        mutationError instanceof Error
-          ? mutationError.message
-          : "An error occurred. Please try again."
-      );
+      setError(getApiErrorMessage(mutationError));
     },
     onMutate: () => {
       setError("");
@@ -136,11 +127,11 @@ export default function ResetPasswordForm({ token }: ResetPasswordFormProps) {
 
   const tokenError =
     error ||
-    (verifyError instanceof ApiClientError
-      ? verifyError.detail || "Unable to verify reset token. Please try again."
-      : verifyError instanceof Error
-        ? verifyError.message
-        : tokenStatus?.message || "This reset link is invalid or has expired.");
+    (verifyError
+      ? getApiErrorMessage(verifyError, {
+          notFoundMessage: "This reset link is invalid or has expired.",
+        })
+      : tokenStatus?.message || "This reset link is invalid or has expired.");
 
   if (isVerifying) {
     return (
