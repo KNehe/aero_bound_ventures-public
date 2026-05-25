@@ -16,6 +16,8 @@ function normalizeApiBaseUrl(rawBaseUrl?: string): string {
 }
 
 const API_BASE_URL = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL);
+export const API_UNAVAILABLE_MESSAGE =
+  'We are having trouble reaching the service right now. Please try again in a moment.';
 
 export interface ApiError {
   status: number;
@@ -26,12 +28,14 @@ export interface ApiError {
 export class ApiClientError extends Error {
   status: number;
   detail?: string;
+  cause?: unknown;
 
-  constructor(status: number, message: string, detail?: string) {
+  constructor(status: number, message: string, detail?: string, cause?: unknown) {
     super(message);
     this.name = 'ApiClientError';
     this.status = status;
     this.detail = detail;
+    this.cause = cause;
   }
 }
 
@@ -90,12 +94,18 @@ async function request<T>(
             ? JSON.stringify(body)
             : undefined;
 
-  const response = await fetch(url.toString(), {
-    method,
-    headers,
-    credentials: 'include', 
-    body: requestBody,
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(url.toString(), {
+      method,
+      headers,
+      credentials: 'include',
+      body: requestBody,
+    });
+  } catch (error) {
+    throw new ApiClientError(0, API_UNAVAILABLE_MESSAGE, API_UNAVAILABLE_MESSAGE, error);
+  }
 
   // Handle non-OK responses
   if (!response.ok) {
@@ -107,11 +117,12 @@ async function request<T>(
       // Response body is not JSON
     }
 
-    throw new ApiClientError(
-      response.status,
-      detail || `Request failed with status ${response.status}`,
-      detail
-    );
+    const isServerError = response.status >= 500;
+    const errorDetail = isServerError ? API_UNAVAILABLE_MESSAGE : detail;
+    const message =
+      errorDetail || 'We could not complete your request. Please try again.';
+
+    throw new ApiClientError(response.status, message, errorDetail);
   }
 
   // Handle empty responses (204 No Content, etc.)

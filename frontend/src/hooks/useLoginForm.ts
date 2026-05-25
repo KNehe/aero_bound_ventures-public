@@ -6,7 +6,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import useAuth from "@/store/auth";
 import { ADMIN_GROUP_NAME, MIN_PASSWORD_LENGTH } from "@/constants/auth";
 import { LoginResponse } from "@/types/auth";
-import { ApiClientError, apiClient, getApiBaseUrl } from "@/lib/api";
+import {
+  API_UNAVAILABLE_MESSAGE,
+  ApiClientError,
+  apiClient,
+  getApiBaseUrl,
+} from "@/lib/api";
 
 type AuthMode = "login" | "signup";
 
@@ -22,12 +27,48 @@ function getRedirectTarget(
   return isAdmin ? "/admin" : "/";
 }
 
+function getLoginErrorMessage(error: unknown): string {
+  if (error instanceof ApiClientError) {
+    if (error.status === 0 || error.status >= 500) {
+      return API_UNAVAILABLE_MESSAGE;
+    }
+
+    if (error.status === 401) {
+      return "Invalid email or password";
+    }
+
+    return error.detail || "Unable to sign in. Please try again.";
+  }
+
+  if (error instanceof Error) {
+    return error.message || "Unable to sign in. Please try again.";
+  }
+
+  return "Unable to sign in. Please try again.";
+}
+
+function getSignupErrorMessage(error: unknown): string {
+  if (error instanceof ApiClientError) {
+    if (error.status === 0 || error.status >= 500) {
+      return API_UNAVAILABLE_MESSAGE;
+    }
+
+    return error.detail || "Signup failed. Please try again.";
+  }
+
+  if (error instanceof Error) {
+    return error.message || "Signup failed. Please try again.";
+  }
+
+  return "Signup failed. Please try again.";
+}
+
 export function useLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/";
 
-  const { setUser, checkAuth, isAuthenticated, isHydrated } = useAuth();
+  const { setUser, isAuthenticated, isHydrated } = useAuth();
 
   const [mode, setMode] = useState<AuthMode>("login");
   const [error, setError] = useState("");
@@ -72,28 +113,8 @@ export function useLoginForm() {
       setUser(data.user);
       handleAuthenticatedRedirect(data.user.groups);
     },
-    onError: async (err: unknown) => {
-      if (err instanceof TypeError) {
-        const isAuthenticatedAfterError = await checkAuth();
-
-        if (isAuthenticatedAfterError) {
-          const userInfo = useAuth.getState().userInfo;
-
-          if (userInfo) {
-            handleAuthenticatedRedirect(userInfo.groups);
-            return;
-          }
-        }
-      }
-
-      const message =
-        err instanceof ApiClientError
-          ? err.detail || "Invalid email or password"
-          : err instanceof Error
-            ? err.message
-            : "Login failed. Please try again.";
-
-      setError(message);
+    onError: (err: unknown) => {
+      setError(getLoginErrorMessage(err));
     },
     onMutate: () => {
       setError("");
@@ -110,14 +131,7 @@ export function useLoginForm() {
       loginMutation.mutate({ loginEmail: email, loginPassword: password });
     },
     onError: (err: unknown) => {
-      const message =
-        err instanceof ApiClientError
-          ? err.detail || "Registration failed"
-          : err instanceof Error
-            ? err.message
-            : "Signup failed. Please try again.";
-
-      setError(message);
+      setError(getSignupErrorMessage(err));
     },
     onMutate: () => {
       setError("");
