@@ -58,14 +58,20 @@ run_compose() {
 
 clear_guard_bans() {
   echo '--- Clearing guard ban state ---'
-  redis_ready=false
-  attempt=0
+  local redis_ready=false
+  local attempt=0
+  local banned_keys=""
+  local -a banned_key_args=()
+
   while [ "$attempt" -lt 30 ]; do
     if run_compose exec -T redis redis-cli PING >/dev/null 2>&1; then
       redis_ready=true
+      echo 'Redis is ready'
+      banned_keys="$(run_compose exec -T redis redis-cli --scan --pattern 'guard_core:banned_*' 2>/dev/null | tr -d '\r' || true)"
       break
     fi
     attempt=$((attempt + 1))
+    echo "Waiting for Redis... attempt ${attempt}/30"
     sleep 1
   done
 
@@ -74,18 +80,19 @@ clear_guard_bans() {
     return 0
   fi
 
-  if ! run_compose exec -T redis sh -s <<'REDIS_SH'
-set -eu
-banned_keys="$(redis-cli --scan --pattern 'guard_core:banned_*' || true)"
-if [ -n "$banned_keys" ]; then
-  set -- $banned_keys
-  redis-cli DEL "$@"
-  echo 'Cleared guard ban keys'
-else
-  echo 'No guard ban keys found'
-fi
-REDIS_SH
-  then
+  if [ -z "$banned_keys" ]; then
+    echo 'No guard ban keys found'
+    return 0
+  fi
+
+  while IFS= read -r key; do
+    [ -n "$key" ] && banned_key_args+=("$key")
+  done <<< "$banned_keys"
+
+  echo "Deleting ${#banned_key_args[@]} guard ban key(s)"
+  if run_compose exec -T redis redis-cli DEL "${banned_key_args[@]}" >/dev/null 2>&1; then
+    echo 'Cleared guard ban keys'
+  else
     echo 'WARNING: Could not clear guard ban state. Continuing deployment.'
   fi
 }
