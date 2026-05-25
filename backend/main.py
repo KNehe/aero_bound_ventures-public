@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from guard import SecurityConfig, SecurityMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from backend.consumers.booking_notifications import process_booking_notifications
@@ -17,6 +18,22 @@ from backend.utils.dependencies import notification_consumer
 from backend.utils.kafka import kafka_producer
 
 load_dotenv()
+
+
+security_config = SecurityConfig(
+    rate_limit=int(os.getenv("RATE_LIMIT", 100)),
+    enable_redis=os.getenv("ENABLE_REDIS", "true").strip().lower() == "true",
+    redis_url=os.getenv("REDIS_URL", "redis://localhost:6379"),
+    blocked_user_agents=os.getenv("BLOCKED_USER_AGENTS", "curl,wget").split(","),
+    auto_ban_threshold=int(os.getenv("AUTO_BAN_THRESHOLD", 5)),
+    auto_ban_duration=int(os.getenv("AUTO_BAN_DURATION", 86400)),
+    enable_penetration_detection=(
+        os.getenv("ENABLE_PENETRATION_DETECTION", "true").strip().lower() == "true"
+    ),
+    custom_log_file=os.getenv("CUSTOM_LOG_FILE", "security.log"),
+    # Log suspicious activity but don't block for testing.
+    passive_mode=os.getenv("PASSIVE_MODE", "true").strip().lower() == "true",
+)
 
 
 @asynccontextmanager
@@ -66,6 +83,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SecurityMiddleware, config=security_config)
 
 from backend.routers import (
     admin,
