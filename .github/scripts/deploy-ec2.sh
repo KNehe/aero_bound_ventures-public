@@ -57,47 +57,6 @@ run_compose() {
   fi
 }
 
-clear_guard_bans() {
-  echo '--- Clearing guard ban state ---'
-  local redis_ready=false
-  local attempt=0
-  local banned_keys=""
-  local -a banned_key_args=()
-
-  while [ "$attempt" -lt 30 ]; do
-    if run_compose exec -T redis redis-cli PING >/dev/null 2>&1; then
-      redis_ready=true
-      echo 'Redis is ready'
-      banned_keys="$(run_compose exec -T redis redis-cli --scan --pattern 'guard_core:banned_*' 2>/dev/null | tr -d '\r' || true)"
-      break
-    fi
-    attempt=$((attempt + 1))
-    echo "Waiting for Redis... attempt ${attempt}/30"
-    sleep 1
-  done
-
-  if [ "$redis_ready" != true ]; then
-    echo 'WARNING: Redis was not ready in time. Skipping guard ban cleanup.'
-    return 0
-  fi
-
-  if [ -z "$banned_keys" ]; then
-    echo 'No guard ban keys found'
-    return 0
-  fi
-
-  while IFS= read -r key; do
-    [ -n "$key" ] && banned_key_args+=("$key")
-  done <<< "$banned_keys"
-
-  echo "Deleting ${#banned_key_args[@]} guard ban key(s)"
-  if run_compose exec -T redis redis-cli DEL "${banned_key_args[@]}" >/dev/null 2>&1; then
-    echo 'Cleared guard ban keys'
-  else
-    echo 'WARNING: Could not clear guard ban state. Continuing deployment.'
-  fi
-}
-
 # 3. Clone or Pull
 if [ -d 'aero_bound_ventures' ]; then
   echo 'Repo exists, pulling...'
@@ -182,7 +141,3 @@ sudo certbot --nginx \
 
 echo '--- Nginx setup complete ---'
 sudo systemctl status nginx --no-pager
-
-# 7. Clear stale guard bans after the proxy is back in place.
-clear_guard_bans
-echo '--- Guard ban cleanup complete ---'

@@ -480,7 +480,7 @@ The `compose.yaml` includes a full observability stack:
 The backend uses a **singleton LogManager** with:
 - Console output (`stdout`)
 - Time-rotating file handler (`.logs/backend.log`, 7-day retention)
-- Security logging from `fastapi-guard` middleware
+- Structured application logging from the backend middleware stack
 
 ---
 
@@ -504,7 +504,6 @@ Main Branch Push → Terraform Apply → SSH Deploy to EC2
 5. **Docker Compose** — rebuilds and restarts all containers
 6. **Nginx Setup** — configures reverse proxy for `api.aeroboundventures.com`
 7. **SSL** — Certbot auto-configures HTTPS certificates
-8. **Guard Cleanup** — clears stale `guard_core:banned_*` Redis keys so old IP bans do not survive the rollout
 
 ### Infrastructure
 

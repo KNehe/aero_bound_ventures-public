@@ -185,8 +185,6 @@ dependencies = [
     { name = "fastapi-guard" },
     { name = "fastapi-mail" },
     { name = "google-genai" },
-    { name = "guard-agent" },
-    { name = "guard-core" },
     { name = "httpx" },
     { name = "passlib" },
     { name = "pre-commit" },
@@ -219,8 +217,6 @@ requires-dist = [
     { name = "fastapi-guard", specifier = ">=7.1.0" },
     { name = "fastapi-mail", specifier = ">=1.5.0" },
     { name = "google-genai", specifier = ">=1.67.0" },
-    { name = "guard-agent", specifier = ">=2.6.0" },
-    { name = "guard-core", specifier = ">=3.1.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "passlib", specifier = ">=1.7.4" },
     { name = "pre-commit", specifier = ">=4.5.0" },
@@ -812,21 +808,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/67/10/b2a4b63d3f08362662e89c103f7fe28894a51ae0bc890fabf37d1d780e52/greenlet-3.2.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:02b0df6f63cd15012bed5401b47829cfd2e97052dc89da3cfaf2c779124eb892", size = 692995, upload-time = "2025-06-05T16:13:07.972Z" },
     { url = "https://files.pythonhosted.org/packages/5a/c6/ad82f148a4e3ce9564056453a71529732baf5448ad53fc323e37efe34f66/greenlet-3.2.3-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:86c2d68e87107c1792e2e8d5399acec2487a4e993ab76c792408e59394d52141", size = 655320, upload-time = "2025-06-05T16:12:53.453Z" },
     { url = "https://files.pythonhosted.org/packages/5c/4f/aab73ecaa6b3086a4c89863d94cf26fa84cbff63f52ce9bc4342b3087a06/greenlet-3.2.3-cp314-cp314-win_amd64.whl", hash = "sha256:8c47aae8fbbfcf82cc13327ae802ba13c9c36753b67e760023fd116bc124a62a", size = 301236, upload-time = "2025-06-05T16:15:20.111Z" },
-]
-
-[[package]]
-name = "guard-agent"
-version = "2.6.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "cryptography" },
-    { name = "httpx" },
-    { name = "pydantic" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/20/82/ca08bb320422fc770c4ae143bb6aee44d849471a15ce241d20269e7e36a4/guard_agent-2.6.0.tar.gz", hash = "sha256:41e7bbf8c55c8eef61e5cef7ef33764dd70a3f86fe16695765175cb9011ad309", size = 68791, upload-time = "2026-05-14T23:26:47.042Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4a/5e/a3730e7d4d2baf738d955fbf2788e3c34c3f6dfe4efa9063f0e7a36492cf/guard_agent-2.6.0-py3-none-any.whl", hash = "sha256:256b282fb1a16ec5d81bf7f9e9d5e298d99cb269a6a1e75768ca1b43e547af11", size = 30538, upload-time = "2026-05-14T23:26:45.732Z" },
 ]
 
 [[package]]
