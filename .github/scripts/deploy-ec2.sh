@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+trap 'echo "ERROR: deploy script failed at line ${LINENO}" >&2' ERR
 
 : "${DOPPLER_TOKEN:?DOPPLER_TOKEN is required}"
 : "${GH_PAT:?GH_PAT is required}"
@@ -126,8 +127,6 @@ else
   run_compose up -d --build
 fi
 
-clear_guard_bans
-
 # 6. Setup Nginx reverse proxy + SSL
 echo '--- Setting up Nginx reverse proxy ---'
 
@@ -183,3 +182,7 @@ sudo certbot --nginx \
 
 echo '--- Nginx setup complete ---'
 sudo systemctl status nginx --no-pager
+
+# 7. Clear stale guard bans after the proxy is back in place.
+clear_guard_bans
+echo '--- Guard ban cleanup complete ---'
