@@ -117,6 +117,7 @@ Practical notes:
 - When the backend sits behind Nginx or another reverse proxy, `TRUSTED_PROXIES` is auto-detected from the container gateway if the env var is unset. Set it explicitly only if you need to pin a different proxy IP or CIDR.
 - The current guard defaults are tuned to reduce false positives: `AUTO_BAN_THRESHOLD=10` and `AUTO_BAN_DURATION=3600`.
 - Use route-level `detection_exclusion(...)` for legitimate URL-like values such as OAuth `scope` and Pesapal `callback_url`.
+- The EC2 deploy script clears `guard_core:banned_*` keys from Redis after each rollout so stale IP bans do not survive a fresh deployment.
 
 ## Useful Commands
 

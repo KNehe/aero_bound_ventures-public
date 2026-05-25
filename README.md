@@ -501,7 +501,7 @@ Main Branch Push → Terraform Apply → SSH Deploy to EC2
 2. **SSH into EC2** — installs Docker/Git if needed, creates swap space
 3. **Clone/Pull** — fetches latest code from the repository
 4. **Generate `.env`** — injects secrets from GitHub Actions environment
-5. **Docker Compose** — rebuilds and restarts all containers
+5. **Docker Compose** — rebuilds and restarts all containers, then clears stale `guard_core:banned_*` Redis keys so old IP bans do not survive the rollout
 6. **Nginx Setup** — configures reverse proxy for `api.aeroboundventures.com`
 7. **SSL** — Certbot auto-configures HTTPS certificates
 

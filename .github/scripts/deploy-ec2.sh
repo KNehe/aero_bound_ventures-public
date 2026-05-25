@@ -48,6 +48,48 @@ id
 sudo id
 sudo docker info
 
+run_compose() {
+  if docker compose version &> /dev/null; then
+    sudo --preserve-env=DOPPLER_TOKEN doppler run -- docker compose "$@"
+  else
+    sudo --preserve-env=DOPPLER_TOKEN doppler run -- docker-compose "$@"
+  fi
+}
+
+clear_guard_bans() {
+  echo '--- Clearing guard ban state ---'
+  redis_ready=false
+  attempt=0
+  while [ "$attempt" -lt 30 ]; do
+    if run_compose exec -T redis redis-cli PING >/dev/null 2>&1; then
+      redis_ready=true
+      break
+    fi
+    attempt=$((attempt + 1))
+    sleep 1
+  done
+
+  if [ "$redis_ready" != true ]; then
+    echo 'WARNING: Redis was not ready in time. Skipping guard ban cleanup.'
+    return 0
+  fi
+
+  if ! run_compose exec -T redis sh -s <<'REDIS_SH'
+set -eu
+banned_keys="$(redis-cli --scan --pattern 'guard_core:banned_*' || true)"
+if [ -n "$banned_keys" ]; then
+  set -- $banned_keys
+  redis-cli DEL "$@"
+  echo 'Cleared guard ban keys'
+else
+  echo 'No guard ban keys found'
+fi
+REDIS_SH
+  then
+    echo 'WARNING: Could not clear guard ban state. Continuing deployment.'
+  fi
+}
+
 # 3. Clone or Pull
 if [ -d 'aero_bound_ventures' ]; then
   echo 'Repo exists, pulling...'
@@ -69,13 +111,15 @@ CERTBOT_EMAIL=$(doppler secrets get MAIL_FROM --plain)
 # Use 'docker compose' (v2) if available, otherwise 'docker-compose'
 if docker compose version &> /dev/null; then
   echo 'Using docker compose v2'
-  sudo --preserve-env=DOPPLER_TOKEN doppler run -- docker compose down
-  sudo --preserve-env=DOPPLER_TOKEN doppler run -- docker compose up -d --build
+  run_compose down
+  run_compose up -d --build
 else
   echo 'Using legacy docker-compose'
-  sudo --preserve-env=DOPPLER_TOKEN doppler run -- docker-compose down
-  sudo --preserve-env=DOPPLER_TOKEN doppler run -- docker-compose up -d --build
+  run_compose down
+  run_compose up -d --build
 fi
+
+clear_guard_bans
 
 # 6. Setup Nginx reverse proxy + SSL
 echo '--- Setting up Nginx reverse proxy ---'
