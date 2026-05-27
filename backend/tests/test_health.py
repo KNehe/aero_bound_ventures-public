@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from tests.conftest import API_V1_PREFIX
 from backend.utils.kafka import kafka_producer
 
 
@@ -33,7 +34,7 @@ def test_health_check_degraded(client: TestClient, mocker):
 
     mocker.patch.object(kafka_producer, "producer", mock_producer)
 
-    response = client.get("/health")
+    response = client.get(f"{API_V1_PREFIX}/health")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "degraded"

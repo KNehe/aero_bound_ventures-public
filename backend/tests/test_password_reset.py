@@ -18,6 +18,7 @@ from backend.crud.users import (
     verify_password_reset_token,
     update_password_with_token,
 )
+from tests.conftest import API_V1_PREFIX
 from backend.utils.security import verify_password
 
 
@@ -152,7 +153,7 @@ class TestForgotPasswordEndpoint:
         create_user(session, "forgot_api@example.com", "password123")
 
         response = client.post(
-            "/forgot-password/", json={"email": "forgot_api@example.com"}
+            f"{API_V1_PREFIX}/forgot-password/", json={"email": "forgot_api@example.com"}
         )
 
         assert response.status_code == 200
@@ -171,7 +172,7 @@ class TestForgotPasswordEndpoint:
     def test_forgot_password_nonexistent_user_no_enumeration(self, mock_kafka, client):
         """Should return same success response for non-existent user (prevent enumeration)."""
         response = client.post(
-            "/forgot-password/", json={"email": "nonexistent@example.com"}
+            f"{API_V1_PREFIX}/forgot-password/", json={"email": "nonexistent@example.com"}
         )
 
         assert response.status_code == 200
@@ -183,7 +184,7 @@ class TestForgotPasswordEndpoint:
 
     def test_forgot_password_invalid_email_format(self, client):
         """Should reject invalid email format."""
-        response = client.post("/forgot-password/", json={"email": "not-an-email"})
+        response = client.post(f"{API_V1_PREFIX}/forgot-password/", json={"email": "not-an-email"})
 
         assert response.status_code == 422  # Validation error
 
@@ -197,7 +198,7 @@ class TestVerifyResetTokenEndpoint:
         create_user(session, "verify_api@example.com", "password123")
         token = create_password_reset_token(session, "verify_api@example.com")
 
-        response = client.get(f"/verify-reset-token/{token}")
+        response = client.get(f"{API_V1_PREFIX}/verify-reset-token/{token}")
 
         assert response.status_code == 200
         data = response.json()
@@ -206,7 +207,7 @@ class TestVerifyResetTokenEndpoint:
 
     def test_verify_invalid_token(self, client):
         """Should return valid=False for an invalid token."""
-        response = client.get("/verify-reset-token/invalid_token_12345")
+        response = client.get(f"{API_V1_PREFIX}/verify-reset-token/invalid_token_12345")
 
         assert response.status_code == 200
         data = response.json()
@@ -226,7 +227,7 @@ class TestVerifyResetTokenEndpoint:
         session.add(user)
         session.commit()
 
-        response = client.get(f"/verify-reset-token/{token}")
+        response = client.get(f"{API_V1_PREFIX}/verify-reset-token/{token}")
 
         assert response.status_code == 200
         data = response.json()
@@ -243,7 +244,7 @@ class TestResetPasswordEndpoint:
         token = create_password_reset_token(session, "reset_api@example.com")
 
         response = client.post(
-            "/reset-password/",
+            f"{API_V1_PREFIX}/reset-password/",
             json={
                 "token": token,
                 "new_password": "NewPassword123!",
@@ -262,7 +263,7 @@ class TestResetPasswordEndpoint:
     def test_reset_password_with_invalid_token(self, client):
         """Should return 400 for invalid token."""
         response = client.post(
-            "/reset-password/",
+            f"{API_V1_PREFIX}/reset-password/",
             json={
                 "token": "invalid_token",
                 "new_password": "NewPassword123!",
@@ -283,7 +284,7 @@ class TestResetPasswordEndpoint:
         token = create_password_reset_token(session, "mismatch@example.com")
 
         response = client.post(
-            "/reset-password/",
+            f"{API_V1_PREFIX}/reset-password/",
             json={
                 "token": token,
                 "new_password": "NewPassword123!",
@@ -300,7 +301,7 @@ class TestResetPasswordEndpoint:
         token = create_password_reset_token(session, "short@example.com")
 
         response = client.post(
-            "/reset-password/",
+            f"{API_V1_PREFIX}/reset-password/",
             json={"token": token, "new_password": "short", "confirm_password": "short"},
         )
 
@@ -312,7 +313,7 @@ class TestResetPasswordEndpoint:
         token = create_password_reset_token(session, "nouppercase@example.com")
 
         response = client.post(
-            "/reset-password/",
+            f"{API_V1_PREFIX}/reset-password/",
             json={
                 "token": token,
                 "new_password": "password123!",
@@ -329,7 +330,7 @@ class TestResetPasswordEndpoint:
         token = create_password_reset_token(session, "nolowercase@example.com")
 
         response = client.post(
-            "/reset-password/",
+            f"{API_V1_PREFIX}/reset-password/",
             json={
                 "token": token,
                 "new_password": "PASSWORD123!",
@@ -346,7 +347,7 @@ class TestResetPasswordEndpoint:
         token = create_password_reset_token(session, "nodigit@example.com")
 
         response = client.post(
-            "/reset-password/",
+            f"{API_V1_PREFIX}/reset-password/",
             json={
                 "token": token,
                 "new_password": "Password!!",
@@ -363,7 +364,7 @@ class TestResetPasswordEndpoint:
         token = create_password_reset_token(session, "nospecial@example.com")
 
         response = client.post(
-            "/reset-password/",
+            f"{API_V1_PREFIX}/reset-password/",
             json={
                 "token": token,
                 "new_password": "Password123",
@@ -382,7 +383,7 @@ class TestResetPasswordEndpoint:
 
         # First reset should succeed
         response1 = client.post(
-            "/reset-password/",
+            f"{API_V1_PREFIX}/reset-password/",
             json={
                 "token": token,
                 "new_password": "NewPassword123!",
@@ -393,7 +394,7 @@ class TestResetPasswordEndpoint:
 
         # Second attempt with same token should fail
         response2 = client.post(
-            "/reset-password/",
+            f"{API_V1_PREFIX}/reset-password/",
             json={
                 "token": token,
                 "new_password": "AnotherPass456@",
@@ -416,14 +417,14 @@ class TestPasswordResetFlow:
         """Test the complete flow: register -> forgot -> verify -> reset -> login."""
         # 1. Register user
         register_response = client.post(
-            "/register/",
+            f"{API_V1_PREFIX}/register/",
             json={"email": "flow_test@example.com", "password": "initialpassword"},
         )
         assert register_response.status_code == 200
 
         # 2. Request password reset
         forgot_response = client.post(
-            "/forgot-password/", json={"email": "flow_test@example.com"}
+            f"{API_V1_PREFIX}/forgot-password/", json={"email": "flow_test@example.com"}
         )
         assert forgot_response.status_code == 200
 
@@ -432,13 +433,13 @@ class TestPasswordResetFlow:
         reset_token = kafka_call_args["reset_token"]
 
         # 3. Verify token is valid
-        verify_response = client.get(f"/verify-reset-token/{reset_token}")
+        verify_response = client.get(f"{API_V1_PREFIX}/verify-reset-token/{reset_token}")
         assert verify_response.status_code == 200
         assert verify_response.json()["valid"] is True
 
         # 4. Reset password
         reset_response = client.post(
-            "/reset-password/",
+            f"{API_V1_PREFIX}/reset-password/",
             json={
                 "token": reset_token,
                 "new_password": "NewPassword456!",
@@ -449,14 +450,14 @@ class TestPasswordResetFlow:
 
         # 5. Login with new password should work
         login_response = client.post(
-            "/token",
+            f"{API_V1_PREFIX}/token",
             data={"username": "flow_test@example.com", "password": "NewPassword456!"},
         )
         assert login_response.status_code == 200
 
         # 6. Login with old password should fail
         old_login_response = client.post(
-            "/token",
+            f"{API_V1_PREFIX}/token",
             data={"username": "flow_test@example.com", "password": "initialpassword"},
         )
         assert old_login_response.status_code == 401
