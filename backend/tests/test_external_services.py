@@ -1,10 +1,15 @@
-import pytest
+import uuid
 from unittest.mock import AsyncMock
+
+import pytest
+
+from backend.application.bookings.create_flight_order import CreatedFlightBooking
 from backend.models.bookings import Booking
 from backend.crud.users import create_user
 from backend.crud.bookings import create_booking
 from backend.routers.flights import (
     get_confirm_flight_price_use_case,
+    get_create_flight_order_use_case,
     get_search_flights_use_case,
 )
 
@@ -28,6 +33,26 @@ class StubConfirmFlightPriceUseCase:
     def execute(self, flight_offer):
         self.calls.append(flight_offer)
         return {"data": {"flightOffers": []}}
+
+
+class StubCreateFlightOrderUseCase:
+    def __init__(self):
+        self.calls = []
+        self.booking_id = uuid.uuid4()
+
+    def execute(self, *, user_id, user_email, order_request):
+        self.calls.append(
+            {
+                "user_id": user_id,
+                "user_email": user_email,
+                "order_request": order_request,
+            }
+        )
+        return CreatedFlightBooking(
+            id=self.booking_id,
+            flight_order_id="AMADEUS_ORDER_1",
+            status="confirmed",
+        )
 
 
 @pytest.fixture
@@ -170,3 +195,35 @@ def test_confirm_price_route_uses_pricing_use_case(client):
         "taxes": None,
         "refundableTaxes": None,
     }
+
+
+def test_create_flight_order_route_uses_create_flight_order_use_case(
+    client, test_user, auth_header
+):
+    use_case = StubCreateFlightOrderUseCase()
+    client.app.dependency_overrides[get_create_flight_order_use_case] = (
+        lambda: use_case
+    )
+    payload = {
+        "flight_offer": {"id": "offer_1"},
+        "travelers": [{"id": "1"}],
+    }
+
+    try:
+        response = client.post(f"{API_V1_PREFIX}/booking/flight-orders", json=payload)
+    finally:
+        client.app.dependency_overrides.pop(get_create_flight_order_use_case, None)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": str(use_case.booking_id),
+        "flight_order_id": "AMADEUS_ORDER_1",
+        "status": "confirmed",
+    }
+    assert use_case.calls == [
+        {
+            "user_id": test_user.id,
+            "user_email": test_user.email,
+            "order_request": payload,
+        }
+    ]

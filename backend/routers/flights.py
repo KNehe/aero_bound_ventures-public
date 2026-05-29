@@ -1,5 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from backend.application.bookings.create_flight_order import (
+    CreateFlightOrder,
+    FlightOrderProviderError,
+    InvalidFlightOrderRequest,
+)
 from backend.application.flights.confirm_flight_price import (
     ConfirmFlightPrice,
     FlightPricingProviderError,
@@ -11,6 +16,16 @@ from backend.application.flights.search_flights import (
     SearchFlights,
 )
 from backend.external_services.flight import amadeus_flight_service
+from backend.infrastructure.bookings.kafka_booking_event_publisher import (
+    KafkaBookingEventPublisher,
+)
+from backend.infrastructure.bookings.redis_user_booking_cache import RedisUserBookingCache
+from backend.infrastructure.bookings.sqlmodel_booking_repository import (
+    SqlModelBookingRepository,
+)
+from backend.infrastructure.flights.amadeus_flight_order_gateway import (
+    AmadeusFlightOrderGateway,
+)
 from backend.infrastructure.flights.amadeus_pricing_gateway import AmadeusPricingGateway
 from backend.infrastructure.flights.amadeus_search_gateway import AmadeusSearchGateway
 from backend.schemas.flights import (
@@ -69,6 +84,17 @@ def get_search_flights_use_case() -> SearchFlights:
 def get_confirm_flight_price_use_case() -> ConfirmFlightPrice:
     return ConfirmFlightPrice(
         provider=AmadeusPricingGateway(amadeus_flight_service),
+    )
+
+
+def get_create_flight_order_use_case(
+    session: Session = Depends(get_session),
+) -> CreateFlightOrder:
+    return CreateFlightOrder(
+        order_provider=AmadeusFlightOrderGateway(amadeus_flight_service),
+        booking_repository=SqlModelBookingRepository(session),
+        booking_cache=RedisUserBookingCache(redis_cache),
+        event_publisher=KafkaBookingEventPublisher(kafka_producer),
     )
 
 
@@ -144,7 +170,9 @@ async def confirm_price(
 async def flight_order(
     request: FlightOrderRequestBody,
     current_user: UserInDB = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    create_flight_order_use_case: CreateFlightOrder = Depends(
+        get_create_flight_order_use_case
+    ),
 ):
     """
     Create a flight order from a pre-selected and price-confirmed flight offer.
@@ -157,84 +185,42 @@ async def flight_order(
     logger.info(f"Flight order creation initiated by user_id: {current_user.id}")
 
     try:
-        request_body = request.model_dump(by_alias=True)
-
-        response = amadeus_flight_service.create_flight_order(request_body)
-        flight_order_id = response.get("id")
-        total_price = 0.0
-        if response:
-            flight_offers = response.get("flightOffers", [])
-            if flight_offers:
-                price_info = flight_offers[0].get("price", {})
-                grand_total = price_info.get("grandTotal", "0")
-                try:
-                    total_price = float(grand_total)
-                except (ValueError, TypeError):
-                    logger.warning(f"Failed to parse grandTotal: {grand_total}")
-                    total_price = 0.0
-
-        booking = Booking(
+        booking = create_flight_order_use_case.execute(
             user_id=current_user.id,
-            flight_order_id=flight_order_id,
-            amadeus_order_response=response,
-            total_price=total_price,
-        )
-        session.add(booking)
-        session.commit()
-
-        booking_id = booking.id
-        booking_flight_order_id = booking.flight_order_id
-        booking_status = booking.status
-
-        session.expunge(booking)
-
-        pnr = response.get("associatedRecords", [{}])[0].get("reference", "N/A")
-
-        # Invalidate user's booking cache list following a new booking
-        pattern = f"user_bookings:{str(current_user.id)}*"
-        redis_cache.delete_pattern(pattern)
-
-        kafka_producer.send(
-            KafkaTopics.BOOKING_EVENTS,
-            {
-                "event_type": KafkaEventTypes.BOOKING_CREATED,
-                "booking_id": str(booking_id),
-                "user_id": str(current_user.id),
-                "pnr": pnr,
-                "user_email": current_user.email,
-            },
+            user_email=current_user.email,
+            order_request=request.model_dump(by_alias=True),
         )
 
         response = BookingResponse(
-            id=booking_id,
-            flight_order_id=booking_flight_order_id,
-            status=booking_status,
+            id=booking.id,
+            flight_order_id=booking.flight_order_id,
+            status=booking.status,
         )
 
         logger.info(
-            f"Booking record saved successfully for user_id: {current_user.id}, flight_order_id: {flight_order_id}"
+            f"Booking record saved successfully for user_id: {current_user.id}, "
+            f"flight_order_id: {booking.flight_order_id}"
         )
         return response
 
-    except ValueError as e:
+    except InvalidFlightOrderRequest as e:
         logger.warning(
-            f"ValueError during flight order creation for user_id: {current_user.id}: {str(e)}"
+            f"Invalid flight order request for user_id: {current_user.id}: {str(e)}"
         )
         raise HTTPException(status_code=400, detail=str(e))
-
-    except ClientError as e:
-        logger.error(
-            f"ClientError during flight order creation for user_id: {current_user.id}: {str(e)}"
+    except FlightOrderProviderError:
+        logger.exception(
+            f"Flight provider error during order creation for user_id: {current_user.id}"
         )
-        # Parse Amadeus error for user-friendly message
-        error_detail = _parse_amadeus_client_error(e)
-        raise HTTPException(status_code=400, detail=error_detail)
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred while creating the flight order. Please try again.",
+        )
 
     except Exception:
         logger.exception(
             f"Unexpected error during flight order creation for user_id: {current_user.id}"
         )
-        session.rollback()
         raise HTTPException(
             status_code=500,
             detail="An unexpected error occurred while creating the flight order. Please try again.",
