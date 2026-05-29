@@ -10,6 +10,7 @@ from backend.crud.bookings import create_booking
 from backend.routers.flights import (
     get_confirm_flight_price_use_case,
     get_create_flight_order_use_case,
+    get_flight_order_details_use_case,
     get_search_flights_use_case,
 )
 
@@ -53,6 +54,25 @@ class StubCreateFlightOrderUseCase:
             flight_order_id="AMADEUS_ORDER_1",
             status="confirmed",
         )
+
+
+class StubGetFlightOrderDetailsUseCase:
+    def __init__(self):
+        self.calls = []
+
+    def execute(self, *, booking_id, user_id, user_email):
+        self.calls.append(
+            {
+                "booking_id": booking_id,
+                "user_id": user_id,
+                "user_email": user_email,
+            }
+        )
+        return {
+            "orderId": str(booking_id),
+            "status": "confirmed",
+            "ticket_url": "https://tickets.example.com/ticket.pdf",
+        }
 
 
 @pytest.fixture
@@ -225,5 +245,34 @@ def test_create_flight_order_route_uses_create_flight_order_use_case(
             "user_id": test_user.id,
             "user_email": test_user.email,
             "order_request": payload,
+        }
+    ]
+
+
+def test_get_flight_order_route_uses_flight_order_details_use_case(
+    client, test_user, auth_header
+):
+    use_case = StubGetFlightOrderDetailsUseCase()
+    booking_id = uuid.uuid4()
+    client.app.dependency_overrides[get_flight_order_details_use_case] = (
+        lambda: use_case
+    )
+
+    try:
+        response = client.get(f"{API_V1_PREFIX}/booking/flight-orders/{booking_id}")
+    finally:
+        client.app.dependency_overrides.pop(get_flight_order_details_use_case, None)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "orderId": str(booking_id),
+        "status": "confirmed",
+        "ticket_url": "https://tickets.example.com/ticket.pdf",
+    }
+    assert use_case.calls == [
+        {
+            "booking_id": booking_id,
+            "user_id": test_user.id,
+            "user_email": test_user.email,
         }
     ]

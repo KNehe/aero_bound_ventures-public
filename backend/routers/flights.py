@@ -5,6 +5,10 @@ from backend.application.bookings.create_flight_order import (
     FlightOrderProviderError,
     InvalidFlightOrderRequest,
 )
+from backend.application.bookings.get_flight_order_details import (
+    FlightOrderDetailsNotFound,
+    GetFlightOrderDetails,
+)
 from backend.application.flights.confirm_flight_price import (
     ConfirmFlightPrice,
     FlightPricingProviderError,
@@ -16,6 +20,9 @@ from backend.application.flights.search_flights import (
     SearchFlights,
 )
 from backend.external_services.flight import amadeus_flight_service
+from backend.infrastructure.bookings.booking_success_presenter import (
+    BookingSuccessPresenter,
+)
 from backend.infrastructure.bookings.kafka_booking_event_publisher import (
     KafkaBookingEventPublisher,
 )
@@ -95,6 +102,15 @@ def get_create_flight_order_use_case(
         booking_repository=SqlModelBookingRepository(session),
         booking_cache=RedisUserBookingCache(redis_cache),
         event_publisher=KafkaBookingEventPublisher(kafka_producer),
+    )
+
+
+def get_flight_order_details_use_case(
+    session: Session = Depends(get_session),
+) -> GetFlightOrderDetails:
+    return GetFlightOrderDetails(
+        booking_repository=SqlModelBookingRepository(session),
+        presenter=BookingSuccessPresenter(),
     )
 
 
@@ -296,7 +312,9 @@ async def view_seat_map_post(request: FlightOffer):
 async def get_flight_order(
     booking_id: str,
     current_user: UserInDB = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    flight_order_details_use_case: GetFlightOrderDetails = Depends(
+        get_flight_order_details_use_case
+    ),
 ):
     """
     Get complete booking details for the booking success page.
@@ -308,9 +326,6 @@ async def get_flight_order(
     Returns:
         Transformed booking data matching frontend BookingSuccessData interface
     """
-    from backend.utils.booking_transformer import transform_amadeus_to_booking_success
-    import uuid as uuid_module
-
     logger.info(
         f"Fetching booking details for booking_id: {booking_id}, user_id: {current_user.id}"
     )
@@ -321,29 +336,10 @@ async def get_flight_order(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid booking ID format")
 
-        booking = session.exec(
-            select(Booking)
-            .where(Booking.id == booking_uuid)
-            .where(Booking.user_id == current_user.id)
-        ).first()
-
-        if not booking:
-            raise HTTPException(
-                status_code=404,
-                detail="Booking not found or you don't have permission to access it",
-            )
-
-        # Use stored Amadeus order response
-        amadeus_order = booking.amadeus_order_response
-
-        # Transform to frontend format, passing user email and ticket_url as fallback
-        booking_details = transform_amadeus_to_booking_success(
-            booking_id=str(booking.id),
-            booking_date=booking.created_at,
-            booking_status=booking.status,
-            amadeus_order=amadeus_order,
+        booking_details = flight_order_details_use_case.execute(
+            booking_id=booking_uuid,
+            user_id=current_user.id,
             user_email=current_user.email,
-            ticket_url=booking.ticket_url,
         )
 
         logger.info(
@@ -353,6 +349,11 @@ async def get_flight_order(
 
     except HTTPException:
         raise
+    except FlightOrderDetailsNotFound:
+        raise HTTPException(
+            status_code=404,
+            detail="Booking not found or you don't have permission to access it",
+        )
     except Exception:
         logger.exception(f"Error fetching booking details for booking_id: {booking_id}")
         raise HTTPException(
