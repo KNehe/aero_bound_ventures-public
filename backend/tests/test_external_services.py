@@ -3,6 +3,19 @@ from unittest.mock import AsyncMock
 from backend.models.bookings import Booking
 from backend.crud.users import create_user
 from backend.crud.bookings import create_booking
+from backend.routers.flights import get_search_flights_use_case
+
+
+API_V1_PREFIX = "/api/v1"
+
+
+class StubSearchFlightsUseCase:
+    def __init__(self):
+        self.calls = []
+
+    def execute(self, criteria):
+        self.calls.append(criteria)
+        return [{"id": "flight_1"}]
 
 
 @pytest.fixture
@@ -62,11 +75,9 @@ def test_initiate_payment_success(client, session, test_user, mocker, auth_heade
     mock_submit.assert_called_once()
 
 
-def test_search_flights_mock(client, mocker):
-    mock_search = mocker.patch(
-        "backend.routers.flights.amadeus_flight_service.search_flights_get"
-    )
-    mock_search.return_value = [{"id": "flight_1"}]
+def test_search_flights_mock(client):
+    use_case = StubSearchFlightsUseCase()
+    client.app.dependency_overrides[get_search_flights_use_case] = lambda: use_case
 
     params = {
         "originLocationCode": "NYC",
@@ -74,10 +85,23 @@ def test_search_flights_mock(client, mocker):
         "departureDate": "2024-12-01",
         "adults": 1,
     }
-    response = client.get("/shopping/flight-offers", params=params)
+    try:
+        response = client.get(f"{API_V1_PREFIX}/shopping/flight-offers", params=params)
+    finally:
+        client.app.dependency_overrides.pop(get_search_flights_use_case, None)
 
     assert response.status_code == 200
-    mock_search.assert_called_once()
+    assert response.json() == [{"id": "flight_1"}]
+    assert use_case.calls == [
+        {
+            "originLocationCode": "NYC",
+            "destinationLocationCode": "LON",
+            "departureDate": "2024-12-01",
+            "adults": 1,
+            "max": 5,
+            "currencyCode": "USD",
+        }
+    ]
 
 
 def test_confirm_price_mock(client, mocker):

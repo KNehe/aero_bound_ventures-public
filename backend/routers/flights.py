@@ -1,6 +1,12 @@
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from backend.application.flights.search_flights import (
+    FlightSearchProviderError,
+    InvalidFlightSearchRequest,
+    SearchFlights,
+)
 from backend.external_services.flight import amadeus_flight_service
+from backend.infrastructure.flights.amadeus_search_gateway import AmadeusSearchGateway
 from backend.schemas.flights import (
     FlightSearchResponse,
     FlightPricingResponse,
@@ -47,6 +53,13 @@ logger = get_app_logger(__name__)
 router = APIRouter()
 
 
+def get_search_flights_use_case() -> SearchFlights:
+    return SearchFlights(
+        provider=AmadeusSearchGateway(amadeus_flight_service),
+        cache=redis_cache,
+    )
+
+
 @router.post("/shopping/flight-offers", response_model=FlightSearchResponse)
 async def search_flights(request: FlightSearchRequestPost):
     """
@@ -70,21 +83,18 @@ async def search_flights(request: FlightSearchRequestPost):
 
 
 @router.get("/shopping/flight-offers")
-async def search_flights2(request: Annotated[FlightSearchRequestGet, Query()]):
+async def search_flights_get(
+    request: Annotated[FlightSearchRequestGet, Query()],
+    search_flights_use_case: SearchFlights = Depends(get_search_flights_use_case),
+):
     try:
-        request_body = request.model_dump(exclude_none=True)
-
-        key = build_redis_key(request_body)
-        flight_data = redis_cache.get(key)
-        if flight_data:
-            return flight_data
-
-        response = amadeus_flight_service.search_flights_get(request_body)
-        redis_cache.set(key, response)
-
-        return response
-    except ClientError:
+        return search_flights_use_case.execute(request.model_dump(exclude_none=True))
+    except InvalidFlightSearchRequest:
         raise HTTPException(status_code=400, detail="Invalid request parameters")
+    except FlightSearchProviderError:
+        raise HTTPException(
+            status_code=500, detail="An error occurred while searching for flights"
+        )
     except Exception:
         raise HTTPException(
             status_code=500, detail="An error occurred while searching for flights"
