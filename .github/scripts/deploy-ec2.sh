@@ -57,6 +57,19 @@ run_compose() {
   fi
 }
 
+cleanup_docker_disk() {
+  echo 'Docker disk usage before cleanup:'
+  sudo docker system df || true
+
+  echo 'Cleaning Docker build cache, stopped containers, and unused images...'
+  sudo docker builder prune -af || true
+  sudo docker container prune -f || true
+  sudo docker image prune -af || true
+
+  echo 'Docker disk usage after cleanup:'
+  sudo docker system df || true
+}
+
 # 3. Clone or Pull
 if [ -d 'aero_bound_ventures' ]; then
   echo 'Repo exists, pulling...'
@@ -79,10 +92,12 @@ CERTBOT_EMAIL=$(doppler secrets get MAIL_FROM --plain)
 if docker compose version &> /dev/null; then
   echo 'Using docker compose v2'
   run_compose down
+  cleanup_docker_disk
   run_compose up -d --build
 else
   echo 'Using legacy docker-compose'
   run_compose down
+  cleanup_docker_disk
   run_compose up -d --build
 fi
 
