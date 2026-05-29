@@ -5,8 +5,24 @@ from fastapi import APIRouter, HTTPException, Depends, status
 
 from sqlmodel import Session
 
+from backend.application.payments.initiate_pesapal_payment import (
+    InitiatePesapalPayment,
+    InitiatePesapalPaymentCommand,
+    PaymentBillingAddress,
+    PaymentBookingAccessDenied,
+    PaymentBookingAlreadyPaid,
+    PaymentBookingNotFound,
+    PaymentProviderValidationError,
+    PaymentSystemNotConfigured,
+)
 from backend.crud.database import get_session
 from backend.external_services.pesapal import pesapal_client
+from backend.infrastructure.bookings.sqlmodel_booking_repository import (
+    SqlModelBookingRepository,
+)
+from backend.infrastructure.payments.pesapal_payment_gateway import (
+    PesapalPaymentGateway,
+)
 from backend.models.bookings import BookingStatus
 from backend.schemas.payments import (
     PesapalPaymentRequest,
@@ -31,11 +47,24 @@ logger = get_app_logger(__name__)
 router = APIRouter(prefix="/payments", tags=["payments"])
 
 
+def get_initiate_pesapal_payment_use_case(
+    session: Session = Depends(get_session),
+) -> InitiatePesapalPayment:
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    return InitiatePesapalPayment(
+        booking_repository=SqlModelBookingRepository(session),
+        payment_provider=PesapalPaymentGateway(pesapal_client),
+        default_callback_url=f"{frontend_url}/booking/payment/callback",
+    )
+
+
 @router.post("/pesapal/initiate", response_model=PesapalPaymentResponse)
 async def initiate_pesapal_payment(
     payment_request: PesapalPaymentRequest,
-    session: Session = Depends(get_session),
     current_user: UserInDB = Depends(get_current_user),
+    initiate_payment_use_case: InitiatePesapalPayment = Depends(
+        get_initiate_pesapal_payment_use_case
+    ),
 ):
     """
     Initiate a Pesapal payment for a booking (USD only)
@@ -47,83 +76,58 @@ async def initiate_pesapal_payment(
 
     Note: Only USD payments are accepted
     """
-    print("Initiating Pesapal payment for booking:", payment_request.booking_id)
-    # 1. Get the booking from database
-    booking = get_booking_by_id(session, payment_request.booking_id)
+    try:
+        billing_address = payment_request.billing_address
+        result = await initiate_payment_use_case.execute(
+            user_id=current_user.id,
+            command=InitiatePesapalPaymentCommand(
+                booking_id=payment_request.booking_id,
+                amount=payment_request.amount,
+                currency=payment_request.currency,
+                description=payment_request.description,
+                callback_url=payment_request.callback_url,
+                billing_address=PaymentBillingAddress(
+                    email_address=str(billing_address.email_address),
+                    phone_number=billing_address.phone_number,
+                    country_code=billing_address.country_code,
+                    first_name=billing_address.first_name,
+                    last_name=billing_address.last_name,
+                    middle_name=billing_address.middle_name,
+                    line_1=billing_address.line_1,
+                    line_2=billing_address.line_2,
+                    city=billing_address.city,
+                    state=billing_address.state,
+                    postal_code=billing_address.postal_code,
+                    zip_code=billing_address.zip_code,
+                ),
+            ),
+        )
 
-    if not booking:
+        return PesapalPaymentResponse(
+            order_tracking_id=result.order_tracking_id,
+            merchant_reference=result.merchant_reference,
+            redirect_url=result.redirect_url,
+        )
+    except PaymentBookingNotFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found"
         )
-
-    # 2. Verify booking belongs to current user
-    if booking.user_id != current_user.id:
+    except PaymentBookingAccessDenied:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to pay for this booking",
         )
-
-    # 3. Check if booking is already paid
-    if booking.status == "paid":
+    except PaymentBookingAlreadyPaid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="This booking has already been paid",
         )
-
-    print("Pesapal IPN ID:", pesapal_client.ipn_id)
-    # 4. Validate IPN ID is configured
-    if not pesapal_client.ipn_id:
+    except PaymentSystemNotConfigured:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Payment system not configured. Please contact support.",
         )
-
-    # 5. Use billing address from request (already contains traveler info from frontend)
-    # Fill in any missing fields with empty strings for Pesapal
-
-    billing_address = {
-        "email_address": payment_request.billing_address.email_address,
-        "phone_number": payment_request.billing_address.phone_number or "",
-        "country_code": payment_request.billing_address.country_code or "",
-        "first_name": payment_request.billing_address.first_name or "",
-        "middle_name": getattr(payment_request.billing_address, "middle_name", None)
-        or "",
-        "last_name": payment_request.billing_address.last_name or "",
-        "line_1": payment_request.billing_address.line_1 or "",
-        "line_2": payment_request.billing_address.line_2 or "",
-        "city": payment_request.billing_address.city or "",
-        "state": payment_request.billing_address.state or "",
-        "postal_code": payment_request.billing_address.postal_code or "",
-        "zip_code": payment_request.billing_address.zip_code or "",
-    }
-
-    # 6. Prepare callback URL (frontend will handle this)
-    callback_url = (
-        payment_request.callback_url
-        or f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/booking/payment/callback"
-    )
-
-    try:
-        # 7. Submit order to Pesapal
-        result = await pesapal_client.submit_order_request(
-            merchant_reference=str(booking.id),
-            amount=payment_request.amount,
-            currency=payment_request.currency,
-            description=f"Flight booking payment - {booking.id}",
-            callback_url=callback_url,
-            notification_id=pesapal_client.ipn_id,
-            billing_address=billing_address,
-        )
-
-        # 8. Return payment response
-        return PesapalPaymentResponse(
-            order_tracking_id=result["order_tracking_id"],
-            merchant_reference=result["merchant_reference"],
-            redirect_url=result["redirect_url"],
-            status=result.get("status", "200"),
-        )
-
-    except ValueError as e:
+    except PaymentProviderValidationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         raise HTTPException(

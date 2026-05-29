@@ -9,6 +9,7 @@ from backend.application.bookings.create_flight_order import (
 from backend.application.bookings.get_flight_order_details import (
     FlightOrderDetailsRecord,
 )
+from backend.application.payments.initiate_pesapal_payment import PaymentBookingRecord
 from backend.models.bookings import Booking
 
 
@@ -62,4 +63,17 @@ class SqlModelBookingRepository:
             status=booking.status,
             amadeus_order_response=booking.amadeus_order_response,
             ticket_url=booking.ticket_url,
+        )
+
+    def get_payment_booking(self, booking_id: str) -> PaymentBookingRecord | None:
+        booking = self.session.exec(
+            select(Booking).where(Booking.id == booking_id)
+        ).first()
+        if not booking:
+            return None
+
+        return PaymentBookingRecord(
+            id=booking.id,
+            user_id=booking.user_id,
+            status=booking.status,
         )

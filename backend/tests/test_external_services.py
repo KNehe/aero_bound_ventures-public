@@ -1,18 +1,19 @@
 import uuid
-from unittest.mock import AsyncMock
 
 import pytest
 
 from backend.application.bookings.create_flight_order import CreatedFlightBooking
-from backend.models.bookings import Booking
+from backend.application.payments.initiate_pesapal_payment import (
+    InitiatedPesapalPayment,
+)
 from backend.crud.users import create_user
-from backend.crud.bookings import create_booking
 from backend.routers.flights import (
     get_confirm_flight_price_use_case,
     get_create_flight_order_use_case,
     get_flight_order_details_use_case,
     get_search_flights_use_case,
 )
+from backend.routers.payments import get_initiate_pesapal_payment_use_case
 
 
 API_V1_PREFIX = "/api/v1"
@@ -75,6 +76,20 @@ class StubGetFlightOrderDetailsUseCase:
         }
 
 
+class StubInitiatePesapalPaymentUseCase:
+    def __init__(self):
+        self.calls = []
+
+    async def execute(self, *, user_id, command):
+        self.calls.append({"user_id": user_id, "command": command})
+        return InitiatedPesapalPayment(
+            order_tracking_id="track_123",
+            merchant_reference=command.booking_id,
+            redirect_url="https://pesapal.com/pay/123",
+            status="200",
+        )
+
+
 @pytest.fixture
 def test_user(session):
     return create_user(session, "test_external@example.com", "password")
@@ -90,32 +105,13 @@ def auth_header(client, test_user):
     client.app.dependency_overrides.clear()
 
 
-def test_initiate_payment_success(client, session, test_user, mocker, auth_header):
-    booking = create_booking(
-        session,
-        Booking(
-            user_id=test_user.id,
-            flight_order_id="FLIGHT_123",
-            total_price=100.0,
-            status="pending",
-        ),
+def test_initiate_payment_route_uses_payment_use_case(client, test_user, auth_header):
+    use_case = StubInitiatePesapalPaymentUseCase()
+    client.app.dependency_overrides[get_initiate_pesapal_payment_use_case] = (
+        lambda: use_case
     )
-
-    mock_submit = mocker.patch(
-        "backend.routers.payments.pesapal_client.submit_order_request",
-        new_callable=AsyncMock,
-    )
-    mock_submit.return_value = {
-        "order_tracking_id": "track_123",
-        "merchant_reference": str(booking.id),
-        "redirect_url": "https://pesapal.com/pay/123",
-        "status": "200",
-    }
-    mocker.patch("backend.routers.payments.pesapal_client.ipn_id", "test_ipn_id")
-    mocker.patch("backend.routers.payments.kafka_producer")
-
     payload = {
-        "booking_id": str(booking.id),
+        "booking_id": "booking_123",
         "amount": 100.0,
         "description": "Test payment",
         "callback_url": "https://frontend.com/callback",
@@ -125,11 +121,23 @@ def test_initiate_payment_success(client, session, test_user, mocker, auth_heade
             "last_name": "User",
         },
     }
-    response = client.post("/payments/pesapal/initiate", json=payload)
+    try:
+        response = client.post(
+            f"{API_V1_PREFIX}/payments/pesapal/initiate", json=payload
+        )
+    finally:
+        client.app.dependency_overrides.pop(get_initiate_pesapal_payment_use_case, None)
 
     assert response.status_code == 200
     assert response.json()["redirect_url"] == "https://pesapal.com/pay/123"
-    mock_submit.assert_called_once()
+    assert len(use_case.calls) == 1
+    assert use_case.calls[0]["user_id"] == test_user.id
+    command = use_case.calls[0]["command"]
+    assert command.booking_id == "booking_123"
+    assert command.amount == 100.0
+    assert command.currency == "USD"
+    assert command.callback_url == "https://frontend.com/callback"
+    assert command.billing_address.email_address == "test@example.com"
 
 
 def test_search_flights_mock(client):
@@ -221,9 +229,7 @@ def test_create_flight_order_route_uses_create_flight_order_use_case(
     client, test_user, auth_header
 ):
     use_case = StubCreateFlightOrderUseCase()
-    client.app.dependency_overrides[get_create_flight_order_use_case] = (
-        lambda: use_case
-    )
+    client.app.dependency_overrides[get_create_flight_order_use_case] = lambda: use_case
     payload = {
         "flight_offer": {"id": "offer_1"},
         "travelers": [{"id": "1"}],
