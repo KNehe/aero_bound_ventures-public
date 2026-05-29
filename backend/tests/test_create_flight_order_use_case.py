@@ -1,11 +1,14 @@
 import uuid
+from json import dumps
 
 import pytest
+from amadeus.client.errors import ClientError
 
 from backend.application.bookings.create_flight_order import (
     CreateFlightOrder,
     CreatedFlightBooking,
     FlightOrderProviderError,
+    InvalidFlightOrderRequest,
 )
 from backend.infrastructure.flights.amadeus_flight_order_gateway import (
     AmadeusFlightOrderGateway,
@@ -89,6 +92,24 @@ class StubAmadeusFlightService:
     def create_flight_order(self, order_request):
         self.create_flight_order_calls.append(order_request)
         return {"id": "AMADEUS_ORDER_1"}
+
+
+class FailingAmadeusFlightService:
+    def __init__(self, error):
+        self.error = error
+        self.create_flight_order_calls = []
+
+    def create_flight_order(self, order_request):
+        self.create_flight_order_calls.append(order_request)
+        raise self.error
+
+
+class FakeAmadeusResponse:
+    def __init__(self, result):
+        self.status_code = 400
+        self.parsed = True
+        self.result = result
+        self.body = dumps(result)
 
 
 def build_use_case(provider_response=None):
@@ -188,4 +209,35 @@ def test_amadeus_flight_order_gateway_uses_create_flight_order_method():
     response = gateway.create_order(order_request)
 
     assert response == {"id": "AMADEUS_ORDER_1"}
+    assert flight_service.create_flight_order_calls == [order_request]
+
+
+def test_amadeus_flight_order_gateway_preserves_amadeus_client_error_detail():
+    order_request = {
+        "flight_offer": {"id": "offer_1"},
+        "travelers": [{"id": "1"}],
+    }
+    amadeus_error = ClientError(
+        FakeAmadeusResponse(
+            {
+                "errors": [
+                    {
+                        "code": 34651,
+                        "title": "SEGMENT SELL FAILURE",
+                        "detail": "Could not sell segment 1",
+                    }
+                ]
+            }
+        )
+    )
+    flight_service = FailingAmadeusFlightService(amadeus_error)
+    gateway = AmadeusFlightOrderGateway(flight_service)
+
+    with pytest.raises(InvalidFlightOrderRequest) as exc_info:
+        gateway.create_order(order_request)
+
+    assert str(exc_info.value) == (
+        "Flight is no longer available for booking. Flight offers expire within minutes. "
+        "Please search for flights again and complete the entire booking process quickly."
+    )
     assert flight_service.create_flight_order_calls == [order_request]

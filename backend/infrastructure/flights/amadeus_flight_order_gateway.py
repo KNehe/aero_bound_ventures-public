@@ -8,6 +8,9 @@ from backend.application.bookings.create_flight_order import (
     InvalidFlightOrderRequest,
 )
 from backend.external_services.interface import FlightServiceProtocol
+from backend.infrastructure.flights.amadeus_error_parser import (
+    parse_amadeus_client_error,
+)
 
 
 class AmadeusFlightOrderGateway:
@@ -20,9 +23,6 @@ class AmadeusFlightOrderGateway:
         except ValueError as exc:
             raise InvalidFlightOrderRequest(str(exc)) from exc
         except ClientError as exc:
-            raise InvalidFlightOrderRequest(
-                "Unable to process your booking request. Please verify your "
-                "information and try again."
-            ) from exc
+            raise InvalidFlightOrderRequest(parse_amadeus_client_error(exc)) from exc
         except ResponseError as exc:
             raise FlightOrderProviderError from exc
