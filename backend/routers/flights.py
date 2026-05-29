@@ -1,11 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from backend.application.flights.confirm_flight_price import (
+    ConfirmFlightPrice,
+    FlightPricingProviderError,
+    InvalidFlightPricingRequest,
+)
 from backend.application.flights.search_flights import (
     FlightSearchProviderError,
     InvalidFlightSearchRequest,
     SearchFlights,
 )
 from backend.external_services.flight import amadeus_flight_service
+from backend.infrastructure.flights.amadeus_pricing_gateway import AmadeusPricingGateway
 from backend.infrastructure.flights.amadeus_search_gateway import AmadeusSearchGateway
 from backend.schemas.flights import (
     FlightSearchResponse,
@@ -60,6 +66,12 @@ def get_search_flights_use_case() -> SearchFlights:
     )
 
 
+def get_confirm_flight_price_use_case() -> ConfirmFlightPrice:
+    return ConfirmFlightPrice(
+        provider=AmadeusPricingGateway(amadeus_flight_service),
+    )
+
+
 @router.post("/shopping/flight-offers", response_model=FlightSearchResponse)
 async def search_flights(request: FlightSearchRequestPost):
     """
@@ -102,7 +114,12 @@ async def search_flights_get(
 
 
 @router.post("/shopping/flight-offers/pricing", response_model=FlightPricingResponse)
-async def confirm_price(request: FlightOffer):
+async def confirm_price(
+    request: FlightOffer,
+    confirm_flight_price_use_case: ConfirmFlightPrice = Depends(
+        get_confirm_flight_price_use_case
+    ),
+):
     """
     Confirm flight pricing using the Amadeus Flight Offers Pricing API
 
@@ -110,15 +127,16 @@ async def confirm_price(request: FlightOffer):
     from the Amadeus API.
     """
     try:
-        request_body = request.model_dump()
-        response = amadeus_flight_service.confirm_price(request_body)
-        return response
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+        return confirm_flight_price_use_case.execute(request.model_dump())
+    except InvalidFlightPricingRequest:
+        raise HTTPException(status_code=400, detail="Invalid pricing request")
+    except FlightPricingProviderError:
         raise HTTPException(
-            status_code=500, detail=f"Price confirmation failed: {str(e)}"
+            status_code=500, detail="An error occurred while confirming flight pricing"
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=500, detail="An error occurred while confirming flight pricing"
         )
 
 

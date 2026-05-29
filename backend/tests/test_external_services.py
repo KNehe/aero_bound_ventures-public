@@ -3,7 +3,10 @@ from unittest.mock import AsyncMock
 from backend.models.bookings import Booking
 from backend.crud.users import create_user
 from backend.crud.bookings import create_booking
-from backend.routers.flights import get_search_flights_use_case
+from backend.routers.flights import (
+    get_confirm_flight_price_use_case,
+    get_search_flights_use_case,
+)
 
 
 API_V1_PREFIX = "/api/v1"
@@ -16,6 +19,15 @@ class StubSearchFlightsUseCase:
     def execute(self, criteria):
         self.calls.append(criteria)
         return [{"id": "flight_1"}]
+
+
+class StubConfirmFlightPriceUseCase:
+    def __init__(self):
+        self.calls = []
+
+    def execute(self, flight_offer):
+        self.calls.append(flight_offer)
+        return {"data": {"flightOffers": []}}
 
 
 @pytest.fixture
@@ -104,12 +116,11 @@ def test_search_flights_mock(client):
     ]
 
 
-def test_confirm_price_mock(client, mocker):
-    mock_price = mocker.patch(
-        "backend.routers.flights.amadeus_flight_service.confirm_price"
+def test_confirm_price_route_uses_pricing_use_case(client):
+    use_case = StubConfirmFlightPriceUseCase()
+    client.app.dependency_overrides[get_confirm_flight_price_use_case] = (
+        lambda: use_case
     )
-    mock_price.return_value = {"data": {"flightOffers": []}}
-
     # Minimal flight offer payload matching FlightOffer schema
     payload = {
         "type": "flight-offer",
@@ -134,7 +145,28 @@ def test_confirm_price_mock(client, mocker):
         "validatingAirlineCodes": ["AA"],
         "travelerPricings": [],
     }
-    response = client.post("/shopping/flight-offers/pricing", json=payload)
+    try:
+        response = client.post(
+            f"{API_V1_PREFIX}/shopping/flight-offers/pricing", json=payload
+        )
+    finally:
+        client.app.dependency_overrides.pop(get_confirm_flight_price_use_case, None)
 
     assert response.status_code == 200
-    mock_price.assert_called_once()
+    assert response.json() == {
+        "data": {"flightOffers": []},
+        "result": None,
+        "meta": None,
+    }
+    assert len(use_case.calls) == 1
+    assert use_case.calls[0]["id"] == "1"
+    assert use_case.calls[0]["price"] == {
+        "currency": "USD",
+        "total": "100.0",
+        "base": "90.0",
+        "fees": [],
+        "grandTotal": "100.0",
+        "billingCurrency": None,
+        "taxes": None,
+        "refundableTaxes": None,
+    }
