@@ -1,42 +1,61 @@
 """Ticket upload endpoints"""
 
+import uuid
+
 from fastapi import (
     APIRouter,
     Depends,
     File,
-    UploadFile,
     HTTPException,
     status,
+    UploadFile,
 )
 from sqlmodel import Session
-from backend.crud.database import get_session
-from backend.utils.kafka import kafka_producer
-from backend.utils.constants import KafkaTopics, KafkaEventTypes
 
-from backend.models.constants import ADMIN_GROUP_NAME
-
-from backend.external_services.cloudinary_service import (
-    configure_cloudinary,
-    upload_file,
+from backend.application.tickets.upload_ticket import (
+    TicketBookingNotFound,
+    TicketBookingUpdateFailed,
+    UploadTicket,
+    UploadTicketCommand,
 )
-from backend.crud.bookings import get_booking_by_id, update_booking_ticket_url
+from backend.crud.database import get_session
+from backend.infrastructure.tickets.cloudinary_ticket_file_storage import (
+    CloudinaryTicketFileStorage,
+)
+from backend.infrastructure.tickets.kafka_ticket_event_publisher import (
+    KafkaTicketEventPublisher,
+)
+from backend.infrastructure.tickets.sqlmodel_ticket_booking_repository import (
+    SqlModelTicketBookingRepository,
+)
+from backend.models.constants import ADMIN_GROUP_NAME
+from backend.schemas.tickets import TicketUploadResponse
 from backend.utils.dependencies import GroupDependency
-
-import uuid
+from backend.utils.kafka import kafka_producer
 
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
-configure_cloudinary()
+
+def get_upload_ticket_use_case(
+    session: Session = Depends(get_session),
+) -> UploadTicket:
+    return UploadTicket(
+        ticket_booking_repository=SqlModelTicketBookingRepository(session),
+        ticket_file_storage=CloudinaryTicketFileStorage(),
+        ticket_event_publisher=KafkaTicketEventPublisher(kafka_producer),
+    )
 
 
 @router.post(
-    "/upload/{booking_id}", dependencies=[Depends(GroupDependency(ADMIN_GROUP_NAME))]
+    "/upload/{booking_id}",
+    response_model=TicketUploadResponse,
+    dependencies=[Depends(GroupDependency(ADMIN_GROUP_NAME))],
 )
 async def upload_ticket(
     booking_id: uuid.UUID,
     file: UploadFile = File(...),
-    session: Session = Depends(get_session),
+    upload_ticket_use_case: UploadTicket = Depends(get_upload_ticket_use_case),
 ):
     """
     Upload a ticket file for a specific booking (Admin only)
@@ -55,52 +74,25 @@ async def upload_ticket(
         HTTPException 400: If file upload fails
         HTTPException 403: If user is not an admin
     """
-    booking = get_booking_by_id(session, str(booking_id))
-
-    if not booking:
+    try:
+        return upload_ticket_use_case.execute(
+            command=UploadTicketCommand(
+                booking_id=booking_id,
+                file=file.file,
+            )
+        )
+    except TicketBookingNotFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Booking not found",
         )
-
-    pnr = booking.amadeus_order_response.get("associatedRecords", [{}])[0].get(
-        "reference", "N/A"
-    )
-
-    try:
-        upload_result = upload_file(file.file, resource_type="auto")
-
-        secure_url = upload_result["secure_url"]
-        updated_booking = update_booking_ticket_url(
-            session, str(booking_id), secure_url
+    except TicketBookingUpdateFailed:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update booking with ticket URL",
         )
-
-        if not updated_booking:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to update booking with ticket URL",
-            )
-
-        kafka_producer.send(
-            KafkaTopics.TICKET_EVENTS,
-            {
-                "event_type": KafkaEventTypes.TICKET_UPLOADED,
-                "pnr": pnr,
-                "booking_id": str(booking.id),
-                "user_id": str(booking.user.id),
-                "user_email": booking.user.email,
-            },
-        )
-
-        return {
-            "message": "Ticket uploaded successfully",
-            "ticket_url": secure_url,
-            "booking_id": str(booking.id),
-            "public_id": upload_result["public_id"],
-        }
-
-    except Exception as e:
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to upload ticket: {str(e)}",
+            detail=f"Failed to upload ticket: {str(exc)}",
         )
