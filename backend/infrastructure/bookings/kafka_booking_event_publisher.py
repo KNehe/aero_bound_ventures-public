@@ -26,3 +26,22 @@ class KafkaBookingEventPublisher:
                 "user_email": user_email,
             },
         )
+
+    def publish_booking_cancelled(
+        self,
+        *,
+        booking_id: UUID,
+        user_id: UUID,
+        pnr: str | None,
+        user_email: str,
+    ) -> None:
+        self.producer.send(
+            KafkaTopics.BOOKING_EVENTS,
+            {
+                "event_type": KafkaEventTypes.BOOKING_CANCELLED,
+                "booking_id": str(booking_id),
+                "user_id": str(user_id),
+                "pnr": pnr,
+                "user_email": user_email,
+            },
+        )

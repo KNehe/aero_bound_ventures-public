@@ -3,6 +3,7 @@ import uuid
 import pytest
 
 from backend.application.bookings.create_flight_order import CreatedFlightBooking
+from backend.application.bookings.cancel_booking import CancelledBooking
 from backend.application.payments.initiate_payment import (
     InitiatedPayment,
 )
@@ -16,6 +17,7 @@ from backend.application.payments.process_payment_notification import (
 from backend.application.payments.request_payment_refund import RequestedPaymentRefund
 from backend.crud.users import create_user
 from backend.routers.flights import (
+    get_cancel_booking_use_case,
     get_confirm_flight_price_use_case,
     get_create_flight_order_use_case,
     get_booking_details_use_case,
@@ -66,6 +68,19 @@ class StubCreateFlightOrderUseCase:
             id=self.booking_id,
             flight_order_id="AMADEUS_ORDER_1",
             status="confirmed",
+        )
+
+
+class StubCancelBookingUseCase:
+    def __init__(self):
+        self.calls = []
+
+    def execute(self, *, command):
+        self.calls.append(command)
+        return CancelledBooking(
+            id=command.booking_id,
+            status="cancelled",
+            message="Booking has been successfully cancelled",
         )
 
 
@@ -487,3 +502,26 @@ def test_get_booking_details_route_uses_booking_details_use_case(
             "user_email": test_user.email,
         }
     ]
+
+
+def test_cancel_booking_route_uses_cancel_use_case(client, test_user, auth_header):
+    use_case = StubCancelBookingUseCase()
+    booking_id = uuid.uuid4()
+    client.app.dependency_overrides[get_cancel_booking_use_case] = lambda: use_case
+
+    try:
+        response = client.delete(f"{API_V1_PREFIX}/booking/flight-orders/{booking_id}")
+    finally:
+        client.app.dependency_overrides.pop(get_cancel_booking_use_case, None)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": str(booking_id),
+        "status": "cancelled",
+        "message": "Booking has been successfully cancelled",
+    }
+    assert len(use_case.calls) == 1
+    command = use_case.calls[0]
+    assert command.booking_id == booking_id
+    assert command.user_id == test_user.id
+    assert command.user_email == test_user.email

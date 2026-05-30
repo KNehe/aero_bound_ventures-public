@@ -6,6 +6,9 @@ from sqlmodel import Session, select
 from backend.application.bookings.create_flight_order import (
     CreatedFlightBooking,
 )
+from backend.application.bookings.cancel_booking import (
+    BookingCancellationRecord,
+)
 from backend.application.bookings.get_booking_details import (
     BookingDetailsRecord,
 )
@@ -69,6 +72,33 @@ class SqlModelBookingRepository:
             status=booking.status,
             amadeus_order_response=booking.amadeus_order_response,
             ticket_url=booking.ticket_url,
+        )
+
+    def get_user_booking_to_cancel(
+        self, *, booking_id: UUID, user_id: UUID
+    ) -> BookingCancellationRecord | None:
+        booking = self.session.exec(
+            select(Booking)
+            .where(Booking.id == booking_id)
+            .where(Booking.user_id == user_id)
+        ).first()
+        if not booking:
+            return None
+
+        pnr = None
+        if booking.amadeus_order_response:
+            associated_records = booking.amadeus_order_response.get(
+                "associatedRecords", []
+            )
+            if associated_records:
+                pnr = associated_records[0].get("reference")
+
+        return BookingCancellationRecord(
+            id=booking.id,
+            user_id=booking.user_id,
+            flight_order_id=booking.flight_order_id,
+            status=booking.status,
+            pnr=pnr,
         )
 
     def get_payment_booking(self, booking_id: str) -> PaymentBookingRecord | None:

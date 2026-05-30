@@ -5,6 +5,13 @@ from backend.application.bookings.create_flight_order import (
     FlightOrderProviderError,
     InvalidFlightOrderRequest,
 )
+from backend.application.bookings.cancel_booking import (
+    BookingAlreadyCancelled,
+    BookingCannotBeCancelled,
+    BookingNotFound,
+    CancelBooking,
+    CancelBookingCommand,
+)
 from backend.application.bookings.get_booking_details import (
     BookingDetailsNotFound,
     GetBookingDetails,
@@ -31,6 +38,9 @@ from backend.infrastructure.bookings.redis_user_booking_cache import (
 )
 from backend.infrastructure.bookings.sqlmodel_booking_repository import (
     SqlModelBookingRepository,
+)
+from backend.infrastructure.flights.amadeus_flight_order_cancellation_gateway import (
+    AmadeusFlightOrderCancellationGateway,
 )
 from backend.infrastructure.flights.amadeus_flight_order_gateway import (
     AmadeusFlightOrderGateway,
@@ -60,7 +70,7 @@ from backend.schemas.locations import (
     AirportCitySearchRequest,
     AirportCitySearchResponse,
 )
-from backend.models.bookings import Booking, BookingStatus
+from backend.models.bookings import Booking
 from backend.schemas.bookings import (
     BookingResponse,
     UserBookingResponse,
@@ -76,8 +86,6 @@ from backend.utils.log_manager import get_app_logger
 from sqlmodel import Session, select
 from backend.utils.kafka import kafka_producer
 import uuid as uuid_module
-
-from backend.utils.constants import KafkaTopics, KafkaEventTypes
 
 
 logger = get_app_logger(__name__)
@@ -116,6 +124,19 @@ def get_booking_details_use_case(
     return GetBookingDetails(
         booking_repository=SqlModelBookingRepository(session),
         presenter=BookingSuccessPresenter(),
+    )
+
+
+def get_cancel_booking_use_case(
+    session: Session = Depends(get_session),
+) -> CancelBooking:
+    return CancelBooking(
+        booking_repository=SqlModelBookingRepository(session),
+        booking_cancellation_provider=AmadeusFlightOrderCancellationGateway(
+            amadeus_flight_service
+        ),
+        booking_cache=RedisUserBookingCache(redis_cache),
+        event_publisher=KafkaBookingEventPublisher(kafka_producer),
     )
 
 
@@ -365,21 +386,19 @@ async def get_booking_details(
 
 
 @router.delete("/booking/flight-orders/{booking_id}")
-async def cancel_flight_order(
+async def cancel_booking(
     booking_id: str,
     current_user: UserInDB = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    cancel_booking_use_case: CancelBooking = Depends(get_cancel_booking_use_case),
 ):
     """
     Cancel a booking for the current user.
 
     This endpoint:
-    1. Validates the booking exists and belongs to the user
-    2. Checks if the booking is eligible for cancellation
-    3. Calls Amadeus API to cancel the flight order
-    4. Updates the booking status in the database
-    5. Invalidates the user's booking cache
-    6. Sends a Kafka event for notification to user and admins
+    1. Validates the booking id format
+    2. Loads the booking for the current user
+    3. Cancels the upstream flight order when present
+    4. Updates the booking status and notifies the rest of the system
 
     Args:
         booking_id: UUID of the booking to cancel
@@ -397,104 +416,45 @@ async def cancel_flight_order(
     )
 
     try:
-        # Validate UUID format
         try:
             booking_uuid = uuid_module.UUID(booking_id)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid booking ID format")
 
-        # 1. Get the booking from database
-        booking = session.exec(
-            select(Booking)
-            .where(Booking.id == booking_uuid)
-            .where(Booking.user_id == current_user.id)
-        ).first()
-
-        if not booking:
-            raise HTTPException(
-                status_code=404,
-                detail="Booking not found or you don't have permission to cancel it",
+        cancelled_booking = cancel_booking_use_case.execute(
+            command=CancelBookingCommand(
+                booking_id=booking_uuid,
+                user_id=current_user.id,
+                user_email=current_user.email,
             )
-
-        # 2. Check if booking is already cancelled
-        if booking.status == BookingStatus.CANCELLED:
-            raise HTTPException(
-                status_code=400,
-                detail="This booking has already been cancelled",
-            )
-
-        # 3. Check if booking can be cancelled (only confirmed, pending, or paid bookings)
-        non_cancellable_statuses = [
-            BookingStatus.REVERSED,
-            BookingStatus.FAILED,
-            BookingStatus.REFUNDED,
-        ]
-        if booking.status in non_cancellable_statuses:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Booking with status '{booking.status}' cannot be cancelled",
-            )
-
-        # 4. Get PNR for notification before cancellation
-        pnr = None
-        if booking.amadeus_order_response:
-            associated_records = booking.amadeus_order_response.get(
-                "associatedRecords", []
-            )
-            if associated_records:
-                pnr = associated_records[0].get("reference")
-
-        # 5. Cancel flight order in Amadeus (if flight_order_id exists)
-        if booking.flight_order_id:
-            try:
-                amadeus_flight_service.cancel_flight_order(booking.flight_order_id)
-                logger.info(
-                    f"Successfully cancelled flight order in Amadeus: {booking.flight_order_id}"
-                )
-            except ClientError as e:
-                logger.warning(f"Failed to cancel in Amadeus: {str(e)}")
-                # Continue with local cancellation even if Amadeus fails
-                # This handles cases where the order was already cancelled externally
-
-        # 6. Update booking status in database
-        booking.status = BookingStatus.CANCELLED
-        session.add(booking)
-        session.commit()
-        session.refresh(booking)
-
-        # 7. Invalidate user's booking cache
-        pattern = f"user_bookings:{str(current_user.id)}*"
-        redis_cache.delete_pattern(pattern)
-
-        # 8. Send Kafka event for notification (user and admins)
-        kafka_producer.send(
-            KafkaTopics.BOOKING_EVENTS,
-            {
-                "event_type": KafkaEventTypes.BOOKING_CANCELLED,
-                "booking_id": str(booking.id),
-                "user_id": str(current_user.id),
-                "pnr": pnr,
-                "user_email": current_user.email,
-            },
         )
-
-        logger.info(
-            f"Booking successfully cancelled for booking_id: {booking_id}, user_id: {current_user.id}"
-        )
-
         return BookingCancellationResponse(
-            id=booking.id,
-            status=booking.status,
-            message="Booking has been successfully cancelled",
+            id=cancelled_booking.id,
+            status=cancelled_booking.status,
+            message=cancelled_booking.message,
         )
 
+    except BookingNotFound:
+        raise HTTPException(
+            status_code=404,
+            detail="Booking not found or you don't have permission to cancel it",
+        )
+    except BookingAlreadyCancelled:
+        raise HTTPException(
+            status_code=400,
+            detail="This booking has already been cancelled",
+        )
+    except BookingCannotBeCancelled:
+        raise HTTPException(
+            status_code=400,
+            detail="Booking with status 'reversed', 'failed', or 'refunded' cannot be cancelled",
+        )
     except HTTPException:
         raise
     except Exception:
         logger.exception(
             f"Error cancelling booking for booking_id: {booking_id}, user_id: {current_user.id}"
         )
-        session.rollback()
         raise HTTPException(
             status_code=500,
             detail="An error occurred while cancelling the booking",
