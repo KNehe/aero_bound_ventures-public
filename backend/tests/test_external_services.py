@@ -9,6 +9,7 @@ from backend.application.payments.initiate_pesapal_payment import (
 from backend.application.payments.process_pesapal_callback import (
     ProcessedPesapalCallback,
 )
+from backend.application.payments.process_pesapal_ipn import ProcessedPesapalIpn
 from backend.crud.users import create_user
 from backend.routers.flights import (
     get_confirm_flight_price_use_case,
@@ -18,6 +19,7 @@ from backend.routers.flights import (
 )
 from backend.routers.payments import get_initiate_pesapal_payment_use_case
 from backend.routers.payments import get_process_pesapal_callback_use_case
+from backend.routers.payments import get_process_pesapal_ipn_use_case
 
 
 API_V1_PREFIX = "/api/v1"
@@ -110,6 +112,19 @@ class StubProcessPesapalCallbackUseCase:
         )
 
 
+class StubProcessPesapalIpnUseCase:
+    def __init__(self):
+        self.calls = []
+
+    async def execute(self, command):
+        self.calls.append(command)
+        return ProcessedPesapalIpn(
+            order_tracking_id=command.order_tracking_id or "",
+            order_merchant_reference=command.order_merchant_reference or "",
+            status=200,
+        )
+
+
 @pytest.fixture
 def test_user(session):
     return create_user(session, "test_external@example.com", "password")
@@ -189,6 +204,35 @@ def test_pesapal_callback_route_uses_callback_use_case(client):
     assert len(use_case.calls) == 1
     assert use_case.calls[0].order_tracking_id == "track_123"
     assert use_case.calls[0].order_merchant_reference == "booking_123-1234567890"
+
+
+def test_pesapal_ipn_route_uses_ipn_use_case(client):
+    use_case = StubProcessPesapalIpnUseCase()
+    client.app.dependency_overrides[get_process_pesapal_ipn_use_case] = lambda: use_case
+
+    try:
+        response = client.get(
+            f"{API_V1_PREFIX}/payments/pesapal/ipn",
+            params={
+                "OrderTrackingId": "track_123",
+                "OrderMerchantReference": "booking_123-1234567890",
+                "OrderNotificationType": "IPNCHANGE",
+            },
+        )
+    finally:
+        client.app.dependency_overrides.pop(get_process_pesapal_ipn_use_case, None)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "orderNotificationType": "IPNCHANGE",
+        "orderTrackingId": "track_123",
+        "orderMerchantReference": "booking_123-1234567890",
+        "status": 200,
+    }
+    assert len(use_case.calls) == 1
+    assert use_case.calls[0].order_tracking_id == "track_123"
+    assert use_case.calls[0].order_merchant_reference == "booking_123-1234567890"
+    assert use_case.calls[0].order_notification_type == "IPNCHANGE"
 
 
 def test_search_flights_mock(client):

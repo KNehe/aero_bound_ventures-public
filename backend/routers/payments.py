@@ -19,6 +19,10 @@ from backend.application.payments.process_pesapal_callback import (
     ProcessPesapalCallbackCommand,
     ProcessPesapalPaymentCallback,
 )
+from backend.application.payments.process_pesapal_ipn import (
+    ProcessPesapalIpn,
+    ProcessPesapalIpnCommand,
+)
 from backend.crud.database import get_session
 from backend.external_services.pesapal import pesapal_client
 from backend.infrastructure.bookings.sqlmodel_booking_repository import (
@@ -30,7 +34,6 @@ from backend.infrastructure.payments.kafka_payment_event_publisher import (
 from backend.infrastructure.payments.pesapal_payment_gateway import (
     PesapalPaymentGateway,
 )
-from backend.models.bookings import BookingStatus
 from backend.schemas.payments import (
     PesapalPaymentRequest,
     PesapalPaymentResponse,
@@ -38,7 +41,6 @@ from backend.schemas.payments import (
     RefundRequest,
     RefundResponse,
 )
-from backend.crud.bookings import get_booking_by_id, update_booking_status
 from backend.utils.security import get_current_user
 from backend.models.users import UserInDB
 
@@ -69,6 +71,16 @@ def get_process_pesapal_callback_use_case(
     session: Session = Depends(get_session),
 ) -> ProcessPesapalPaymentCallback:
     return ProcessPesapalPaymentCallback(
+        booking_repository=SqlModelBookingRepository(session),
+        transaction_provider=PesapalPaymentGateway(pesapal_client),
+        event_publisher=KafkaPaymentEventPublisher(kafka_producer),
+    )
+
+
+def get_process_pesapal_ipn_use_case(
+    session: Session = Depends(get_session),
+) -> ProcessPesapalIpn:
+    return ProcessPesapalIpn(
         booking_repository=SqlModelBookingRepository(session),
         transaction_provider=PesapalPaymentGateway(pesapal_client),
         event_publisher=KafkaPaymentEventPublisher(kafka_producer),
@@ -190,7 +202,7 @@ async def pesapal_ipn_notification(
     OrderTrackingId: str | None = None,
     OrderMerchantReference: str | None = None,
     OrderNotificationType: str | None = None,
-    session: Session = Depends(get_session),
+    process_ipn_use_case: ProcessPesapalIpn = Depends(get_process_pesapal_ipn_use_case),
 ):
     """
     Handle Pesapal IPN (Instant Payment Notification)
@@ -206,94 +218,14 @@ async def pesapal_ipn_notification(
     Response Format (Required):
     {"orderNotificationType":"IPNCHANGE","orderTrackingId":"...","orderMerchantReference":"...","status":200}
     """
-    try:
-        # Validate we have required parameters
-        if not all([OrderTrackingId, OrderMerchantReference]):
-            return {
-                "orderNotificationType": "IPNCHANGE",
-                "orderTrackingId": OrderTrackingId or "",
-                "orderMerchantReference": OrderMerchantReference or "",
-                "status": 500,
-            }
-
-        # Extract original booking ID from merchant reference (format: booking_id-timestamp)
-        original_booking_id = (
-            OrderMerchantReference.rsplit("-", 1)[0]
-            if "-" in OrderMerchantReference
-            else OrderMerchantReference
+    result = await process_ipn_use_case.execute(
+        ProcessPesapalIpnCommand(
+            order_tracking_id=OrderTrackingId,
+            order_merchant_reference=OrderMerchantReference,
+            order_notification_type=OrderNotificationType,
         )
-
-        # Fetch transaction status from Pesapal
-        transaction_status = await pesapal_client.get_transaction_status(
-            OrderTrackingId
-        )
-
-        booking = get_booking_by_id(session, original_booking_id)
-
-        if not booking:
-            return {
-                "orderNotificationType": "IPNCHANGE",
-                "orderTrackingId": OrderTrackingId,
-                "orderMerchantReference": OrderMerchantReference,
-                "status": 500,
-            }
-
-        # 3. Update booking based on payment status
-        payment_status_code = transaction_status.get("status_code")
-
-        if payment_status_code == 1:  # COMPLETED
-            update_booking_status(session, str(booking.id), BookingStatus.PAID)
-            kafka_producer.send(
-                KafkaTopics.PAYMENT_EVENTS,
-                {
-                    "event_type": KafkaEventTypes.PAYMENT_SUCCESSFUL,
-                    "booking_id": str(booking.id),
-                    "pnr": booking.amadeus_order_response.get(
-                        "associatedRecords", [{}]
-                    )[0].get("reference", "N/A"),
-                    "user_email": booking.user.email,
-                    "user_id": str(booking.user_id),
-                },
-            )
-
-        elif payment_status_code == 2:  # FAILED
-            update_booking_status(
-                session,
-                str(booking.id),
-                BookingStatus.FAILED,
-            )
-        elif payment_status_code == 3:  # REVERSED
-            update_booking_status(
-                session,
-                str(booking.id),
-                BookingStatus.REVERSED,
-            )
-        else:
-            update_booking_status(
-                session,
-                str(booking.id),
-                BookingStatus.PENDING,
-            )
-
-        return {
-            "orderNotificationType": "IPNCHANGE",
-            "orderTrackingId": OrderTrackingId,
-            "orderMerchantReference": OrderMerchantReference,
-            "status": 200,
-        }
-
-    except Exception:
-        update_booking_status(
-            session,
-            str(booking.id),
-            BookingStatus.CANCELLED,
-        )
-        return {
-            "orderNotificationType": "IPNCHANGE",
-            "orderTrackingId": OrderTrackingId or "",
-            "orderMerchantReference": OrderMerchantReference or "",
-            "status": 500,
-        }
+    )
+    return result.as_response()
 
 
 @router.get(

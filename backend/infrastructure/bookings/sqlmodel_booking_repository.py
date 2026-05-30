@@ -13,6 +13,7 @@ from backend.application.payments.initiate_pesapal_payment import PaymentBooking
 from backend.application.payments.process_pesapal_callback import (
     PaymentCallbackBookingRecord,
 )
+from backend.application.payments.process_pesapal_ipn import PaymentIpnBookingRecord
 from backend.models.bookings import Booking
 
 
@@ -99,6 +100,30 @@ class SqlModelBookingRepository:
                 pnr = associated_records[0].get("reference", "N/A")
 
         return PaymentCallbackBookingRecord(
+            id=booking.id,
+            user_id=booking.user_id,
+            user_email=booking.user.email,
+            pnr=pnr,
+        )
+
+    def get_payment_ipn_booking(
+        self, booking_id: str
+    ) -> PaymentIpnBookingRecord | None:
+        booking = self.session.exec(
+            select(Booking).where(Booking.id == booking_id)
+        ).first()
+        if not booking:
+            return None
+
+        pnr = "N/A"
+        if booking.amadeus_order_response:
+            associated_records = booking.amadeus_order_response.get(
+                "associatedRecords", []
+            )
+            if associated_records:
+                pnr = associated_records[0].get("reference", "N/A")
+
+        return PaymentIpnBookingRecord(
             id=booking.id,
             user_id=booking.user_id,
             user_email=booking.user.email,
