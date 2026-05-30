@@ -1,24 +1,99 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlmodel import Session, select
-from datetime import datetime, timedelta, timezone
-from backend.crud.database import get_session
-from backend.crud.bookings import (
-    get_all_bookings_cursor,
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlmodel import Session
+
+from backend.application.admin.admin_bookings import (
+    AdminBookingNotFound,
+    AdminBookingRecord,
+    AdminBookingStatsRecord,
+    AdminBookingsPage,
+    GetAdminBooking,
+    GetAdminBookingStats,
+    ListAdminBookings,
 )
-from backend.utils.pagination import MAX_PAGINATION_LIMIT
-from backend.models.bookings import Booking, BookingStatus
+from backend.crud.database import get_session
+from backend.infrastructure.admin.sqlmodel_admin_booking_repository import (
+    SqlModelAdminBookingRepository,
+)
 from backend.models.constants import ADMIN_GROUP_NAME
 from backend.schemas.admin import (
-    BookingStatsResponse,
     AdminBookingResponse,
+    BookingStatsResponse,
     CursorPaginatedAdminBookingResponse,
 )
 from backend.utils.dependencies import GroupDependency
 from backend.utils.log_manager import get_app_logger
+from backend.utils.pagination import MAX_PAGINATION_LIMIT
 
 logger = get_app_logger(__name__)
 
 router = APIRouter()
+
+
+def get_admin_booking_stats_use_case(
+    session: Session = Depends(get_session),
+) -> GetAdminBookingStats:
+    return GetAdminBookingStats(
+        admin_booking_repository=SqlModelAdminBookingRepository(session),
+    )
+
+
+def get_list_admin_bookings_use_case(
+    session: Session = Depends(get_session),
+) -> ListAdminBookings:
+    return ListAdminBookings(
+        admin_booking_repository=SqlModelAdminBookingRepository(session),
+    )
+
+
+def get_admin_booking_use_case(
+    session: Session = Depends(get_session),
+) -> GetAdminBooking:
+    return GetAdminBooking(
+        admin_booking_repository=SqlModelAdminBookingRepository(session),
+    )
+
+
+def _to_booking_stats_response(
+    stats: AdminBookingStatsRecord,
+) -> BookingStatsResponse:
+    return BookingStatsResponse(
+        total_bookings=stats.total_bookings,
+        total_revenue=stats.total_revenue,
+        active_users=stats.active_users,
+        bookings_today=stats.bookings_today,
+        bookings_this_week=stats.bookings_this_week,
+    )
+
+
+def _to_admin_booking_response(
+    booking: AdminBookingRecord,
+) -> AdminBookingResponse:
+    return AdminBookingResponse(
+        id=booking.id,
+        flight_order_id=booking.flight_order_id,
+        status=booking.status,
+        created_at=booking.created_at,
+        ticket_url=booking.ticket_url,
+        total_price=booking.total_price,
+        user={
+            "id": booking.user.id,
+            "email": booking.user.email,
+        },
+        amadeus_order_response=booking.amadeus_order_response,
+    )
+
+
+def _to_paginated_admin_booking_response(
+    page: AdminBookingsPage,
+) -> CursorPaginatedAdminBookingResponse:
+    return CursorPaginatedAdminBookingResponse(
+        items=[_to_admin_booking_response(booking) for booking in page.items],
+        next_cursor=page.next_cursor,
+        has_more=page.has_more,
+        has_previous=page.has_previous,
+        total_count=page.total_count,
+        limit=page.limit,
+    )
 
 
 @router.get(
@@ -27,62 +102,23 @@ router = APIRouter()
     dependencies=[Depends(GroupDependency(ADMIN_GROUP_NAME))],
 )
 async def get_booking_stats(
-    session: Session = Depends(get_session),
+    admin_booking_stats_use_case: GetAdminBookingStats = Depends(
+        get_admin_booking_stats_use_case
+    ),
 ):
     """
     Get booking statistics for admin dashboard.
-
-    Returns:
-        - Total bookings count
-        - Total revenue (sum of all booking amounts)
-        - Active users count (users who have made bookings)
-        - Bookings today count
-        - Bookings this week count
     """
     logger.info("Calculating booking statistics")
 
     try:
-        bookings = session.exec(select(Booking)).all()
-
-        total_bookings = len(bookings)
-
-        total_revenue = sum(
-            booking.total_price 
-            for booking in bookings 
-            if booking.status == BookingStatus.PAID and booking.status != BookingStatus.CANCELLED
-        )
-
-        # Calculate active users (unique users who have made bookings)
-        unique_user_ids = set(booking.user_id for booking in bookings)
-        active_users = len(unique_user_ids)
-
-        now = datetime.now(timezone.utc)
-        today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
-        bookings_today = sum(
-            1 for booking in bookings if booking.created_at >= today_start
-        )
-
-        # Calculate bookings this week (last 7 days)
-        one_week_ago = now - timedelta(days=7)
-        bookings_this_week = sum(
-            1 for booking in bookings if booking.created_at >= one_week_ago
-        )
-
-        stats = BookingStatsResponse(
-            total_bookings=total_bookings,
-            total_revenue=total_revenue,
-            active_users=active_users,
-            bookings_today=bookings_today,
-            bookings_this_week=bookings_this_week,
-        )
-
-        logger.info(f"Successfully calculated booking statistics: {stats.model_dump()}")
-        return stats
-
+        stats = admin_booking_stats_use_case.execute()
+        logger.info("Successfully calculated booking statistics")
+        return _to_booking_stats_response(stats)
     except Exception:
         logger.exception("Error calculating booking statistics")
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while calculating booking statistics",
         )
 
@@ -104,63 +140,32 @@ async def get_all_bookings(
         False,
         description="Include total_count in response (may be slower)",
     ),
-    session: Session = Depends(get_session),
+    list_admin_bookings_use_case: ListAdminBookings = Depends(
+        get_list_admin_bookings_use_case
+    ),
 ):
     """
     Get cursor-paginated bookings with user information for admin dashboard.
-
-    Args:
-        cursor: Cursor for pagination (None for first page)
-        limit: Maximum number of records to return (default: 20, max: 100)
-
-    Returns:
-        Cursor-paginated list of bookings with associated user data
     """
     logger.info(
         f"Fetching bookings for admin dashboard with cursor={cursor}, limit={limit}"
     )
 
     try:
-        bookings, next_cursor, has_more, total_count = get_all_bookings_cursor(
-            session, cursor=cursor, limit=limit, include_count=include_count
-        )
-
-        items = []
-        for booking in bookings:
-            items.append(
-                AdminBookingResponse(
-                    id=booking.id,
-                    flight_order_id=booking.flight_order_id,
-                    status=booking.status,
-                    created_at=booking.created_at,
-                    ticket_url=booking.ticket_url,
-                    total_price=booking.total_price,
-                    user={
-                        "id": booking.user.id,
-                        "email": booking.user.email,
-                    },
-                    amadeus_order_response=booking.amadeus_order_response,
-                )
-            )
-
-        response = CursorPaginatedAdminBookingResponse(
-            items=items,
-            next_cursor=next_cursor,
-            has_more=has_more,
-            has_previous=cursor is not None,
-            total_count=total_count,
+        page = list_admin_bookings_use_case.execute(
+            cursor=cursor,
             limit=limit,
+            include_count=include_count,
         )
-
         logger.info(
-            f"Successfully fetched {len(items)} bookings (has_more: {has_more})"
+            f"Successfully fetched {len(page.items)} bookings (has_more: {page.has_more})"
         )
-        return response
-
+        return _to_paginated_admin_booking_response(page)
     except Exception:
         logger.exception("Error fetching bookings for admin")
         raise HTTPException(
-            status_code=500, detail="An error occurred while fetching bookings"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while fetching bookings",
         )
 
 
@@ -171,51 +176,26 @@ async def get_all_bookings(
 )
 async def get_booking(
     booking_id: str,
-    session: Session = Depends(get_session),
+    admin_booking_use_case: GetAdminBooking = Depends(get_admin_booking_use_case),
 ):
     """
     Get a single booking by ID for admin dashboard.
-
-    Args:
-        booking_id: The UUID of the booking to fetch
-
-    Returns:
-        Booking details with associated user data
-
-    Raises:
-        HTTPException 404: If booking not found
     """
     logger.info(f"Fetching booking {booking_id} for admin")
 
     try:
-        statement = select(Booking).where(Booking.id == booking_id)
-        booking = session.exec(statement).first()
-
-        if not booking:
-            logger.warning(f"Booking {booking_id} not found")
-            raise HTTPException(status_code=404, detail="Booking not found")
-
-        response = AdminBookingResponse(
-            id=booking.id,
-            flight_order_id=booking.flight_order_id,
-            status=booking.status,
-            created_at=booking.created_at,
-            ticket_url=booking.ticket_url,
-            total_price=booking.total_price,
-            user={
-                "id": booking.user.id,
-                "email": booking.user.email,
-            },
-            amadeus_order_response=booking.amadeus_order_response,
-        )
-
+        booking = admin_booking_use_case.execute(booking_id=booking_id)
         logger.info(f"Successfully fetched booking {booking_id}")
-        return response
-
-    except HTTPException:
-        raise
+        return _to_admin_booking_response(booking)
+    except AdminBookingNotFound:
+        logger.warning(f"Booking {booking_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Booking not found",
+        )
     except Exception:
         logger.exception(f"Error fetching booking {booking_id}")
         raise HTTPException(
-            status_code=500, detail="An error occurred while fetching the booking"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while fetching the booking",
         )
