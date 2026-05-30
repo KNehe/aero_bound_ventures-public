@@ -7,10 +7,15 @@ from backend.application.bookings.get_seat_map import (
     InvalidSeatMapRequest,
     SeatMapBookingNotFound,
 )
-from backend.external_services.flight import AmadeusFlightService
+from backend.application.flights.get_seat_map_from_flight_offer import (
+    InvalidSeatMapOfferRequest,
+)
 from backend.main import app
 from backend.models.users import UserInDB
-from backend.routers.flights import get_seat_map_use_case
+from backend.routers.flights import (
+    get_seat_map_from_flight_offer_use_case,
+    get_seat_map_use_case,
+)
 from backend.utils.security import get_current_user
 
 
@@ -43,10 +48,11 @@ def seat_map_use_case():
 
 
 @pytest.fixture
-def flight_service():
-    service = AmadeusFlightService()
-    service.amadeus = MagicMock()
-    return service
+def seat_map_from_offer_use_case():
+    use_case = MagicMock()
+    app.dependency_overrides[get_seat_map_from_flight_offer_use_case] = lambda: use_case
+    yield use_case
+    app.dependency_overrides.pop(get_seat_map_from_flight_offer_use_case, None)
 
 
 def test_view_seat_map_get_direct_id_success(
@@ -118,13 +124,8 @@ def test_view_seat_map_get_invalid_provider_request(
     assert "Seat map not available" in response.json()["detail"]
 
 
-def test_view_seat_map_post_success(authenticated_client, mocker, flight_service):
-    mocker.patch("backend.routers.flights.amadeus_flight_service", flight_service)
-
-    mock_response = MagicMock()
-    mock_response.data = [{"id": "offer_seatmap_1"}]
-    flight_service.amadeus.shopping.seatmaps.post.return_value = mock_response
-
+def test_view_seat_map_post_success(authenticated_client, seat_map_from_offer_use_case):
+    seat_map_from_offer_use_case.execute.return_value = [{"id": "offer_seatmap_1"}]
     payload = {
         "type": "flight-offer",
         "id": "1",
@@ -149,4 +150,30 @@ def test_view_seat_map_post_success(authenticated_client, mocker, flight_service
 
     assert response.status_code == 200
     assert response.json() == [{"id": "offer_seatmap_1"}]
-    flight_service.amadeus.shopping.seatmaps.post.assert_called_once()
+    seat_map_from_offer_use_case.execute.assert_called_once()
+    assert seat_map_from_offer_use_case.execute.call_args.args[0]["id"] == "1"
+
+
+def test_view_seat_map_post_invalid_provider_request(
+    authenticated_client, seat_map_from_offer_use_case
+):
+    seat_map_from_offer_use_case.execute.side_effect = InvalidSeatMapOfferRequest(
+        "Seat map not available for this offer"
+    )
+    payload = {
+        "type": "flight-offer",
+        "id": "1",
+        "source": "GDS",
+        "itineraries": [],
+        "price": {"currency": "USD", "total": "500.0", "base": "400.0", "fees": []},
+        "pricingOptions": {"fareType": ["PUBLISHED"], "includedCheckedBagsOnly": False},
+        "validatingAirlineCodes": ["DL"],
+        "travelerPricings": [],
+    }
+
+    response = authenticated_client.post(
+        f"{API_V1_PREFIX}/shopping/seatmaps", json=payload
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Seat map not available for this offer"

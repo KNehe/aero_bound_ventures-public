@@ -28,10 +28,25 @@ from backend.application.flights.confirm_flight_price import (
     FlightPricingProviderError,
     InvalidFlightPricingRequest,
 )
+from backend.application.flights.get_seat_map_from_flight_offer import (
+    GetSeatMapFromFlightOffer,
+    InvalidSeatMapOfferRequest,
+    SeatMapFromOfferProviderError,
+)
+from backend.application.flights.get_travelled_destinations import (
+    GetTravelledDestinations,
+    InvalidTravelledDestinationsRequest,
+    TravelledDestinationsProviderError,
+)
 from backend.application.flights.search_flights import (
     FlightSearchProviderError,
     InvalidFlightSearchRequest,
     SearchFlights,
+)
+from backend.application.flights.search_locations import (
+    InvalidLocationSearchRequest,
+    LocationSearchProviderError,
+    SearchLocations,
 )
 from backend.external_services.flight import amadeus_flight_service
 from backend.infrastructure.bookings.booking_success_presenter import (
@@ -52,33 +67,30 @@ from backend.infrastructure.flights.amadeus_flight_order_cancellation_gateway im
 from backend.infrastructure.flights.amadeus_flight_order_gateway import (
     AmadeusFlightOrderGateway,
 )
-from backend.infrastructure.flights.amadeus_error_parser import (
-    parse_amadeus_client_error,
+from backend.infrastructure.flights.amadeus_location_search_gateway import (
+    AmadeusLocationSearchGateway,
 )
 from backend.infrastructure.flights.amadeus_pricing_gateway import AmadeusPricingGateway
 from backend.infrastructure.flights.amadeus_seat_map_gateway import (
     AmadeusSeatMapGateway,
 )
 from backend.infrastructure.flights.amadeus_search_gateway import AmadeusSearchGateway
+from backend.infrastructure.flights.amadeus_travel_analytics_gateway import (
+    AmadeusTravelAnalyticsGateway,
+)
 from backend.schemas.flights import (
-    FlightSearchResponse,
     FlightPricingResponse,
 )
 from typing import Annotated
-from backend.schemas.flight_search import (
-    FlightSearchRequestGet,
-    FlightSearchRequestPost,
-)
+from backend.schemas.flight_search import FlightSearchRequestGet
 from backend.schemas.flight_price_confirm import FlightOffer
 from backend.schemas.flight_order import FlightOrderRequestBody
 from backend.utils.security import get_current_user
 from backend.models.users import UserInDB
-from amadeus.client.errors import ClientError
 from backend.external_services.cache import redis_cache
-from backend.utils.helpers import build_redis_key
 from backend.schemas.locations import (
-    AirportCitySearchRequest,
-    AirportCitySearchResponse,
+    AirportCitySearchRequest as LocationSearchRequest,
+    AirportCitySearchResponse as LocationSearchResponse,
 )
 from backend.schemas.bookings import (
     BookingResponse,
@@ -155,6 +167,26 @@ def get_seat_map_use_case(
     )
 
 
+def get_seat_map_from_flight_offer_use_case() -> GetSeatMapFromFlightOffer:
+    return GetSeatMapFromFlightOffer(
+        seat_map_provider=AmadeusSeatMapGateway(amadeus_flight_service),
+    )
+
+
+def get_location_search_use_case() -> SearchLocations:
+    return SearchLocations(
+        provider=AmadeusLocationSearchGateway(amadeus_flight_service),
+        cache=redis_cache,
+    )
+
+
+def get_travelled_destinations_use_case() -> GetTravelledDestinations:
+    return GetTravelledDestinations(
+        provider=AmadeusTravelAnalyticsGateway(amadeus_flight_service),
+        cache=redis_cache,
+    )
+
+
 def get_user_bookings_use_case(
     session: Session = Depends(get_session),
 ) -> GetUserBookings:
@@ -162,28 +194,6 @@ def get_user_bookings_use_case(
         booking_repository=SqlModelBookingRepository(session),
         cache=RedisUserBookingCache(redis_cache),
     )
-
-
-@router.post("/shopping/flight-offers", response_model=FlightSearchResponse)
-async def search_flights(request: FlightSearchRequestPost):
-    """
-    Search for flights using the Amadeus Flight Search API
-
-    This endpoint accepts a validated flight search request and returns available flight offers
-    from the Amadeus API. The request is validated using Pydantic models.
-    """
-    try:
-        request_body = request.model_dump()
-
-        # TO DO: Search in cache first (REDIS)
-
-        response = amadeus_flight_service.search_flights(request_body)
-        return response
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Flight search failed: {str(e)}")
 
 
 @router.get("/shopping/flight-offers")
@@ -324,17 +334,22 @@ async def view_seat_map_get(
 
 
 @router.post("/shopping/seatmaps")
-async def view_seat_map_post(request: FlightOffer):
+async def view_seat_map_post(
+    request: FlightOffer,
+    seat_map_from_offer_use_case: GetSeatMapFromFlightOffer = Depends(
+        get_seat_map_from_flight_offer_use_case
+    ),
+):
     try:
-        request_body = request.model_dump()
-        response = amadeus_flight_service.view_seat_map_post(request_body)
-        return response
-    except ClientError as e:
-        error_detail = _parse_amadeus_client_error(e)
-        raise HTTPException(status_code=400, detail=error_detail)
-    except Exception as e:
+        return seat_map_from_offer_use_case.execute(request.model_dump())
+    except InvalidSeatMapOfferRequest as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except SeatMapFromOfferProviderError:
+        raise HTTPException(status_code=500, detail="Failed to retrieve seat map")
+    except Exception:
+        logger.exception("Failed to retrieve seat map from flight offer")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve seat map: {str(e)}"
+            status_code=500, detail="Failed to retrieve seat map from flight offer"
         )
 
 
@@ -465,37 +480,23 @@ async def cancel_booking(
         )
 
 
-@router.get("/reference-data/locations", response_model=list[AirportCitySearchResponse])
-async def airport_city_search(request: Annotated[AirportCitySearchRequest, Query()]):
+@router.get("/reference-data/locations", response_model=list[LocationSearchResponse])
+async def search_locations(
+    request: Annotated[LocationSearchRequest, Query()],
+    location_search_use_case: SearchLocations = Depends(get_location_search_use_case),
+):
     try:
-        request_body = request.model_dump()
-
-        key = build_redis_key(request_body)
-        data = redis_cache.get(key)
-        if data:
-            return data
-
-        response = amadeus_flight_service.airport_city_search(request_body)
-        redis_cache.set(key, response)
-        return response
-
+        return location_search_use_case.execute(request.model_dump())
+    except InvalidLocationSearchRequest:
+        raise HTTPException(status_code=400, detail="Invalid location search request")
+    except LocationSearchProviderError:
+        raise HTTPException(
+            status_code=500, detail="An error occurred while searching for a location"
+        )
     except Exception:
         raise HTTPException(
             status_code=500, detail="An error occurred while searching for a location"
         )
-
-
-def _parse_amadeus_client_error(error: ClientError) -> str:
-    """
-    Parse Amadeus ClientError and return user-friendly error message.
-
-    Args:
-        error: ClientError from Amadeus SDK
-
-    Returns:
-        str: User-friendly error message
-    """
-    return parse_amadeus_client_error(error)
 
 
 @router.get("/bookings", response_model=CursorPaginatedUserBookingResponse)
@@ -562,20 +563,29 @@ async def get_user_bookings(
 
 
 @router.get("/analytics/most-travelled-destinations")
-def get_most_travelled_destinations(origin_city_code: str, period: str):
+def get_most_travelled_destinations(
+    origin_city_code: str,
+    period: str,
+    travelled_destinations_use_case: GetTravelledDestinations = Depends(
+        get_travelled_destinations_use_case
+    ),
+):
     try:
-        key = build_redis_key({"city_code_period": f"{origin_city_code}{period}"})
-        destinations = redis_cache.get(key)
-        if destinations:
-            return destinations
-
-        response = amadeus_flight_service.get_most_travelled_destinations(
-            origin_city_code, period
+        return travelled_destinations_use_case.execute(
+            origin_city_code=origin_city_code,
+            period=period,
         )
-
-        if len(response) > 0:
-            redis_cache.set(key, response)
-
-        return response
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except InvalidTravelledDestinationsRequest:
+        raise HTTPException(
+            status_code=400, detail="Invalid travelled destinations request"
+        )
+    except TravelledDestinationsProviderError:
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred while fetching travelled destinations",
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred while fetching travelled destinations",
+        )
