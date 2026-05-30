@@ -4,9 +4,7 @@ from backend.application.payments.initiate_pesapal_payment import (
     InitiatedPesapalPayment,
     PaymentProviderValidationError,
 )
-from backend.application.payments.process_pesapal_callback import (
-    PaymentTransactionStatusError,
-)
+from backend.application.payments.payment_status import PaymentStatusLookupError
 
 
 class PesapalClientProtocol(Protocol):
@@ -72,4 +70,4 @@ class PesapalPaymentGateway:
         try:
             return await self.client.get_transaction_status(order_tracking_id)
         except ValueError as exc:
-            raise PaymentTransactionStatusError(str(exc)) from exc
+            raise PaymentStatusLookupError(str(exc)) from exc

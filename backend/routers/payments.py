@@ -15,6 +15,11 @@ from backend.application.payments.initiate_pesapal_payment import (
     PaymentProviderValidationError,
     PaymentSystemNotConfigured,
 )
+from backend.application.payments.get_payment_status import (
+    GetPaymentStatus,
+    InvalidPaymentStatusRequest,
+    PaymentStatusProviderError,
+)
 from backend.application.payments.process_pesapal_callback import (
     ProcessPesapalCallbackCommand,
     ProcessPesapalPaymentCallback,
@@ -84,6 +89,12 @@ def get_process_pesapal_ipn_use_case(
         booking_repository=SqlModelBookingRepository(session),
         transaction_provider=PesapalPaymentGateway(pesapal_client),
         event_publisher=KafkaPaymentEventPublisher(kafka_producer),
+    )
+
+
+def get_payment_status_use_case() -> GetPaymentStatus:
+    return GetPaymentStatus(
+        payment_status_provider=PesapalPaymentGateway(pesapal_client),
     )
 
 
@@ -234,6 +245,7 @@ async def pesapal_ipn_notification(
 async def get_payment_status(
     order_tracking_id: str,
     current_user: UserInDB = Depends(get_current_user),
+    payment_status_use_case: GetPaymentStatus = Depends(get_payment_status_use_case),
 ):
     """
     Get the current status of a Pesapal transaction
@@ -249,25 +261,15 @@ async def get_payment_status(
         Transaction status details
     """
     try:
-        transaction_status = await pesapal_client.get_transaction_status(
-            order_tracking_id
-        )
-
-        return PesapalTransactionStatus(
-            payment_status_description=transaction_status.get(
-                "payment_status_description", ""
-            ),
-            payment_method=transaction_status.get("payment_method", ""),
-            amount=transaction_status.get("amount", 0),
-            confirmation_code=transaction_status.get("confirmation_code", ""),
-            created_date=transaction_status.get("created_date", ""),
-            status_code=transaction_status.get("status_code", 0),
-            merchant_reference=transaction_status.get("merchant_reference", ""),
-            currency=transaction_status.get("currency", "USD"),
-        )
-
-    except ValueError as e:
+        result = await payment_status_use_case.execute(order_tracking_id)
+        return PesapalTransactionStatus(**result.as_response())
+    except InvalidPaymentStatusRequest as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except PaymentStatusProviderError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch payment status: {str(e)}",
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

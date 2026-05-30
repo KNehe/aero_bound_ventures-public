@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import UUID
 
+from backend.application.payments.payment_status import PaymentStatusLookupError
 from backend.models.bookings import BookingStatus
 
 
@@ -48,8 +49,7 @@ class ProcessedPesapalCallback:
         return response
 
 
-class PaymentTransactionStatusError(Exception):
-    pass
+PaymentTransactionStatusError = PaymentStatusLookupError
 
 
 class PaymentCallbackBookingRepository(Protocol):
@@ -119,7 +119,7 @@ class ProcessPesapalPaymentCallback:
                 transaction_status=transaction_status,
                 order_tracking_id=command.order_tracking_id,
             )
-        except PaymentTransactionStatusError as exc:
+        except PaymentStatusLookupError as exc:
             if "Pending Payment" in str(exc):
                 return ProcessedPesapalCallback(
                     status="pending",

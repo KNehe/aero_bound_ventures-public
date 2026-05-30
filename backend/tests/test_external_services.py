@@ -6,6 +6,7 @@ from backend.application.bookings.create_flight_order import CreatedFlightBookin
 from backend.application.payments.initiate_pesapal_payment import (
     InitiatedPesapalPayment,
 )
+from backend.application.payments.payment_status import PaymentStatus
 from backend.application.payments.process_pesapal_callback import (
     ProcessedPesapalCallback,
 )
@@ -17,6 +18,7 @@ from backend.routers.flights import (
     get_flight_order_details_use_case,
     get_search_flights_use_case,
 )
+from backend.routers.payments import get_payment_status_use_case
 from backend.routers.payments import get_initiate_pesapal_payment_use_case
 from backend.routers.payments import get_process_pesapal_callback_use_case
 from backend.routers.payments import get_process_pesapal_ipn_use_case
@@ -122,6 +124,29 @@ class StubProcessPesapalIpnUseCase:
             order_tracking_id=command.order_tracking_id or "",
             order_merchant_reference=command.order_merchant_reference or "",
             status=200,
+        )
+
+
+class StubGetPaymentStatusUseCase:
+    def __init__(self):
+        self.calls = []
+
+    async def execute(self, order_tracking_id: str):
+        self.calls.append(order_tracking_id)
+        return PaymentStatus(
+            payment_method="Visa",
+            amount=100,
+            created_date="2026-05-30T10:00:00Z",
+            confirmation_code="CONFIRM123",
+            payment_status_description="Completed",
+            description="Payment completed",
+            message="Request processed successfully",
+            payment_account="476173**0010",
+            call_back_url="https://frontend.com/callback",
+            status_code=1,
+            merchant_reference="booking_123",
+            payment_status_code="COMPLETED",
+            currency="USD",
         )
 
 
@@ -233,6 +258,37 @@ def test_pesapal_ipn_route_uses_ipn_use_case(client):
     assert use_case.calls[0].order_tracking_id == "track_123"
     assert use_case.calls[0].order_merchant_reference == "booking_123-1234567890"
     assert use_case.calls[0].order_notification_type == "IPNCHANGE"
+
+
+def test_payment_status_route_uses_status_use_case(client, auth_header):
+    use_case = StubGetPaymentStatusUseCase()
+    client.app.dependency_overrides[get_payment_status_use_case] = lambda: use_case
+
+    try:
+        response = client.get(
+            f"{API_V1_PREFIX}/payments/pesapal/status/track_123",
+        )
+    finally:
+        client.app.dependency_overrides.pop(get_payment_status_use_case, None)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "payment_method": "Visa",
+        "amount": 100.0,
+        "created_date": "2026-05-30T10:00:00Z",
+        "confirmation_code": "CONFIRM123",
+        "payment_status_description": "Completed",
+        "description": "Payment completed",
+        "message": "Request processed successfully",
+        "payment_account": "476173**0010",
+        "call_back_url": "https://frontend.com/callback",
+        "status_code": 1,
+        "merchant_reference": "booking_123",
+        "payment_status_code": "COMPLETED",
+        "currency": "USD",
+        "error": None,
+    }
+    assert use_case.calls == ["track_123"]
 
 
 def test_search_flights_mock(client):
