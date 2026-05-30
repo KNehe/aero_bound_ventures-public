@@ -20,9 +20,9 @@ from backend.routers.flights import (
     get_search_flights_use_case,
 )
 from backend.routers.payments import get_payment_status_use_case
-from backend.routers.payments import get_initiate_pesapal_payment_use_case
-from backend.routers.payments import get_process_pesapal_callback_use_case
-from backend.routers.payments import get_process_pesapal_ipn_use_case
+from backend.routers.payments import get_initiate_payment_use_case
+from backend.routers.payments import get_process_payment_callback_use_case
+from backend.routers.payments import get_process_payment_ipn_use_case
 from backend.routers.payments import get_request_payment_refund_use_case
 
 
@@ -86,7 +86,7 @@ class StubGetFlightOrderDetailsUseCase:
         }
 
 
-class StubInitiatePesapalPaymentUseCase:
+class StubInitiatePaymentUseCase:
     def __init__(self):
         self.calls = []
 
@@ -100,7 +100,7 @@ class StubInitiatePesapalPaymentUseCase:
         )
 
 
-class StubProcessPesapalCallbackUseCase:
+class StubProcessPaymentCallbackUseCase:
     def __init__(self):
         self.calls = []
 
@@ -116,7 +116,7 @@ class StubProcessPesapalCallbackUseCase:
         )
 
 
-class StubProcessPesapalIpnUseCase:
+class StubProcessPaymentIpnUseCase:
     def __init__(self):
         self.calls = []
 
@@ -187,10 +187,8 @@ def auth_header(client, test_user):
 
 
 def test_initiate_payment_route_uses_payment_use_case(client, test_user, auth_header):
-    use_case = StubInitiatePesapalPaymentUseCase()
-    client.app.dependency_overrides[get_initiate_pesapal_payment_use_case] = (
-        lambda: use_case
-    )
+    use_case = StubInitiatePaymentUseCase()
+    client.app.dependency_overrides[get_initiate_payment_use_case] = lambda: use_case
     payload = {
         "booking_id": "booking_123",
         "amount": 100.0,
@@ -207,7 +205,7 @@ def test_initiate_payment_route_uses_payment_use_case(client, test_user, auth_he
             f"{API_V1_PREFIX}/payments/pesapal/initiate", json=payload
         )
     finally:
-        client.app.dependency_overrides.pop(get_initiate_pesapal_payment_use_case, None)
+        client.app.dependency_overrides.pop(get_initiate_payment_use_case, None)
 
     assert response.status_code == 200
     assert response.json()["redirect_url"] == "https://pesapal.com/pay/123"
@@ -222,8 +220,8 @@ def test_initiate_payment_route_uses_payment_use_case(client, test_user, auth_he
 
 
 def test_pesapal_callback_route_uses_callback_use_case(client):
-    use_case = StubProcessPesapalCallbackUseCase()
-    client.app.dependency_overrides[get_process_pesapal_callback_use_case] = (
+    use_case = StubProcessPaymentCallbackUseCase()
+    client.app.dependency_overrides[get_process_payment_callback_use_case] = (
         lambda: use_case
     )
 
@@ -236,7 +234,7 @@ def test_pesapal_callback_route_uses_callback_use_case(client):
             },
         )
     finally:
-        client.app.dependency_overrides.pop(get_process_pesapal_callback_use_case, None)
+        client.app.dependency_overrides.pop(get_process_payment_callback_use_case, None)
 
     assert response.status_code == 200
     assert response.json() == {
@@ -253,8 +251,8 @@ def test_pesapal_callback_route_uses_callback_use_case(client):
 
 
 def test_pesapal_ipn_route_uses_ipn_use_case(client):
-    use_case = StubProcessPesapalIpnUseCase()
-    client.app.dependency_overrides[get_process_pesapal_ipn_use_case] = lambda: use_case
+    use_case = StubProcessPaymentIpnUseCase()
+    client.app.dependency_overrides[get_process_payment_ipn_use_case] = lambda: use_case
 
     try:
         response = client.get(
@@ -266,7 +264,7 @@ def test_pesapal_ipn_route_uses_ipn_use_case(client):
             },
         )
     finally:
-        client.app.dependency_overrides.pop(get_process_pesapal_ipn_use_case, None)
+        client.app.dependency_overrides.pop(get_process_payment_ipn_use_case, None)
 
     assert response.status_code == 200
     assert response.json() == {

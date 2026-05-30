@@ -6,8 +6,8 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from sqlmodel import Session
 
 from backend.application.payments.initiate_pesapal_payment import (
-    InitiatePesapalPayment,
-    InitiatePesapalPaymentCommand,
+    InitiatePesapalPayment as InitiatePayment,
+    InitiatePesapalPaymentCommand as InitiatePaymentCommand,
     PaymentBillingAddress,
     PaymentBookingAccessDenied,
     PaymentBookingAlreadyPaid,
@@ -21,12 +21,12 @@ from backend.application.payments.get_payment_status import (
     PaymentStatusProviderError,
 )
 from backend.application.payments.process_pesapal_callback import (
-    ProcessPesapalCallbackCommand,
-    ProcessPesapalPaymentCallback,
+    ProcessPesapalCallbackCommand as ProcessPaymentCallbackCommand,
+    ProcessPesapalPaymentCallback as ProcessPaymentCallback,
 )
 from backend.application.payments.process_pesapal_ipn import (
-    ProcessPesapalIpn,
-    ProcessPesapalIpnCommand,
+    ProcessPesapalIpn as ProcessPaymentIpn,
+    ProcessPesapalIpnCommand as ProcessPaymentIpnCommand,
 )
 from backend.application.payments.request_payment_refund import (
     PaymentRefundCommand,
@@ -35,7 +35,7 @@ from backend.application.payments.request_payment_refund import (
     RequestPaymentRefund,
 )
 from backend.crud.database import get_session
-from backend.external_services.pesapal import pesapal_client
+from backend.external_services.pesapal import pesapal_client as payment_provider_client
 from backend.infrastructure.bookings.sqlmodel_booking_repository import (
     SqlModelBookingRepository,
 )
@@ -43,7 +43,7 @@ from backend.infrastructure.payments.kafka_payment_event_publisher import (
     KafkaPaymentEventPublisher,
 )
 from backend.infrastructure.payments.pesapal_payment_gateway import (
-    PesapalPaymentGateway,
+    PesapalPaymentGateway as PaymentProviderGateway,
 )
 from backend.schemas.payments import (
     PesapalPaymentRequest,
@@ -61,57 +61,55 @@ from backend.utils.kafka import kafka_producer
 router = APIRouter(prefix="/payments", tags=["payments"])
 
 
-def get_initiate_pesapal_payment_use_case(
+def get_initiate_payment_use_case(
     session: Session = Depends(get_session),
-) -> InitiatePesapalPayment:
+) -> InitiatePayment:
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-    return InitiatePesapalPayment(
+    return InitiatePayment(
         booking_repository=SqlModelBookingRepository(session),
-        payment_provider=PesapalPaymentGateway(pesapal_client),
+        payment_provider=PaymentProviderGateway(payment_provider_client),
         default_callback_url=f"{frontend_url}/booking/payment/callback",
     )
 
 
-def get_process_pesapal_callback_use_case(
+def get_process_payment_callback_use_case(
     session: Session = Depends(get_session),
-) -> ProcessPesapalPaymentCallback:
-    return ProcessPesapalPaymentCallback(
+) -> ProcessPaymentCallback:
+    return ProcessPaymentCallback(
         booking_repository=SqlModelBookingRepository(session),
-        transaction_provider=PesapalPaymentGateway(pesapal_client),
+        transaction_provider=PaymentProviderGateway(payment_provider_client),
         event_publisher=KafkaPaymentEventPublisher(kafka_producer),
     )
 
 
-def get_process_pesapal_ipn_use_case(
+def get_process_payment_ipn_use_case(
     session: Session = Depends(get_session),
-) -> ProcessPesapalIpn:
-    return ProcessPesapalIpn(
+) -> ProcessPaymentIpn:
+    return ProcessPaymentIpn(
         booking_repository=SqlModelBookingRepository(session),
-        transaction_provider=PesapalPaymentGateway(pesapal_client),
+        transaction_provider=PaymentProviderGateway(payment_provider_client),
         event_publisher=KafkaPaymentEventPublisher(kafka_producer),
     )
 
 
 def get_payment_status_use_case() -> GetPaymentStatus:
     return GetPaymentStatus(
-        payment_status_provider=PesapalPaymentGateway(pesapal_client),
+        payment_status_provider=PaymentProviderGateway(payment_provider_client),
     )
 
 
 def get_request_payment_refund_use_case() -> RequestPaymentRefund:
     return RequestPaymentRefund(
-        refund_provider=PesapalPaymentGateway(pesapal_client),
+        refund_provider=PaymentProviderGateway(payment_provider_client),
         refund_event_publisher=KafkaPaymentEventPublisher(kafka_producer),
     )
 
 
 @router.post("/pesapal/initiate", response_model=PesapalPaymentResponse)
-async def initiate_pesapal_payment(
+async def initiate_payment(
     payment_request: PesapalPaymentRequest,
     current_user: UserInDB = Depends(get_current_user),
-    initiate_payment_use_case: InitiatePesapalPayment = Depends(
-        get_initiate_pesapal_payment_use_case
-    ),
+    initiate_payment_use_case: InitiatePayment = Depends(get_initiate_payment_use_case),
 ):
     """
     Initiate a Pesapal payment for a booking (USD only)
@@ -127,7 +125,7 @@ async def initiate_pesapal_payment(
         billing_address = payment_request.billing_address
         result = await initiate_payment_use_case.execute(
             user_id=current_user.id,
-            command=InitiatePesapalPaymentCommand(
+            command=InitiatePaymentCommand(
                 booking_id=payment_request.booking_id,
                 amount=payment_request.amount,
                 currency=payment_request.currency,
@@ -184,11 +182,11 @@ async def initiate_pesapal_payment(
 
 
 @router.get("/pesapal/callback")
-async def pesapal_payment_callback(
+async def payment_callback(
     OrderTrackingId: str,
     OrderMerchantReference: str,
-    process_callback_use_case: ProcessPesapalPaymentCallback = Depends(
-        get_process_pesapal_callback_use_case
+    process_callback_use_case: ProcessPaymentCallback = Depends(
+        get_process_payment_callback_use_case
     ),
 ):
     """
@@ -207,7 +205,7 @@ async def pesapal_payment_callback(
     3. Redirects user to appropriate page
     """
     result = await process_callback_use_case.execute(
-        ProcessPesapalCallbackCommand(
+        ProcessPaymentCallbackCommand(
             order_tracking_id=OrderTrackingId,
             order_merchant_reference=OrderMerchantReference,
         )
@@ -216,11 +214,11 @@ async def pesapal_payment_callback(
 
 
 @router.get("/pesapal/ipn")
-async def pesapal_ipn_notification(
+async def payment_ipn_notification(
     OrderTrackingId: str | None = None,
     OrderMerchantReference: str | None = None,
     OrderNotificationType: str | None = None,
-    process_ipn_use_case: ProcessPesapalIpn = Depends(get_process_pesapal_ipn_use_case),
+    process_ipn_use_case: ProcessPaymentIpn = Depends(get_process_payment_ipn_use_case),
 ):
     """
     Handle Pesapal IPN (Instant Payment Notification)
@@ -237,7 +235,7 @@ async def pesapal_ipn_notification(
     {"orderNotificationType":"IPNCHANGE","orderTrackingId":"...","orderMerchantReference":"...","status":200}
     """
     result = await process_ipn_use_case.execute(
-        ProcessPesapalIpnCommand(
+        ProcessPaymentIpnCommand(
             order_tracking_id=OrderTrackingId,
             order_merchant_reference=OrderMerchantReference,
             order_notification_type=OrderNotificationType,
@@ -285,7 +283,7 @@ async def get_payment_status(
 
 
 @router.post("/pesapal/refund", response_model=RefundResponse)
-async def request_pesapal_refund(
+async def request_payment_refund(
     refund_request: RefundRequest,
     current_user: UserInDB = Depends(get_current_user),
     refund_use_case: RequestPaymentRefund = Depends(
