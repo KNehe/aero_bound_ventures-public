@@ -2,7 +2,10 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import UUID
 
-from backend.application.payments.payment_status import PaymentStatusLookupError
+from backend.application.payments.payment_status import (
+    PaymentStatusLookupError,
+    PaymentStatusProvider,
+)
 from backend.models.bookings import BookingStatus
 
 
@@ -20,16 +23,16 @@ class PaymentCallbackBookingRecord:
 
 
 @dataclass(frozen=True)
-class ProcessPesapalCallbackCommand:
-    order_tracking_id: str
-    order_merchant_reference: str
+class ProcessPaymentCallbackCommand:
+    payment_order_id: str
+    merchant_reference: str
 
 
 @dataclass(frozen=True)
-class ProcessedPesapalCallback:
+class ProcessedPaymentCallback:
     status: str
     message: str
-    order_tracking_id: str
+    payment_order_id: str
     payment_method: Any | None = None
     amount: Any | None = None
     confirmation_code: Any | None = None
@@ -38,7 +41,7 @@ class ProcessedPesapalCallback:
         response: dict[str, Any] = {
             "status": self.status,
             "message": self.message,
-            "order_tracking_id": self.order_tracking_id,
+            "order_tracking_id": self.payment_order_id,
         }
         if self.payment_method is not None:
             response["payment_method"] = self.payment_method
@@ -49,21 +52,12 @@ class ProcessedPesapalCallback:
         return response
 
 
-PaymentTransactionStatusError = PaymentStatusLookupError
-
-
 class PaymentCallbackBookingRepository(Protocol):
     def get_payment_callback_booking(
         self, booking_id: str
     ) -> PaymentCallbackBookingRecord | None: ...
 
     def update_payment_booking_status(self, booking_id: UUID, status: str) -> None: ...
-
-
-class PaymentTransactionStatusProvider(Protocol):
-    async def get_transaction_status(
-        self, order_tracking_id: str
-    ) -> dict[str, Any]: ...
 
 
 class PaymentCallbackEventPublisher(Protocol):
@@ -86,66 +80,66 @@ class PaymentCallbackEventPublisher(Protocol):
     ) -> None: ...
 
 
-class ProcessPesapalPaymentCallback:
+class ProcessPaymentCallback:
     def __init__(
         self,
         *,
         booking_repository: PaymentCallbackBookingRepository,
-        transaction_provider: PaymentTransactionStatusProvider,
+        payment_status_provider: PaymentStatusProvider,
         event_publisher: PaymentCallbackEventPublisher,
     ):
         self.booking_repository = booking_repository
-        self.transaction_provider = transaction_provider
+        self.payment_status_provider = payment_status_provider
         self.event_publisher = event_publisher
 
     async def execute(
-        self, command: ProcessPesapalCallbackCommand
-    ) -> ProcessedPesapalCallback:
-        booking_id = self._extract_booking_id(command.order_merchant_reference)
+        self, command: ProcessPaymentCallbackCommand
+    ) -> ProcessedPaymentCallback:
+        booking_id = self._extract_booking_id(command.merchant_reference)
         booking = self.booking_repository.get_payment_callback_booking(booking_id)
         if not booking:
-            return ProcessedPesapalCallback(
+            return ProcessedPaymentCallback(
                 status="error",
                 message="Booking not found",
-                order_tracking_id=command.order_tracking_id,
+                payment_order_id=command.payment_order_id,
             )
 
         try:
-            transaction_status = await self.transaction_provider.get_transaction_status(
-                command.order_tracking_id
+            payment_status = await self.payment_status_provider.get_payment_status(
+                command.payment_order_id
             )
-            return self._process_transaction_status(
+            return self._process_payment_status(
                 booking=booking,
-                transaction_status=transaction_status,
-                order_tracking_id=command.order_tracking_id,
+                payment_status=payment_status,
+                payment_order_id=command.payment_order_id,
             )
         except PaymentStatusLookupError as exc:
             if "Pending Payment" in str(exc):
-                return ProcessedPesapalCallback(
+                return ProcessedPaymentCallback(
                     status="pending",
                     message=PENDING_PAYMENT_MESSAGE,
-                    order_tracking_id=command.order_tracking_id,
+                    payment_order_id=command.payment_order_id,
                 )
             return self._handle_processing_error(
                 booking=booking,
-                order_tracking_id=command.order_tracking_id,
+                payment_order_id=command.payment_order_id,
                 error=exc,
             )
         except Exception as exc:
             return self._handle_processing_error(
                 booking=booking,
-                order_tracking_id=command.order_tracking_id,
+                payment_order_id=command.payment_order_id,
                 error=exc,
             )
 
-    def _process_transaction_status(
+    def _process_payment_status(
         self,
         *,
         booking: PaymentCallbackBookingRecord,
-        transaction_status: dict[str, Any],
-        order_tracking_id: str,
-    ) -> ProcessedPesapalCallback:
-        status_code = transaction_status.get("status_code")
+        payment_status: dict[str, Any],
+        payment_order_id: str,
+    ) -> ProcessedPaymentCallback:
+        status_code = payment_status.get("status_code")
 
         if status_code == 1:
             self.booking_repository.update_payment_booking_status(
@@ -157,81 +151,81 @@ class ProcessPesapalPaymentCallback:
                 user_email=booking.user_email,
                 pnr=booking.pnr,
             )
-            return ProcessedPesapalCallback(
+            return ProcessedPaymentCallback(
                 status="success",
                 message="Payment completed successfully",
-                order_tracking_id=order_tracking_id,
-                payment_method=transaction_status.get("payment_method"),
-                amount=transaction_status.get("amount"),
-                confirmation_code=transaction_status.get("confirmation_code"),
+                payment_order_id=payment_order_id,
+                payment_method=payment_status.get("payment_method"),
+                amount=payment_status.get("amount"),
+                confirmation_code=payment_status.get("confirmation_code"),
             )
 
         if status_code == 2:
             self.booking_repository.update_payment_booking_status(
                 booking.id, BookingStatus.FAILED
             )
-            reason = transaction_status.get("description", "Unknown error")
+            reason = payment_status.get("description", "Unknown error")
             self.event_publisher.publish_payment_failed(
                 booking_id=booking.id,
                 user_id=booking.user_id,
                 pnr=booking.pnr,
                 reason=reason,
             )
-            return ProcessedPesapalCallback(
+            return ProcessedPaymentCallback(
                 status="failed",
                 message=f"Payment failed: {reason}",
-                order_tracking_id=order_tracking_id,
+                payment_order_id=payment_order_id,
             )
 
         if status_code == 3:
             self.booking_repository.update_payment_booking_status(
                 booking.id, BookingStatus.REVERSED
             )
-            return ProcessedPesapalCallback(
+            return ProcessedPaymentCallback(
                 status="reversed",
                 message="Payment was reversed",
-                order_tracking_id=order_tracking_id,
+                payment_order_id=payment_order_id,
             )
 
         self.booking_repository.update_payment_booking_status(
             booking.id, BookingStatus.PENDING
         )
-        error = transaction_status.get("error", {})
+        error = payment_status.get("error", {})
         if error and error.get("code") == "payment_details_not_found":
-            return ProcessedPesapalCallback(
+            return ProcessedPaymentCallback(
                 status="pending",
                 message=PENDING_PAYMENT_MESSAGE,
-                order_tracking_id=order_tracking_id,
+                payment_order_id=payment_order_id,
             )
 
-        return ProcessedPesapalCallback(
+        return ProcessedPaymentCallback(
             status="invalid",
             message=(
                 "Invalid payment status: "
-                f"{transaction_status.get('payment_status_description', '')}"
+                f"{payment_status.get('payment_status_description', '')}"
             ),
-            order_tracking_id=order_tracking_id,
+            payment_order_id=payment_order_id,
         )
 
     def _handle_processing_error(
         self,
         *,
         booking: PaymentCallbackBookingRecord,
-        order_tracking_id: str,
+        payment_order_id: str,
         error: Exception,
-    ) -> ProcessedPesapalCallback:
+    ) -> ProcessedPaymentCallback:
         self.booking_repository.update_payment_booking_status(
             booking.id, BookingStatus.CANCELLED
         )
-        return ProcessedPesapalCallback(
+        return ProcessedPaymentCallback(
             status="error",
             message=f"Error processing callback: {str(error)}",
-            order_tracking_id=order_tracking_id,
+            payment_order_id=payment_order_id,
         )
 
     @staticmethod
-    def _extract_booking_id(order_merchant_reference: str) -> str:
-        booking_id, separator, suffix = order_merchant_reference.rpartition("-")
+    def _extract_booking_id(merchant_reference: str) -> str:
+        booking_id, separator, suffix = merchant_reference.rpartition("-")
         if separator and suffix.isdigit():
             return booking_id
-        return order_merchant_reference
+        return merchant_reference

@@ -8,22 +8,22 @@ from backend.application.payments.get_payment_status import (
 from backend.application.payments.payment_status import PaymentStatusLookupError
 
 
-class StubTransactionStatusProvider:
-    def __init__(self, transaction_status=None, error: Exception | None = None):
-        self.transaction_status = transaction_status or {}
+class StubPaymentStatusProvider:
+    def __init__(self, payment_status=None, error: Exception | None = None):
+        self.payment_status = payment_status or {}
         self.error = error
         self.calls = []
 
-    async def get_transaction_status(self, order_tracking_id: str):
-        self.calls.append(order_tracking_id)
+    async def get_payment_status(self, payment_order_id: str):
+        self.calls.append(payment_order_id)
         if self.error:
             raise self.error
-        return self.transaction_status
+        return self.payment_status
 
 
 @pytest.mark.asyncio
 async def test_get_payment_status_maps_provider_response():
-    provider = StubTransactionStatusProvider(
+    provider = StubPaymentStatusProvider(
         {
             "payment_method": "Visa",
             "amount": 100,
@@ -65,7 +65,7 @@ async def test_get_payment_status_maps_provider_response():
 
 @pytest.mark.asyncio
 async def test_get_payment_status_supplies_schema_safe_defaults():
-    provider = StubTransactionStatusProvider({})
+    provider = StubPaymentStatusProvider({})
     use_case = GetPaymentStatus(payment_status_provider=provider)
 
     result = await use_case.execute("track_123")
@@ -90,20 +90,20 @@ async def test_get_payment_status_supplies_schema_safe_defaults():
 
 @pytest.mark.asyncio
 async def test_get_payment_status_translates_provider_validation_error():
-    provider = StubTransactionStatusProvider(
-        error=PaymentStatusLookupError("Invalid order tracking id")
+    provider = StubPaymentStatusProvider(
+        error=PaymentStatusLookupError("Invalid payment order id")
     )
     use_case = GetPaymentStatus(payment_status_provider=provider)
 
     with pytest.raises(InvalidPaymentStatusRequest) as exc_info:
         await use_case.execute("bad_track")
 
-    assert str(exc_info.value) == "Invalid order tracking id"
+    assert str(exc_info.value) == "Invalid payment order id"
 
 
 @pytest.mark.asyncio
 async def test_get_payment_status_translates_unexpected_provider_error():
-    provider = StubTransactionStatusProvider(error=RuntimeError("Provider unavailable"))
+    provider = StubPaymentStatusProvider(error=RuntimeError("Provider unavailable"))
     use_case = GetPaymentStatus(payment_status_provider=provider)
 
     with pytest.raises(PaymentStatusProviderError) as exc_info:

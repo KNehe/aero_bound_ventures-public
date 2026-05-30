@@ -62,6 +62,4 @@ class PaymentStatusLookupError(Exception):
 
 
 class PaymentStatusProvider(Protocol):
-    async def get_transaction_status(
-        self, order_tracking_id: str
-    ) -> dict[str, Any]: ...
+    async def get_payment_status(self, payment_order_id: str) -> dict[str, Any]: ...

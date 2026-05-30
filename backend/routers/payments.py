@@ -1,13 +1,15 @@
 """Payment endpoints for Pesapal integration"""
 
 import os
-from fastapi import APIRouter, HTTPException, Depends, status
+from typing import Annotated
+
+from fastapi import APIRouter, HTTPException, Depends, Query, status
 
 from sqlmodel import Session
 
-from backend.application.payments.initiate_pesapal_payment import (
-    InitiatePesapalPayment as InitiatePayment,
-    InitiatePesapalPaymentCommand as InitiatePaymentCommand,
+from backend.application.payments.initiate_payment import (
+    InitiatePayment,
+    InitiatePaymentCommand,
     PaymentBillingAddress,
     PaymentBookingAccessDenied,
     PaymentBookingAlreadyPaid,
@@ -20,13 +22,13 @@ from backend.application.payments.get_payment_status import (
     InvalidPaymentStatusRequest,
     PaymentStatusProviderError,
 )
-from backend.application.payments.process_pesapal_callback import (
-    ProcessPesapalCallbackCommand as ProcessPaymentCallbackCommand,
-    ProcessPesapalPaymentCallback as ProcessPaymentCallback,
+from backend.application.payments.process_payment_callback import (
+    ProcessPaymentCallback,
+    ProcessPaymentCallbackCommand,
 )
-from backend.application.payments.process_pesapal_ipn import (
-    ProcessPesapalIpn as ProcessPaymentIpn,
-    ProcessPesapalIpnCommand as ProcessPaymentIpnCommand,
+from backend.application.payments.process_payment_notification import (
+    ProcessPaymentNotification,
+    ProcessPaymentNotificationCommand,
 )
 from backend.application.payments.request_payment_refund import (
     PaymentRefundCommand,
@@ -67,7 +69,7 @@ def get_initiate_payment_use_case(
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
     return InitiatePayment(
         booking_repository=SqlModelBookingRepository(session),
-        payment_provider=PaymentProviderGateway(payment_provider_client),
+        payment_initiation_provider=PaymentProviderGateway(payment_provider_client),
         default_callback_url=f"{frontend_url}/booking/payment/callback",
     )
 
@@ -77,17 +79,17 @@ def get_process_payment_callback_use_case(
 ) -> ProcessPaymentCallback:
     return ProcessPaymentCallback(
         booking_repository=SqlModelBookingRepository(session),
-        transaction_provider=PaymentProviderGateway(payment_provider_client),
+        payment_status_provider=PaymentProviderGateway(payment_provider_client),
         event_publisher=KafkaPaymentEventPublisher(kafka_producer),
     )
 
 
-def get_process_payment_ipn_use_case(
+def get_process_payment_notification_use_case(
     session: Session = Depends(get_session),
-) -> ProcessPaymentIpn:
-    return ProcessPaymentIpn(
+) -> ProcessPaymentNotification:
+    return ProcessPaymentNotification(
         booking_repository=SqlModelBookingRepository(session),
-        transaction_provider=PaymentProviderGateway(payment_provider_client),
+        payment_status_provider=PaymentProviderGateway(payment_provider_client),
         event_publisher=KafkaPaymentEventPublisher(kafka_producer),
     )
 
@@ -149,7 +151,7 @@ async def initiate_payment(
         )
 
         return PesapalPaymentResponse(
-            order_tracking_id=result.order_tracking_id,
+            order_tracking_id=result.payment_order_id,
             merchant_reference=result.merchant_reference,
             redirect_url=result.redirect_url,
         )
@@ -183,8 +185,8 @@ async def initiate_payment(
 
 @router.get("/pesapal/callback")
 async def payment_callback(
-    OrderTrackingId: str,
-    OrderMerchantReference: str,
+    payment_order_id: Annotated[str, Query(alias="OrderTrackingId")],
+    merchant_reference: Annotated[str, Query(alias="OrderMerchantReference")],
     process_callback_use_case: ProcessPaymentCallback = Depends(
         get_process_payment_callback_use_case
     ),
@@ -206,19 +208,25 @@ async def payment_callback(
     """
     result = await process_callback_use_case.execute(
         ProcessPaymentCallbackCommand(
-            order_tracking_id=OrderTrackingId,
-            order_merchant_reference=OrderMerchantReference,
+            payment_order_id=payment_order_id,
+            merchant_reference=merchant_reference,
         )
     )
     return result.as_response()
 
 
 @router.get("/pesapal/ipn")
-async def payment_ipn_notification(
-    OrderTrackingId: str | None = None,
-    OrderMerchantReference: str | None = None,
-    OrderNotificationType: str | None = None,
-    process_ipn_use_case: ProcessPaymentIpn = Depends(get_process_payment_ipn_use_case),
+async def payment_notification(
+    payment_order_id: Annotated[str | None, Query(alias="OrderTrackingId")] = None,
+    merchant_reference: Annotated[
+        str | None, Query(alias="OrderMerchantReference")
+    ] = None,
+    notification_type: Annotated[
+        str | None, Query(alias="OrderNotificationType")
+    ] = None,
+    process_notification_use_case: ProcessPaymentNotification = Depends(
+        get_process_payment_notification_use_case
+    ),
 ):
     """
     Handle Pesapal IPN (Instant Payment Notification)
@@ -234,21 +242,21 @@ async def payment_ipn_notification(
     Response Format (Required):
     {"orderNotificationType":"IPNCHANGE","orderTrackingId":"...","orderMerchantReference":"...","status":200}
     """
-    result = await process_ipn_use_case.execute(
-        ProcessPaymentIpnCommand(
-            order_tracking_id=OrderTrackingId,
-            order_merchant_reference=OrderMerchantReference,
-            order_notification_type=OrderNotificationType,
+    result = await process_notification_use_case.execute(
+        ProcessPaymentNotificationCommand(
+            payment_order_id=payment_order_id,
+            merchant_reference=merchant_reference,
+            notification_type=notification_type,
         )
     )
     return result.as_response()
 
 
 @router.get(
-    "/pesapal/status/{order_tracking_id}", response_model=PesapalTransactionStatus
+    "/pesapal/status/{payment_order_id}", response_model=PesapalTransactionStatus
 )
 async def get_payment_status(
-    order_tracking_id: str,
+    payment_order_id: str,
     current_user: UserInDB = Depends(get_current_user),
     payment_status_use_case: GetPaymentStatus = Depends(get_payment_status_use_case),
 ):
@@ -259,14 +267,14 @@ async def get_payment_status(
     Useful for showing real-time status updates.
 
     Args:
-        order_tracking_id: Pesapal's order tracking ID
+        payment_order_id: Provider payment order ID
         current_user: Authenticated user (any authenticated user can check)
 
     Returns:
         Transaction status details
     """
     try:
-        result = await payment_status_use_case.execute(order_tracking_id)
+        result = await payment_status_use_case.execute(payment_order_id)
         return PesapalTransactionStatus(**result.as_response())
     except InvalidPaymentStatusRequest as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

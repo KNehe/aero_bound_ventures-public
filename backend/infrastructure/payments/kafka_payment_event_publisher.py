@@ -70,7 +70,7 @@ class KafkaPaymentEventPublisher:
                 "remarks": remarks,
                 "initiated_by": initiated_by,
                 "user_id": str(user_id),
-                "pesapal_status": provider_status,
-                "pesapal_message": provider_message,
+                "provider_status": provider_status,
+                "provider_message": provider_message,
             },
         )

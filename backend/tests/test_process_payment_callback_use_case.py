@@ -2,13 +2,13 @@ from uuid import uuid4
 
 import pytest
 
-from backend.application.payments.process_pesapal_callback import (
+from backend.application.payments.process_payment_callback import (
     PENDING_PAYMENT_MESSAGE,
     PaymentCallbackBookingRecord,
-    PaymentTransactionStatusError,
-    ProcessPesapalCallbackCommand,
-    ProcessPesapalPaymentCallback,
+    ProcessPaymentCallbackCommand,
+    ProcessPaymentCallback,
 )
+from backend.application.payments.payment_status import PaymentStatusLookupError
 from backend.models.bookings import BookingStatus
 
 
@@ -31,17 +31,17 @@ class StubCallbackBookingRepository:
         self.status_updates.append({"booking_id": booking_id, "status": status})
 
 
-class StubTransactionProvider:
-    def __init__(self, transaction_status=None, error: Exception | None = None):
-        self.transaction_status = transaction_status or {}
+class StubPaymentStatusProvider:
+    def __init__(self, payment_status=None, error: Exception | None = None):
+        self.payment_status = payment_status or {}
         self.error = error
         self.calls = []
 
-    async def get_transaction_status(self, order_tracking_id: str):
-        self.calls.append(order_tracking_id)
+    async def get_payment_status(self, payment_order_id: str):
+        self.calls.append(payment_order_id)
         if self.error:
             raise self.error
-        return self.transaction_status
+        return self.payment_status
 
 
 class StubPaymentEventPublisher:
@@ -68,35 +68,35 @@ def build_booking() -> PaymentCallbackBookingRecord:
 def build_use_case(
     *,
     booking=DEFAULT_BOOKING,
-    transaction_status=None,
+    payment_status=None,
     error: Exception | None = None,
 ):
     repository = StubCallbackBookingRepository(
         build_booking() if booking is DEFAULT_BOOKING else booking
     )
-    provider = StubTransactionProvider(transaction_status, error)
+    provider = StubPaymentStatusProvider(payment_status, error)
     publisher = StubPaymentEventPublisher()
-    use_case = ProcessPesapalPaymentCallback(
+    use_case = ProcessPaymentCallback(
         booking_repository=repository,
-        transaction_provider=provider,
+        payment_status_provider=provider,
         event_publisher=publisher,
     )
     return use_case, repository, provider, publisher
 
 
 def build_command(reference: str = "booking-id-1234567890"):
-    return ProcessPesapalCallbackCommand(
-        order_tracking_id="track_123",
-        order_merchant_reference=reference,
+    return ProcessPaymentCallbackCommand(
+        payment_order_id="track_123",
+        merchant_reference=reference,
     )
 
 
 @pytest.mark.asyncio
-async def test_process_pesapal_callback_marks_success_and_publishes_event():
+async def test_process_payment_callback_marks_success_and_publishes_event():
     booking = build_booking()
     use_case, repository, provider, publisher = build_use_case(
         booking=booking,
-        transaction_status={
+        payment_status={
             "status_code": 1,
             "payment_method": "Visa",
             "amount": 100,
@@ -130,11 +130,11 @@ async def test_process_pesapal_callback_marks_success_and_publishes_event():
 
 
 @pytest.mark.asyncio
-async def test_process_pesapal_callback_marks_failed_and_publishes_event():
+async def test_process_payment_callback_marks_failed_and_publishes_event():
     booking = build_booking()
     use_case, repository, _provider, publisher = build_use_case(
         booking=booking,
-        transaction_status={
+        payment_status={
             "status_code": 2,
             "description": "Card declined",
         },
@@ -158,11 +158,11 @@ async def test_process_pesapal_callback_marks_failed_and_publishes_event():
 
 
 @pytest.mark.asyncio
-async def test_process_pesapal_callback_returns_pending_for_missing_payment_details():
+async def test_process_payment_callback_returns_pending_for_missing_payment_details():
     booking = build_booking()
     use_case, repository, _provider, publisher = build_use_case(
         booking=booking,
-        transaction_status={
+        payment_status={
             "status_code": 0,
             "error": {"code": "payment_details_not_found"},
         },
@@ -180,11 +180,11 @@ async def test_process_pesapal_callback_returns_pending_for_missing_payment_deta
 
 
 @pytest.mark.asyncio
-async def test_process_pesapal_callback_handles_pending_payment_error_without_update():
+async def test_process_payment_callback_handles_pending_payment_error_without_update():
     booking = build_booking()
     use_case, repository, _provider, publisher = build_use_case(
         booking=booking,
-        error=PaymentTransactionStatusError("Pending Payment"),
+        error=PaymentStatusLookupError("Pending Payment"),
     )
 
     result = await use_case.execute(build_command())
@@ -197,11 +197,11 @@ async def test_process_pesapal_callback_handles_pending_payment_error_without_up
 
 
 @pytest.mark.asyncio
-async def test_process_pesapal_callback_marks_cancelled_on_processing_error():
+async def test_process_payment_callback_marks_cancelled_on_processing_error():
     booking = build_booking()
     use_case, repository, _provider, _publisher = build_use_case(
         booking=booking,
-        error=PaymentTransactionStatusError("Provider unavailable"),
+        error=PaymentStatusLookupError("Provider unavailable"),
     )
 
     result = await use_case.execute(build_command())
@@ -214,7 +214,7 @@ async def test_process_pesapal_callback_marks_cancelled_on_processing_error():
 
 
 @pytest.mark.asyncio
-async def test_process_pesapal_callback_returns_error_when_booking_not_found():
+async def test_process_payment_callback_returns_error_when_booking_not_found():
     use_case, repository, provider, publisher = build_use_case(booking=None)
 
     result = await use_case.execute(build_command("missing-booking-1234567890"))
@@ -231,12 +231,12 @@ async def test_process_pesapal_callback_returns_error_when_booking_not_found():
 
 
 @pytest.mark.asyncio
-async def test_process_pesapal_callback_keeps_plain_uuid_reference_intact():
+async def test_process_payment_callback_keeps_plain_uuid_reference_intact():
     booking = build_booking()
     reference = str(booking.id)
     use_case, repository, _provider, _publisher = build_use_case(
         booking=booking,
-        transaction_status={"status_code": 3},
+        payment_status={"status_code": 3},
     )
 
     result = await use_case.execute(build_command(reference))

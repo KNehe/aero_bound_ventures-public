@@ -5,9 +5,9 @@ from backend.application.bookings.create_flight_order import (
     FlightOrderProviderError,
     InvalidFlightOrderRequest,
 )
-from backend.application.bookings.get_flight_order_details import (
-    FlightOrderDetailsNotFound,
-    GetFlightOrderDetails,
+from backend.application.bookings.get_booking_details import (
+    BookingDetailsNotFound,
+    GetBookingDetails,
 )
 from backend.application.flights.confirm_flight_price import (
     ConfirmFlightPrice,
@@ -26,7 +26,9 @@ from backend.infrastructure.bookings.booking_success_presenter import (
 from backend.infrastructure.bookings.kafka_booking_event_publisher import (
     KafkaBookingEventPublisher,
 )
-from backend.infrastructure.bookings.redis_user_booking_cache import RedisUserBookingCache
+from backend.infrastructure.bookings.redis_user_booking_cache import (
+    RedisUserBookingCache,
+)
 from backend.infrastructure.bookings.sqlmodel_booking_repository import (
     SqlModelBookingRepository,
 )
@@ -108,10 +110,10 @@ def get_create_flight_order_use_case(
     )
 
 
-def get_flight_order_details_use_case(
+def get_booking_details_use_case(
     session: Session = Depends(get_session),
-) -> GetFlightOrderDetails:
-    return GetFlightOrderDetails(
+) -> GetBookingDetails:
+    return GetBookingDetails(
         booking_repository=SqlModelBookingRepository(session),
         presenter=BookingSuccessPresenter(),
     )
@@ -312,12 +314,10 @@ async def view_seat_map_post(request: FlightOffer):
 
 
 @router.get("/booking/flight-orders/{booking_id}")
-async def get_flight_order(
+async def get_booking_details(
     booking_id: str,
     current_user: UserInDB = Depends(get_current_user),
-    flight_order_details_use_case: GetFlightOrderDetails = Depends(
-        get_flight_order_details_use_case
-    ),
+    booking_details_use_case: GetBookingDetails = Depends(get_booking_details_use_case),
 ):
     """
     Get complete booking details for the booking success page.
@@ -339,7 +339,7 @@ async def get_flight_order(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid booking ID format")
 
-        booking_details = flight_order_details_use_case.execute(
+        booking_details = booking_details_use_case.execute(
             booking_id=booking_uuid,
             user_id=current_user.id,
             user_email=current_user.email,
@@ -352,7 +352,7 @@ async def get_flight_order(
 
     except HTTPException:
         raise
-    except FlightOrderDetailsNotFound:
+    except BookingDetailsNotFound:
         raise HTTPException(
             status_code=404,
             detail="Booking not found or you don't have permission to access it",

@@ -1,7 +1,7 @@
 from typing import Any, Protocol
 
-from backend.application.payments.initiate_pesapal_payment import (
-    InitiatedPesapalPayment,
+from backend.application.payments.initiate_payment import (
+    InitiatedPayment,
     PaymentProviderValidationError,
 )
 from backend.application.payments.payment_status import PaymentStatusLookupError
@@ -53,7 +53,7 @@ class PesapalPaymentGateway:
         description: str,
         callback_url: str,
         billing_address: dict[str, str],
-    ) -> InitiatedPesapalPayment:
+    ) -> InitiatedPayment:
         if not self.client.ipn_id:
             raise PaymentProviderValidationError("Payment notification ID is missing")
 
@@ -70,16 +70,16 @@ class PesapalPaymentGateway:
         except ValueError as exc:
             raise PaymentProviderValidationError(str(exc)) from exc
 
-        return InitiatedPesapalPayment(
-            order_tracking_id=result["order_tracking_id"],
+        return InitiatedPayment(
+            payment_order_id=result["order_tracking_id"],
             merchant_reference=result["merchant_reference"],
             redirect_url=result["redirect_url"],
             status=result.get("status"),
         )
 
-    async def get_transaction_status(self, order_tracking_id: str) -> dict[str, Any]:
+    async def get_payment_status(self, payment_order_id: str) -> dict[str, Any]:
         try:
-            return await self.client.get_transaction_status(order_tracking_id)
+            return await self.client.get_transaction_status(payment_order_id)
         except ValueError as exc:
             raise PaymentStatusLookupError(str(exc)) from exc
 

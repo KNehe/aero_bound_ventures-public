@@ -5,7 +5,7 @@ from uuid import UUID
 
 
 @dataclass(frozen=True)
-class FlightOrderDetailsRecord:
+class BookingDetailsRecord:
     id: UUID
     created_at: datetime
     status: str
@@ -13,34 +13,32 @@ class FlightOrderDetailsRecord:
     ticket_url: str | None
 
 
-class FlightOrderDetailsError(Exception):
+class BookingDetailsError(Exception):
     pass
 
 
-class FlightOrderDetailsNotFound(FlightOrderDetailsError):
+class BookingDetailsNotFound(BookingDetailsError):
     pass
 
 
-class FlightOrderDetailsRepository(Protocol):
-    def get_user_flight_order_details(
+class BookingDetailsRepository(Protocol):
+    def get_user_booking_details(
         self, *, booking_id: UUID, user_id: UUID
-    ) -> FlightOrderDetailsRecord | None:
-        ...
+    ) -> BookingDetailsRecord | None: ...
 
 
-class FlightOrderDetailsPresenter(Protocol):
+class BookingDetailsPresenter(Protocol):
     def present(
-        self, *, booking: FlightOrderDetailsRecord, user_email: str
-    ) -> dict[str, Any]:
-        ...
+        self, *, booking: BookingDetailsRecord, user_email: str
+    ) -> dict[str, Any]: ...
 
 
-class GetFlightOrderDetails:
+class GetBookingDetails:
     def __init__(
         self,
         *,
-        booking_repository: FlightOrderDetailsRepository,
-        presenter: FlightOrderDetailsPresenter,
+        booking_repository: BookingDetailsRepository,
+        presenter: BookingDetailsPresenter,
     ):
         self.booking_repository = booking_repository
         self.presenter = presenter
@@ -48,11 +46,11 @@ class GetFlightOrderDetails:
     def execute(
         self, *, booking_id: UUID, user_id: UUID, user_email: str
     ) -> dict[str, Any]:
-        booking = self.booking_repository.get_user_flight_order_details(
+        booking = self.booking_repository.get_user_booking_details(
             booking_id=booking_id,
             user_id=user_id,
         )
         if not booking:
-            raise FlightOrderDetailsNotFound
+            raise BookingDetailsNotFound
 
         return self.presenter.present(booking=booking, user_email=user_email)

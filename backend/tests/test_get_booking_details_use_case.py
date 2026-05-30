@@ -3,10 +3,10 @@ from datetime import datetime, timezone
 
 import pytest
 
-from backend.application.bookings.get_flight_order_details import (
-    FlightOrderDetailsNotFound,
-    FlightOrderDetailsRecord,
-    GetFlightOrderDetails,
+from backend.application.bookings.get_booking_details import (
+    BookingDetailsNotFound,
+    BookingDetailsRecord,
+    GetBookingDetails,
 )
 from backend.infrastructure.bookings.booking_success_presenter import (
     BookingSuccessPresenter,
@@ -18,17 +18,17 @@ USER_ID = uuid.uuid4()
 CREATED_AT = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
 
 
-class StubFlightOrderDetailsRepository:
+class StubBookingDetailsRepository:
     def __init__(self, booking=None):
         self.booking = booking
         self.calls = []
 
-    def get_user_flight_order_details(self, *, booking_id, user_id):
+    def get_user_booking_details(self, *, booking_id, user_id):
         self.calls.append({"booking_id": booking_id, "user_id": user_id})
         return self.booking
 
 
-class StubFlightOrderDetailsPresenter:
+class StubBookingDetailsPresenter:
     def __init__(self):
         self.calls = []
 
@@ -38,7 +38,7 @@ class StubFlightOrderDetailsPresenter:
 
 
 def make_booking_record():
-    return FlightOrderDetailsRecord(
+    return BookingDetailsRecord(
         id=BOOKING_ID,
         created_at=CREATED_AT,
         status="confirmed",
@@ -62,11 +62,11 @@ def make_booking_record():
     )
 
 
-def test_get_flight_order_details_presents_user_booking():
+def test_get_booking_details_presents_user_booking():
     booking = make_booking_record()
-    repository = StubFlightOrderDetailsRepository(booking=booking)
-    presenter = StubFlightOrderDetailsPresenter()
-    use_case = GetFlightOrderDetails(
+    repository = StubBookingDetailsRepository(booking=booking)
+    presenter = StubBookingDetailsPresenter()
+    use_case = GetBookingDetails(
         booking_repository=repository,
         presenter=presenter,
     )
@@ -84,15 +84,15 @@ def test_get_flight_order_details_presents_user_booking():
     ]
 
 
-def test_get_flight_order_details_raises_when_booking_is_not_found():
-    repository = StubFlightOrderDetailsRepository()
-    presenter = StubFlightOrderDetailsPresenter()
-    use_case = GetFlightOrderDetails(
+def test_get_booking_details_raises_when_booking_is_not_found():
+    repository = StubBookingDetailsRepository()
+    presenter = StubBookingDetailsPresenter()
+    use_case = GetBookingDetails(
         booking_repository=repository,
         presenter=presenter,
     )
 
-    with pytest.raises(FlightOrderDetailsNotFound):
+    with pytest.raises(BookingDetailsNotFound):
         use_case.execute(
             booking_id=BOOKING_ID,
             user_id=USER_ID,

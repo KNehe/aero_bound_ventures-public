@@ -6,14 +6,16 @@ from sqlmodel import Session, select
 from backend.application.bookings.create_flight_order import (
     CreatedFlightBooking,
 )
-from backend.application.bookings.get_flight_order_details import (
-    FlightOrderDetailsRecord,
+from backend.application.bookings.get_booking_details import (
+    BookingDetailsRecord,
 )
-from backend.application.payments.initiate_pesapal_payment import PaymentBookingRecord
-from backend.application.payments.process_pesapal_callback import (
+from backend.application.payments.initiate_payment import PaymentBookingRecord
+from backend.application.payments.process_payment_callback import (
     PaymentCallbackBookingRecord,
 )
-from backend.application.payments.process_pesapal_ipn import PaymentIpnBookingRecord
+from backend.application.payments.process_payment_notification import (
+    PaymentNotificationBookingRecord,
+)
 from backend.models.bookings import Booking
 
 
@@ -50,9 +52,9 @@ class SqlModelBookingRepository:
             status=booking.status,
         )
 
-    def get_user_flight_order_details(
+    def get_user_booking_details(
         self, *, booking_id: UUID, user_id: UUID
-    ) -> FlightOrderDetailsRecord | None:
+    ) -> BookingDetailsRecord | None:
         booking = self.session.exec(
             select(Booking)
             .where(Booking.id == booking_id)
@@ -61,7 +63,7 @@ class SqlModelBookingRepository:
         if not booking:
             return None
 
-        return FlightOrderDetailsRecord(
+        return BookingDetailsRecord(
             id=booking.id,
             created_at=booking.created_at,
             status=booking.status,
@@ -106,9 +108,9 @@ class SqlModelBookingRepository:
             pnr=pnr,
         )
 
-    def get_payment_ipn_booking(
+    def get_payment_notification_booking(
         self, booking_id: str
-    ) -> PaymentIpnBookingRecord | None:
+    ) -> PaymentNotificationBookingRecord | None:
         booking = self.session.exec(
             select(Booking).where(Booking.id == booking_id)
         ).first()
@@ -123,7 +125,7 @@ class SqlModelBookingRepository:
             if associated_records:
                 pnr = associated_records[0].get("reference", "N/A")
 
-        return PaymentIpnBookingRecord(
+        return PaymentNotificationBookingRecord(
             id=booking.id,
             user_id=booking.user_id,
             user_email=booking.user.email,

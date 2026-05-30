@@ -2,10 +2,10 @@ from uuid import uuid4
 
 import pytest
 
-from backend.application.payments.initiate_pesapal_payment import (
-    InitiatePesapalPayment,
-    InitiatePesapalPaymentCommand,
-    InitiatedPesapalPayment,
+from backend.application.payments.initiate_payment import (
+    InitiatePayment,
+    InitiatePaymentCommand,
+    InitiatedPayment,
     PaymentBillingAddress,
     PaymentBookingAccessDenied,
     PaymentBookingAlreadyPaid,
@@ -36,15 +36,15 @@ class StubPaymentProvider:
 
     async def initiate_payment(self, **kwargs):
         self.calls.append(kwargs)
-        return InitiatedPesapalPayment(
-            order_tracking_id="track_123",
+        return InitiatedPayment(
+            payment_order_id="track_123",
             merchant_reference=kwargs["merchant_reference"],
-            redirect_url="https://pesapal.com/pay/123",
+            redirect_url="https://payment.example.com/pay/123",
             status="200",
         )
 
 
-def build_command(**overrides) -> InitiatePesapalPaymentCommand:
+def build_command(**overrides) -> InitiatePaymentCommand:
     values = {
         "booking_id": "booking_123",
         "amount": 125.5,
@@ -60,11 +60,11 @@ def build_command(**overrides) -> InitiatePesapalPaymentCommand:
         ),
     }
     values.update(overrides)
-    return InitiatePesapalPaymentCommand(**values)
+    return InitiatePaymentCommand(**values)
 
 
 @pytest.mark.asyncio
-async def test_initiate_pesapal_payment_builds_provider_request():
+async def test_initiate_payment_builds_provider_request():
     user_id = uuid4()
     booking_id = uuid4()
     repository = StubBookingRepository(
@@ -75,15 +75,15 @@ async def test_initiate_pesapal_payment_builds_provider_request():
         )
     )
     provider = StubPaymentProvider()
-    use_case = InitiatePesapalPayment(
+    use_case = InitiatePayment(
         booking_repository=repository,
-        payment_provider=provider,
+        payment_initiation_provider=provider,
         default_callback_url="https://default.example.com/payment/callback",
     )
 
     result = await use_case.execute(user_id=user_id, command=build_command())
 
-    assert result.redirect_url == "https://pesapal.com/pay/123"
+    assert result.redirect_url == "https://payment.example.com/pay/123"
     assert repository.calls == ["booking_123"]
     assert provider.calls == [
         {
@@ -111,7 +111,7 @@ async def test_initiate_pesapal_payment_builds_provider_request():
 
 
 @pytest.mark.asyncio
-async def test_initiate_pesapal_payment_uses_default_callback_when_missing():
+async def test_initiate_payment_uses_default_callback_when_missing():
     user_id = uuid4()
     repository = StubBookingRepository(
         PaymentBookingRecord(
@@ -121,9 +121,9 @@ async def test_initiate_pesapal_payment_uses_default_callback_when_missing():
         )
     )
     provider = StubPaymentProvider()
-    use_case = InitiatePesapalPayment(
+    use_case = InitiatePayment(
         booking_repository=repository,
-        payment_provider=provider,
+        payment_initiation_provider=provider,
         default_callback_url="https://default.example.com/payment/callback",
     )
 
@@ -135,10 +135,10 @@ async def test_initiate_pesapal_payment_uses_default_callback_when_missing():
 
 
 @pytest.mark.asyncio
-async def test_initiate_pesapal_payment_rejects_missing_booking():
-    use_case = InitiatePesapalPayment(
+async def test_initiate_payment_rejects_missing_booking():
+    use_case = InitiatePayment(
         booking_repository=StubBookingRepository(None),
-        payment_provider=StubPaymentProvider(),
+        payment_initiation_provider=StubPaymentProvider(),
         default_callback_url="https://default.example.com/payment/callback",
     )
 
@@ -147,7 +147,7 @@ async def test_initiate_pesapal_payment_rejects_missing_booking():
 
 
 @pytest.mark.asyncio
-async def test_initiate_pesapal_payment_rejects_other_users_booking():
+async def test_initiate_payment_rejects_other_users_booking():
     repository = StubBookingRepository(
         PaymentBookingRecord(
             id=uuid4(),
@@ -156,9 +156,9 @@ async def test_initiate_pesapal_payment_rejects_other_users_booking():
         )
     )
     provider = StubPaymentProvider()
-    use_case = InitiatePesapalPayment(
+    use_case = InitiatePayment(
         booking_repository=repository,
-        payment_provider=provider,
+        payment_initiation_provider=provider,
         default_callback_url="https://default.example.com/payment/callback",
     )
 
@@ -169,7 +169,7 @@ async def test_initiate_pesapal_payment_rejects_other_users_booking():
 
 
 @pytest.mark.asyncio
-async def test_initiate_pesapal_payment_rejects_paid_booking():
+async def test_initiate_payment_rejects_paid_booking():
     user_id = uuid4()
     repository = StubBookingRepository(
         PaymentBookingRecord(
@@ -179,9 +179,9 @@ async def test_initiate_pesapal_payment_rejects_paid_booking():
         )
     )
     provider = StubPaymentProvider()
-    use_case = InitiatePesapalPayment(
+    use_case = InitiatePayment(
         booking_repository=repository,
-        payment_provider=provider,
+        payment_initiation_provider=provider,
         default_callback_url="https://default.example.com/payment/callback",
     )
 
@@ -192,7 +192,7 @@ async def test_initiate_pesapal_payment_rejects_paid_booking():
 
 
 @pytest.mark.asyncio
-async def test_initiate_pesapal_payment_requires_configured_provider():
+async def test_initiate_payment_requires_configured_provider():
     user_id = uuid4()
     repository = StubBookingRepository(
         PaymentBookingRecord(
@@ -202,9 +202,9 @@ async def test_initiate_pesapal_payment_requires_configured_provider():
         )
     )
     provider = StubPaymentProvider(configured=False)
-    use_case = InitiatePesapalPayment(
+    use_case = InitiatePayment(
         booking_repository=repository,
-        payment_provider=provider,
+        payment_initiation_provider=provider,
         default_callback_url="https://default.example.com/payment/callback",
     )
 

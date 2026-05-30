@@ -29,7 +29,7 @@ class PaymentBillingAddress:
 
 
 @dataclass(frozen=True)
-class InitiatePesapalPaymentCommand:
+class InitiatePaymentCommand:
     booking_id: str
     amount: float
     currency: str
@@ -39,34 +39,34 @@ class InitiatePesapalPaymentCommand:
 
 
 @dataclass(frozen=True)
-class InitiatedPesapalPayment:
-    order_tracking_id: str
+class InitiatedPayment:
+    payment_order_id: str
     merchant_reference: str
     redirect_url: str
     status: str | None = None
 
 
-class InitiatePesapalPaymentError(Exception):
+class InitiatePaymentError(Exception):
     pass
 
 
-class PaymentBookingNotFound(InitiatePesapalPaymentError):
+class PaymentBookingNotFound(InitiatePaymentError):
     pass
 
 
-class PaymentBookingAccessDenied(InitiatePesapalPaymentError):
+class PaymentBookingAccessDenied(InitiatePaymentError):
     pass
 
 
-class PaymentBookingAlreadyPaid(InitiatePesapalPaymentError):
+class PaymentBookingAlreadyPaid(InitiatePaymentError):
     pass
 
 
-class PaymentSystemNotConfigured(InitiatePesapalPaymentError):
+class PaymentSystemNotConfigured(InitiatePaymentError):
     pass
 
 
-class PaymentProviderValidationError(InitiatePesapalPaymentError):
+class PaymentProviderValidationError(InitiatePaymentError):
     pass
 
 
@@ -74,7 +74,7 @@ class PaymentBookingRepository(Protocol):
     def get_payment_booking(self, booking_id: str) -> PaymentBookingRecord | None: ...
 
 
-class PesapalPaymentProvider(Protocol):
+class PaymentInitiationProvider(Protocol):
     def is_configured(self) -> bool: ...
 
     async def initiate_payment(
@@ -86,27 +86,27 @@ class PesapalPaymentProvider(Protocol):
         description: str,
         callback_url: str,
         billing_address: dict[str, str],
-    ) -> InitiatedPesapalPayment: ...
+    ) -> InitiatedPayment: ...
 
 
-class InitiatePesapalPayment:
+class InitiatePayment:
     def __init__(
         self,
         *,
         booking_repository: PaymentBookingRepository,
-        payment_provider: PesapalPaymentProvider,
+        payment_initiation_provider: PaymentInitiationProvider,
         default_callback_url: str,
     ):
         self.booking_repository = booking_repository
-        self.payment_provider = payment_provider
+        self.payment_initiation_provider = payment_initiation_provider
         self.default_callback_url = default_callback_url
 
     async def execute(
         self,
         *,
         user_id: UUID,
-        command: InitiatePesapalPaymentCommand,
-    ) -> InitiatedPesapalPayment:
+        command: InitiatePaymentCommand,
+    ) -> InitiatedPayment:
         booking = self.booking_repository.get_payment_booking(command.booking_id)
         if not booking:
             raise PaymentBookingNotFound
@@ -117,10 +117,10 @@ class InitiatePesapalPayment:
         if booking.status == BookingStatus.PAID:
             raise PaymentBookingAlreadyPaid
 
-        if not self.payment_provider.is_configured():
+        if not self.payment_initiation_provider.is_configured():
             raise PaymentSystemNotConfigured
 
-        return await self.payment_provider.initiate_payment(
+        return await self.payment_initiation_provider.initiate_payment(
             merchant_reference=str(booking.id),
             amount=command.amount,
             currency=command.currency,

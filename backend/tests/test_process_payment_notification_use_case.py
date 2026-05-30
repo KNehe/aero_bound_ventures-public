@@ -2,10 +2,10 @@ from uuid import uuid4
 
 import pytest
 
-from backend.application.payments.process_pesapal_ipn import (
-    PaymentIpnBookingRecord,
-    ProcessPesapalIpn,
-    ProcessPesapalIpnCommand,
+from backend.application.payments.process_payment_notification import (
+    PaymentNotificationBookingRecord,
+    ProcessPaymentNotification,
+    ProcessPaymentNotificationCommand,
 )
 from backend.models.bookings import BookingStatus
 
@@ -13,15 +13,15 @@ from backend.models.bookings import BookingStatus
 DEFAULT_BOOKING = object()
 
 
-class StubIpnBookingRepository:
-    def __init__(self, booking: PaymentIpnBookingRecord | None):
+class StubPaymentNotificationBookingRepository:
+    def __init__(self, booking: PaymentNotificationBookingRecord | None):
         self.booking = booking
         self.lookup_calls = []
         self.status_updates = []
 
-    def get_payment_ipn_booking(
+    def get_payment_notification_booking(
         self, booking_id: str
-    ) -> PaymentIpnBookingRecord | None:
+    ) -> PaymentNotificationBookingRecord | None:
         self.lookup_calls.append(booking_id)
         return self.booking
 
@@ -29,17 +29,17 @@ class StubIpnBookingRepository:
         self.status_updates.append({"booking_id": booking_id, "status": status})
 
 
-class StubTransactionProvider:
-    def __init__(self, transaction_status=None, error: Exception | None = None):
-        self.transaction_status = transaction_status or {}
+class StubPaymentStatusProvider:
+    def __init__(self, payment_status=None, error: Exception | None = None):
+        self.payment_status = payment_status or {}
         self.error = error
         self.calls = []
 
-    async def get_transaction_status(self, order_tracking_id: str):
-        self.calls.append(order_tracking_id)
+    async def get_payment_status(self, payment_order_id: str):
+        self.calls.append(payment_order_id)
         if self.error:
             raise self.error
-        return self.transaction_status
+        return self.payment_status
 
 
 class StubPaymentEventPublisher:
@@ -50,8 +50,8 @@ class StubPaymentEventPublisher:
         self.successful.append(kwargs)
 
 
-def build_booking() -> PaymentIpnBookingRecord:
-    return PaymentIpnBookingRecord(
+def build_booking() -> PaymentNotificationBookingRecord:
+    return PaymentNotificationBookingRecord(
         id=uuid4(),
         user_id=uuid4(),
         user_email="traveler@example.com",
@@ -62,36 +62,36 @@ def build_booking() -> PaymentIpnBookingRecord:
 def build_use_case(
     *,
     booking=DEFAULT_BOOKING,
-    transaction_status=None,
+    payment_status=None,
     error: Exception | None = None,
 ):
-    repository = StubIpnBookingRepository(
+    repository = StubPaymentNotificationBookingRepository(
         build_booking() if booking is DEFAULT_BOOKING else booking
     )
-    provider = StubTransactionProvider(transaction_status, error)
+    provider = StubPaymentStatusProvider(payment_status, error)
     publisher = StubPaymentEventPublisher()
-    use_case = ProcessPesapalIpn(
+    use_case = ProcessPaymentNotification(
         booking_repository=repository,
-        transaction_provider=provider,
+        payment_status_provider=provider,
         event_publisher=publisher,
     )
     return use_case, repository, provider, publisher
 
 
 def build_command(reference: str | None = "booking-id-1234567890"):
-    return ProcessPesapalIpnCommand(
-        order_tracking_id="track_123",
-        order_merchant_reference=reference,
-        order_notification_type="IPNCHANGE",
+    return ProcessPaymentNotificationCommand(
+        payment_order_id="track_123",
+        merchant_reference=reference,
+        notification_type="IPNCHANGE",
     )
 
 
 @pytest.mark.asyncio
-async def test_process_pesapal_ipn_marks_success_and_publishes_event():
+async def test_process_payment_notification_marks_success_and_publishes_event():
     booking = build_booking()
     use_case, repository, provider, publisher = build_use_case(
         booking=booking,
-        transaction_status={"status_code": 1},
+        payment_status={"status_code": 1},
     )
 
     result = await use_case.execute(build_command())
@@ -118,11 +118,11 @@ async def test_process_pesapal_ipn_marks_success_and_publishes_event():
 
 
 @pytest.mark.asyncio
-async def test_process_pesapal_ipn_marks_failed_without_event():
+async def test_process_payment_notification_marks_failed_without_event():
     booking = build_booking()
     use_case, repository, _provider, publisher = build_use_case(
         booking=booking,
-        transaction_status={"status_code": 2},
+        payment_status={"status_code": 2},
     )
 
     result = await use_case.execute(build_command())
@@ -135,11 +135,11 @@ async def test_process_pesapal_ipn_marks_failed_without_event():
 
 
 @pytest.mark.asyncio
-async def test_process_pesapal_ipn_marks_reversed_without_event():
+async def test_process_payment_notification_marks_reversed_without_event():
     booking = build_booking()
     use_case, repository, _provider, publisher = build_use_case(
         booking=booking,
-        transaction_status={"status_code": 3},
+        payment_status={"status_code": 3},
     )
 
     result = await use_case.execute(build_command())
@@ -152,11 +152,11 @@ async def test_process_pesapal_ipn_marks_reversed_without_event():
 
 
 @pytest.mark.asyncio
-async def test_process_pesapal_ipn_marks_unknown_status_pending():
+async def test_process_payment_notification_marks_unknown_status_pending():
     booking = build_booking()
     use_case, repository, _provider, publisher = build_use_case(
         booking=booking,
-        transaction_status={"status_code": 0},
+        payment_status={"status_code": 0},
     )
 
     result = await use_case.execute(build_command())
@@ -169,14 +169,14 @@ async def test_process_pesapal_ipn_marks_unknown_status_pending():
 
 
 @pytest.mark.asyncio
-async def test_process_pesapal_ipn_rejects_missing_required_parameters():
+async def test_process_payment_notification_rejects_missing_required_parameters():
     use_case, repository, provider, publisher = build_use_case()
 
     result = await use_case.execute(
-        ProcessPesapalIpnCommand(
-            order_tracking_id=None,
-            order_merchant_reference=None,
-            order_notification_type=None,
+        ProcessPaymentNotificationCommand(
+            payment_order_id=None,
+            merchant_reference=None,
+            notification_type=None,
         )
     )
 
@@ -192,7 +192,7 @@ async def test_process_pesapal_ipn_rejects_missing_required_parameters():
 
 
 @pytest.mark.asyncio
-async def test_process_pesapal_ipn_returns_failure_when_booking_not_found():
+async def test_process_payment_notification_returns_failure_when_booking_not_found():
     use_case, repository, provider, publisher = build_use_case(booking=None)
 
     result = await use_case.execute(build_command("missing-booking-1234567890"))
@@ -209,7 +209,7 @@ async def test_process_pesapal_ipn_returns_failure_when_booking_not_found():
 
 
 @pytest.mark.asyncio
-async def test_process_pesapal_ipn_marks_cancelled_on_processing_error():
+async def test_process_payment_notification_marks_cancelled_on_processing_error():
     booking = build_booking()
     use_case, repository, _provider, publisher = build_use_case(
         booking=booking,
@@ -226,12 +226,12 @@ async def test_process_pesapal_ipn_marks_cancelled_on_processing_error():
 
 
 @pytest.mark.asyncio
-async def test_process_pesapal_ipn_keeps_plain_uuid_reference_intact():
+async def test_process_payment_notification_keeps_plain_uuid_reference_intact():
     booking = build_booking()
     reference = str(booking.id)
     use_case, repository, _provider, _publisher = build_use_case(
         booking=booking,
-        transaction_status={"status_code": 1},
+        payment_status={"status_code": 1},
     )
 
     result = await use_case.execute(build_command(reference))

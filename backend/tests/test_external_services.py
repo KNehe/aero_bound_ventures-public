@@ -3,26 +3,28 @@ import uuid
 import pytest
 
 from backend.application.bookings.create_flight_order import CreatedFlightBooking
-from backend.application.payments.initiate_pesapal_payment import (
-    InitiatedPesapalPayment,
+from backend.application.payments.initiate_payment import (
+    InitiatedPayment,
 )
 from backend.application.payments.payment_status import PaymentStatus
-from backend.application.payments.process_pesapal_callback import (
-    ProcessedPesapalCallback,
+from backend.application.payments.process_payment_callback import (
+    ProcessedPaymentCallback,
 )
-from backend.application.payments.process_pesapal_ipn import ProcessedPesapalIpn
+from backend.application.payments.process_payment_notification import (
+    ProcessedPaymentNotification,
+)
 from backend.application.payments.request_payment_refund import RequestedPaymentRefund
 from backend.crud.users import create_user
 from backend.routers.flights import (
     get_confirm_flight_price_use_case,
     get_create_flight_order_use_case,
-    get_flight_order_details_use_case,
+    get_booking_details_use_case,
     get_search_flights_use_case,
 )
 from backend.routers.payments import get_payment_status_use_case
 from backend.routers.payments import get_initiate_payment_use_case
 from backend.routers.payments import get_process_payment_callback_use_case
-from backend.routers.payments import get_process_payment_ipn_use_case
+from backend.routers.payments import get_process_payment_notification_use_case
 from backend.routers.payments import get_request_payment_refund_use_case
 
 
@@ -67,7 +69,7 @@ class StubCreateFlightOrderUseCase:
         )
 
 
-class StubGetFlightOrderDetailsUseCase:
+class StubBookingDetailsUseCase:
     def __init__(self):
         self.calls = []
 
@@ -92,8 +94,8 @@ class StubInitiatePaymentUseCase:
 
     async def execute(self, *, user_id, command):
         self.calls.append({"user_id": user_id, "command": command})
-        return InitiatedPesapalPayment(
-            order_tracking_id="track_123",
+        return InitiatedPayment(
+            payment_order_id="track_123",
             merchant_reference=command.booking_id,
             redirect_url="https://pesapal.com/pay/123",
             status="200",
@@ -106,25 +108,25 @@ class StubProcessPaymentCallbackUseCase:
 
     async def execute(self, command):
         self.calls.append(command)
-        return ProcessedPesapalCallback(
+        return ProcessedPaymentCallback(
             status="success",
             message="Payment completed successfully",
-            order_tracking_id=command.order_tracking_id,
+            payment_order_id=command.payment_order_id,
             payment_method="Visa",
             amount=100,
             confirmation_code="CONFIRM123",
         )
 
 
-class StubProcessPaymentIpnUseCase:
+class StubProcessPaymentNotificationUseCase:
     def __init__(self):
         self.calls = []
 
     async def execute(self, command):
         self.calls.append(command)
-        return ProcessedPesapalIpn(
-            order_tracking_id=command.order_tracking_id or "",
-            order_merchant_reference=command.order_merchant_reference or "",
+        return ProcessedPaymentNotification(
+            payment_order_id=command.payment_order_id or "",
+            merchant_reference=command.merchant_reference or "",
             status=200,
         )
 
@@ -133,8 +135,8 @@ class StubGetPaymentStatusUseCase:
     def __init__(self):
         self.calls = []
 
-    async def execute(self, order_tracking_id: str):
-        self.calls.append(order_tracking_id)
+    async def execute(self, payment_order_id: str):
+        self.calls.append(payment_order_id)
         return PaymentStatus(
             payment_method="Visa",
             amount=100,
@@ -219,7 +221,7 @@ def test_initiate_payment_route_uses_payment_use_case(client, test_user, auth_he
     assert command.billing_address.email_address == "test@example.com"
 
 
-def test_pesapal_callback_route_uses_callback_use_case(client):
+def test_payment_callback_route_uses_callback_use_case(client):
     use_case = StubProcessPaymentCallbackUseCase()
     client.app.dependency_overrides[get_process_payment_callback_use_case] = (
         lambda: use_case
@@ -246,13 +248,15 @@ def test_pesapal_callback_route_uses_callback_use_case(client):
         "confirmation_code": "CONFIRM123",
     }
     assert len(use_case.calls) == 1
-    assert use_case.calls[0].order_tracking_id == "track_123"
-    assert use_case.calls[0].order_merchant_reference == "booking_123-1234567890"
+    assert use_case.calls[0].payment_order_id == "track_123"
+    assert use_case.calls[0].merchant_reference == "booking_123-1234567890"
 
 
-def test_pesapal_ipn_route_uses_ipn_use_case(client):
-    use_case = StubProcessPaymentIpnUseCase()
-    client.app.dependency_overrides[get_process_payment_ipn_use_case] = lambda: use_case
+def test_payment_notification_route_uses_notification_use_case(client):
+    use_case = StubProcessPaymentNotificationUseCase()
+    client.app.dependency_overrides[get_process_payment_notification_use_case] = (
+        lambda: use_case
+    )
 
     try:
         response = client.get(
@@ -264,7 +268,9 @@ def test_pesapal_ipn_route_uses_ipn_use_case(client):
             },
         )
     finally:
-        client.app.dependency_overrides.pop(get_process_payment_ipn_use_case, None)
+        client.app.dependency_overrides.pop(
+            get_process_payment_notification_use_case, None
+        )
 
     assert response.status_code == 200
     assert response.json() == {
@@ -274,9 +280,9 @@ def test_pesapal_ipn_route_uses_ipn_use_case(client):
         "status": 200,
     }
     assert len(use_case.calls) == 1
-    assert use_case.calls[0].order_tracking_id == "track_123"
-    assert use_case.calls[0].order_merchant_reference == "booking_123-1234567890"
-    assert use_case.calls[0].order_notification_type == "IPNCHANGE"
+    assert use_case.calls[0].payment_order_id == "track_123"
+    assert use_case.calls[0].merchant_reference == "booking_123-1234567890"
+    assert use_case.calls[0].notification_type == "IPNCHANGE"
 
 
 def test_payment_status_route_uses_status_use_case(client, auth_header):
@@ -456,19 +462,17 @@ def test_create_flight_order_route_uses_create_flight_order_use_case(
     ]
 
 
-def test_get_flight_order_route_uses_flight_order_details_use_case(
+def test_get_booking_details_route_uses_booking_details_use_case(
     client, test_user, auth_header
 ):
-    use_case = StubGetFlightOrderDetailsUseCase()
+    use_case = StubBookingDetailsUseCase()
     booking_id = uuid.uuid4()
-    client.app.dependency_overrides[get_flight_order_details_use_case] = (
-        lambda: use_case
-    )
+    client.app.dependency_overrides[get_booking_details_use_case] = lambda: use_case
 
     try:
         response = client.get(f"{API_V1_PREFIX}/booking/flight-orders/{booking_id}")
     finally:
-        client.app.dependency_overrides.pop(get_flight_order_details_use_case, None)
+        client.app.dependency_overrides.pop(get_booking_details_use_case, None)
 
     assert response.status_code == 200
     assert response.json() == {
