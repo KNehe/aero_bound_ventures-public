@@ -16,6 +16,7 @@ from backend.application.bookings.get_user_bookings import (
 from backend.application.bookings.get_booking_details import (
     BookingDetailsRecord,
 )
+from backend.application.bookings.get_seat_map import SeatMapBookingRecord
 from backend.application.payments.initiate_payment import PaymentBookingRecord
 from backend.application.payments.process_payment_callback import (
     PaymentCallbackBookingRecord,
@@ -104,6 +105,23 @@ class SqlModelBookingRepository:
             flight_order_id=booking.flight_order_id,
             status=booking.status,
             pnr=pnr,
+        )
+
+    def get_user_booking_for_seat_map(
+        self, *, booking_id: UUID, user_id: UUID
+    ) -> SeatMapBookingRecord | None:
+        booking = self.session.exec(
+            select(Booking)
+            .where(Booking.id == booking_id)
+            .where(Booking.user_id == user_id)
+        ).first()
+        if not booking:
+            return None
+
+        return SeatMapBookingRecord(
+            id=booking.id,
+            user_id=booking.user_id,
+            flight_order_id=booking.flight_order_id,
         )
 
     def get_payment_booking(self, booking_id: str) -> PaymentBookingRecord | None:

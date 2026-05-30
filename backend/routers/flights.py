@@ -16,6 +16,12 @@ from backend.application.bookings.get_booking_details import (
     BookingDetailsNotFound,
     GetBookingDetails,
 )
+from backend.application.bookings.get_seat_map import (
+    GetSeatMap,
+    InvalidSeatMapRequest,
+    SeatMapBookingNotFound,
+    SeatMapProviderError,
+)
 from backend.application.bookings.get_user_bookings import GetUserBookings
 from backend.application.flights.confirm_flight_price import (
     ConfirmFlightPrice,
@@ -50,6 +56,9 @@ from backend.infrastructure.flights.amadeus_error_parser import (
     parse_amadeus_client_error,
 )
 from backend.infrastructure.flights.amadeus_pricing_gateway import AmadeusPricingGateway
+from backend.infrastructure.flights.amadeus_seat_map_gateway import (
+    AmadeusSeatMapGateway,
+)
 from backend.infrastructure.flights.amadeus_search_gateway import AmadeusSearchGateway
 from backend.schemas.flights import (
     FlightSearchResponse,
@@ -71,7 +80,6 @@ from backend.schemas.locations import (
     AirportCitySearchRequest,
     AirportCitySearchResponse,
 )
-from backend.models.bookings import Booking
 from backend.schemas.bookings import (
     BookingResponse,
     UserBookingResponse,
@@ -81,7 +89,7 @@ from backend.schemas.bookings import (
 from backend.crud.database import get_session
 from backend.utils.pagination import MAX_PAGINATION_LIMIT
 from backend.utils.log_manager import get_app_logger
-from sqlmodel import Session, select
+from sqlmodel import Session
 from backend.utils.kafka import kafka_producer
 import uuid as uuid_module
 
@@ -135,6 +143,15 @@ def get_cancel_booking_use_case(
         ),
         booking_cache=RedisUserBookingCache(redis_cache),
         event_publisher=KafkaBookingEventPublisher(kafka_producer),
+    )
+
+
+def get_seat_map_use_case(
+    session: Session = Depends(get_session),
+) -> GetSeatMap:
+    return GetSeatMap(
+        booking_repository=SqlModelBookingRepository(session),
+        seat_map_provider=AmadeusSeatMapGateway(amadeus_flight_service),
     )
 
 
@@ -278,49 +295,29 @@ async def flight_order(
 
 @router.get("/shopping/seatmaps")
 async def view_seat_map_get(
-    flightorderId: Annotated[str, Query()],
+    flight_order_reference: Annotated[str, Query(alias="flightorderId")],
     current_user: UserInDB = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    seat_map_use_case: GetSeatMap = Depends(get_seat_map_use_case),
 ):
     try:
-        amadeus_order_id = flightorderId
-        # Check if flightorderId is a database UUID
-        try:
-            booking_uuid = uuid_module.UUID(flightorderId)
-            booking = session.exec(
-                select(Booking)
-                .where(Booking.id == booking_uuid)
-                .where(Booking.user_id == current_user.id)
-            ).first()
-
-            if booking:
-                amadeus_order_id = booking.flight_order_id
-                logger.info(
-                    f"Mapped booking UUID {flightorderId} to Amadeus order ID {amadeus_order_id}"
-                )
-            else:
-                # If it's a UUID but not found in DB for this user, it's either someone else's or invalid
-                raise HTTPException(
-                    status_code=404, detail="Booking not found or access denied"
-                )
-        except ValueError:
-            # Not a UUID, use as is (direct Amadeus ID)
-            pass
-
-        logger.info(
-            f"Final Amadeus Flight Order ID for seatmap retrieval: {amadeus_order_id}"
+        return seat_map_use_case.execute(
+            flight_order_reference=flight_order_reference,
+            user_id=current_user.id,
         )
-        response = amadeus_flight_service.view_seat_map_get(
-            flightorderId=amadeus_order_id
+    except SeatMapBookingNotFound:
+        raise HTTPException(
+            status_code=404, detail="Booking not found or access denied"
         )
-        return response
-    except ClientError as e:
-        error_detail = _parse_amadeus_client_error(e)
-        raise HTTPException(status_code=400, detail=error_detail)
+    except InvalidSeatMapRequest as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except SeatMapProviderError:
+        raise HTTPException(status_code=500, detail="Failed to retrieve seat map")
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to retrieve seat map for ID: {flightorderId}")
+        logger.exception(
+            f"Failed to retrieve seat map for ID: {flight_order_reference}"
+        )
         raise HTTPException(
             status_code=500, detail=f"Failed to retrieve seat map: {str(e)}"
         )
