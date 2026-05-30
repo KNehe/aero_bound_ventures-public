@@ -9,6 +9,10 @@ from backend.application.bookings.create_flight_order import (
 from backend.application.bookings.cancel_booking import (
     BookingCancellationRecord,
 )
+from backend.application.bookings.get_user_bookings import (
+    BookingListItemRecord,
+    UserBookingsPage,
+)
 from backend.application.bookings.get_booking_details import (
     BookingDetailsRecord,
 )
@@ -20,6 +24,7 @@ from backend.application.payments.process_payment_notification import (
     PaymentNotificationBookingRecord,
 )
 from backend.models.bookings import Booking
+from backend.crud.bookings import get_user_bookings_cursor
 
 
 class SqlModelBookingRepository:
@@ -160,6 +165,51 @@ class SqlModelBookingRepository:
             user_id=booking.user_id,
             user_email=booking.user.email,
             pnr=pnr,
+        )
+
+    def get_user_bookings(
+        self,
+        *,
+        user_id: UUID,
+        cursor: str | None,
+        limit: int,
+        include_count: bool,
+    ) -> UserBookingsPage:
+        bookings, next_cursor, has_more, total_count = get_user_bookings_cursor(
+            self.session,
+            user_id,
+            cursor=cursor,
+            limit=limit,
+            include_count=include_count,
+        )
+
+        items: list[BookingListItemRecord] = []
+        for booking in bookings:
+            pnr = None
+            if booking.amadeus_order_response:
+                associated_records = booking.amadeus_order_response.get(
+                    "associatedRecords", []
+                )
+                if associated_records:
+                    pnr = associated_records[0].get("reference")
+
+            items.append(
+                BookingListItemRecord(
+                    id=booking.id,
+                    pnr=pnr,
+                    status=booking.status,
+                    created_at=booking.created_at,
+                    ticket_url=booking.ticket_url,
+                )
+            )
+
+        return UserBookingsPage(
+            items=items,
+            next_cursor=next_cursor,
+            has_more=has_more,
+            has_previous=cursor is not None,
+            total_count=total_count,
+            limit=limit,
         )
 
     def update_payment_booking_status(self, booking_id: UUID, status: str) -> None:

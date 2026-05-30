@@ -16,6 +16,7 @@ from backend.application.bookings.get_booking_details import (
     BookingDetailsNotFound,
     GetBookingDetails,
 )
+from backend.application.bookings.get_user_bookings import GetUserBookings
 from backend.application.flights.confirm_flight_price import (
     ConfirmFlightPrice,
     FlightPricingProviderError,
@@ -78,9 +79,6 @@ from backend.schemas.bookings import (
     CursorPaginatedUserBookingResponse,
 )
 from backend.crud.database import get_session
-from backend.crud.bookings import (
-    get_user_bookings_cursor,
-)
 from backend.utils.pagination import MAX_PAGINATION_LIMIT
 from backend.utils.log_manager import get_app_logger
 from sqlmodel import Session, select
@@ -137,6 +135,15 @@ def get_cancel_booking_use_case(
         ),
         booking_cache=RedisUserBookingCache(redis_cache),
         event_publisher=KafkaBookingEventPublisher(kafka_producer),
+    )
+
+
+def get_user_bookings_use_case(
+    session: Session = Depends(get_session),
+) -> GetUserBookings:
+    return GetUserBookings(
+        booking_repository=SqlModelBookingRepository(session),
+        cache=RedisUserBookingCache(redis_cache),
     )
 
 
@@ -508,7 +515,7 @@ async def get_user_bookings(
         description="Include total_count in response (may be slower)",
     ),
     user: UserInDB = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    user_bookings_use_case: GetUserBookings = Depends(get_user_bookings_use_case),
 ):
     """
     Get cursor-paginated bookings for the current user.
@@ -521,57 +528,32 @@ async def get_user_bookings(
         Cursor-paginated list of bookings with id, pnr, status, created_at, and ticket_url
     """
     try:
-        cache_key = build_redis_key(
-            {"user_bookings": str(user.id), "cursor": cursor or "first", "limit": limit}
+        user_bookings_page = user_bookings_use_case.execute(
+            user_id=user.id,
+            cursor=cursor,
+            limit=limit,
+            include_count=include_count,
         )
-        cached_response = redis_cache.get(cache_key)
-        if cached_response:
-            logger.info(
-                f"Returning cached bookings for user_id: {user.id}, cursor: {cursor}, limit: {limit}"
-            )
-            return cached_response
-
-        logger.info(
-            f"Fetching bookings for user_id: {user.id}, cursor: {cursor}, limit: {limit}"
-        )
-
-        bookings, next_cursor, has_more, total_count = get_user_bookings_cursor(
-            session, user.id, cursor=cursor, limit=limit, include_count=include_count
-        )
-
-        items = []
-        for booking in bookings:
-            pnr = None
-            if booking.amadeus_order_response:
-                associated_records = booking.amadeus_order_response.get(
-                    "associatedRecords", []
-                )
-                if associated_records:
-                    pnr = associated_records[0].get("reference")
-
-            items.append(
+        response = CursorPaginatedUserBookingResponse(
+            items=[
                 UserBookingResponse(
                     id=booking.id,
-                    pnr=pnr,
+                    pnr=booking.pnr,
                     status=booking.status,
                     created_at=booking.created_at,
                     ticket_url=booking.ticket_url,
                 )
-            )
-
-        response = CursorPaginatedUserBookingResponse(
-            items=items,
-            next_cursor=next_cursor,
-            has_more=has_more,
-            has_previous=cursor is not None,
-            total_count=total_count,
-            limit=limit,
+                for booking in user_bookings_page.items
+            ],
+            next_cursor=user_bookings_page.next_cursor,
+            has_more=user_bookings_page.has_more,
+            has_previous=user_bookings_page.has_previous,
+            total_count=user_bookings_page.total_count,
+            limit=user_bookings_page.limit,
         )
-
-        redis_cache.set(cache_key, response.model_dump(mode="json"))
-
         logger.info(
-            f"Successfully fetched {len(items)} bookings for user_id: {user.id} (has_more: {has_more})"
+            f"Successfully fetched {len(response.items)} bookings for user_id: {user.id} "
+            f"(has_more: {response.has_more})"
         )
         return response
 

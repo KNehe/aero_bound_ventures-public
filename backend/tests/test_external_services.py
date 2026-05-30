@@ -1,9 +1,14 @@
 import uuid
+from datetime import datetime, timezone
 
 import pytest
 
 from backend.application.bookings.create_flight_order import CreatedFlightBooking
 from backend.application.bookings.cancel_booking import CancelledBooking
+from backend.application.bookings.get_user_bookings import (
+    BookingListItemRecord,
+    UserBookingsPage,
+)
 from backend.application.payments.initiate_payment import (
     InitiatedPayment,
 )
@@ -21,6 +26,7 @@ from backend.routers.flights import (
     get_confirm_flight_price_use_case,
     get_create_flight_order_use_case,
     get_booking_details_use_case,
+    get_user_bookings_use_case,
     get_search_flights_use_case,
 )
 from backend.routers.payments import get_payment_status_use_case
@@ -101,6 +107,38 @@ class StubBookingDetailsUseCase:
             "status": "confirmed",
             "ticket_url": "https://tickets.example.com/ticket.pdf",
         }
+
+
+class StubUserBookingsUseCase:
+    def __init__(self):
+        self.calls = []
+        self.booking_id = uuid.uuid4()
+
+    def execute(self, *, user_id, cursor, limit, include_count):
+        self.calls.append(
+            {
+                "user_id": user_id,
+                "cursor": cursor,
+                "limit": limit,
+                "include_count": include_count,
+            }
+        )
+        return UserBookingsPage(
+            items=[
+                BookingListItemRecord(
+                    id=self.booking_id,
+                    pnr="PNR123",
+                    status="confirmed",
+                    created_at=datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
+                    ticket_url="https://tickets.example.com/ticket.pdf",
+                )
+            ],
+            next_cursor="cursor_2",
+            has_more=False,
+            has_previous=False,
+            total_count=1,
+            limit=limit,
+        )
 
 
 class StubInitiatePaymentUseCase:
@@ -525,3 +563,42 @@ def test_cancel_booking_route_uses_cancel_use_case(client, test_user, auth_heade
     assert command.booking_id == booking_id
     assert command.user_id == test_user.id
     assert command.user_email == test_user.email
+
+
+def test_get_user_bookings_route_uses_bookings_use_case(client, test_user, auth_header):
+    use_case = StubUserBookingsUseCase()
+    client.app.dependency_overrides[get_user_bookings_use_case] = lambda: use_case
+
+    try:
+        response = client.get(
+            f"{API_V1_PREFIX}/bookings",
+            params={"cursor": "cursor_1", "limit": 20, "include_count": True},
+        )
+    finally:
+        client.app.dependency_overrides.pop(get_user_bookings_use_case, None)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "items": [
+            {
+                "id": str(use_case.booking_id),
+                "pnr": "PNR123",
+                "status": "confirmed",
+                "created_at": "2026-01-01T12:00:00Z",
+                "ticket_url": "https://tickets.example.com/ticket.pdf",
+            }
+        ],
+        "next_cursor": "cursor_2",
+        "has_more": False,
+        "has_previous": False,
+        "total_count": 1,
+        "limit": 20,
+    }
+    assert use_case.calls == [
+        {
+            "user_id": test_user.id,
+            "cursor": "cursor_1",
+            "limit": 20,
+            "include_count": True,
+        }
+    ]
