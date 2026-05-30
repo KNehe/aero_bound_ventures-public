@@ -11,6 +11,7 @@ from backend.application.payments.process_pesapal_callback import (
     ProcessedPesapalCallback,
 )
 from backend.application.payments.process_pesapal_ipn import ProcessedPesapalIpn
+from backend.application.payments.request_payment_refund import RequestedPaymentRefund
 from backend.crud.users import create_user
 from backend.routers.flights import (
     get_confirm_flight_price_use_case,
@@ -22,6 +23,7 @@ from backend.routers.payments import get_payment_status_use_case
 from backend.routers.payments import get_initiate_pesapal_payment_use_case
 from backend.routers.payments import get_process_pesapal_callback_use_case
 from backend.routers.payments import get_process_pesapal_ipn_use_case
+from backend.routers.payments import get_request_payment_refund_use_case
 
 
 API_V1_PREFIX = "/api/v1"
@@ -147,6 +149,25 @@ class StubGetPaymentStatusUseCase:
             merchant_reference="booking_123",
             payment_status_code="COMPLETED",
             currency="USD",
+        )
+
+
+class StubRequestPaymentRefundUseCase:
+    def __init__(self):
+        self.calls = []
+
+    async def execute(self, *, user_id, user_email, command):
+        self.calls.append(
+            {
+                "user_id": user_id,
+                "user_email": user_email,
+                "command": command,
+            }
+        )
+        return RequestedPaymentRefund(
+            status="200",
+            message="Refund request submitted",
+            confirmation_code=command.confirmation_code,
         )
 
 
@@ -289,6 +310,37 @@ def test_payment_status_route_uses_status_use_case(client, auth_header):
         "error": None,
     }
     assert use_case.calls == ["track_123"]
+
+
+def test_request_refund_route_uses_refund_use_case(client, test_user, auth_header):
+    use_case = StubRequestPaymentRefundUseCase()
+    client.app.dependency_overrides[get_request_payment_refund_use_case] = (
+        lambda: use_case
+    )
+    payload = {
+        "confirmation_code": "CONFIRM123",
+        "amount": 25.5,
+        "remarks": "Customer requested itinerary change",
+    }
+
+    try:
+        response = client.post(f"{API_V1_PREFIX}/payments/pesapal/refund", json=payload)
+    finally:
+        client.app.dependency_overrides.pop(get_request_payment_refund_use_case, None)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "200",
+        "message": "Refund request submitted",
+        "confirmation_code": "CONFIRM123",
+    }
+    assert len(use_case.calls) == 1
+    assert use_case.calls[0]["user_id"] == test_user.id
+    assert use_case.calls[0]["user_email"] == test_user.email
+    command = use_case.calls[0]["command"]
+    assert command.confirmation_code == "CONFIRM123"
+    assert command.amount == 25.5
+    assert command.remarks == "Customer requested itinerary change"
 
 
 def test_search_flights_mock(client):

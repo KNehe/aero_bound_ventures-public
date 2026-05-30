@@ -49,3 +49,28 @@ class KafkaPaymentEventPublisher:
                 "reason": reason,
             },
         )
+
+    def publish_refund_requested(
+        self,
+        *,
+        confirmation_code: str,
+        amount: float,
+        remarks: str,
+        initiated_by: str,
+        user_id: UUID,
+        provider_status: str | None,
+        provider_message: str | None,
+    ) -> None:
+        self.producer.send(
+            KafkaTopics.PAYMENT_EVENTS,
+            {
+                "event_type": KafkaEventTypes.REFUND_REQUESTED,
+                "confirmation_code": confirmation_code,
+                "amount": amount,
+                "remarks": remarks,
+                "initiated_by": initiated_by,
+                "user_id": str(user_id),
+                "pesapal_status": provider_status,
+                "pesapal_message": provider_message,
+            },
+        )

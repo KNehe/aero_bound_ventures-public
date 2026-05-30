@@ -5,6 +5,9 @@ from backend.application.payments.initiate_pesapal_payment import (
     PaymentProviderValidationError,
 )
 from backend.application.payments.payment_status import PaymentStatusLookupError
+from backend.application.payments.request_payment_refund import (
+    PaymentRefundValidationError,
+)
 
 
 class PesapalClientProtocol(Protocol):
@@ -23,6 +26,14 @@ class PesapalClientProtocol(Protocol):
 
     async def get_transaction_status(
         self, order_tracking_id: str
+    ) -> dict[str, Any]: ...
+
+    async def request_refund(
+        self,
+        confirmation_code: str,
+        amount: float,
+        username: str,
+        remarks: str,
     ) -> dict[str, Any]: ...
 
 
@@ -71,3 +82,21 @@ class PesapalPaymentGateway:
             return await self.client.get_transaction_status(order_tracking_id)
         except ValueError as exc:
             raise PaymentStatusLookupError(str(exc)) from exc
+
+    async def request_refund(
+        self,
+        *,
+        confirmation_code: str,
+        amount: float,
+        username: str,
+        remarks: str,
+    ) -> dict[str, Any]:
+        try:
+            return await self.client.request_refund(
+                confirmation_code=confirmation_code,
+                amount=amount,
+                username=username,
+                remarks=remarks,
+            )
+        except ValueError as exc:
+            raise PaymentRefundValidationError(str(exc)) from exc

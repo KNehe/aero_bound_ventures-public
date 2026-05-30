@@ -28,6 +28,12 @@ from backend.application.payments.process_pesapal_ipn import (
     ProcessPesapalIpn,
     ProcessPesapalIpnCommand,
 )
+from backend.application.payments.request_payment_refund import (
+    PaymentRefundCommand,
+    PaymentRefundProcessingError,
+    PaymentRefundValidationError,
+    RequestPaymentRefund,
+)
 from backend.crud.database import get_session
 from backend.external_services.pesapal import pesapal_client
 from backend.infrastructure.bookings.sqlmodel_booking_repository import (
@@ -49,13 +55,7 @@ from backend.schemas.payments import (
 from backend.utils.security import get_current_user
 from backend.models.users import UserInDB
 
-from backend.utils.log_manager import get_app_logger
 from backend.utils.kafka import kafka_producer
-
-from backend.utils.constants import KafkaTopics, KafkaEventTypes
-
-
-logger = get_app_logger(__name__)
 
 
 router = APIRouter(prefix="/payments", tags=["payments"])
@@ -95,6 +95,13 @@ def get_process_pesapal_ipn_use_case(
 def get_payment_status_use_case() -> GetPaymentStatus:
     return GetPaymentStatus(
         payment_status_provider=PesapalPaymentGateway(pesapal_client),
+    )
+
+
+def get_request_payment_refund_use_case() -> RequestPaymentRefund:
+    return RequestPaymentRefund(
+        refund_provider=PesapalPaymentGateway(pesapal_client),
+        refund_event_publisher=KafkaPaymentEventPublisher(kafka_producer),
     )
 
 
@@ -280,46 +287,30 @@ async def get_payment_status(
 @router.post("/pesapal/refund", response_model=RefundResponse)
 async def request_pesapal_refund(
     refund_request: RefundRequest,
-    session: Session = Depends(get_session),
     current_user: UserInDB = Depends(get_current_user),
+    refund_use_case: RequestPaymentRefund = Depends(
+        get_request_payment_refund_use_case
+    ),
 ):
-    logger.info(
-        f"Refund request initiated by user {current_user.email}"
-        f"for confirmation_code: {refund_request.confirmation_code}"
-    )
     try:
-        result = await pesapal_client.request_refund(
-            confirmation_code=refund_request.confirmation_code,
-            amount=refund_request.amount,
-            username=current_user.email,
-            remarks=refund_request.remarks,
+        result = await refund_use_case.execute(
+            user_id=current_user.id,
+            user_email=current_user.email,
+            command=PaymentRefundCommand(
+                confirmation_code=refund_request.confirmation_code,
+                amount=refund_request.amount,
+                remarks=refund_request.remarks,
+            ),
         )
-
-        kafka_producer.send(
-            KafkaTopics.PAYMENT_EVENTS,
-            {
-                "event_type": KafkaEventTypes.REFUND_REQUESTED,
-                "confirmation_code": refund_request.confirmation_code,
-                "amount": refund_request.amount,
-                "remarks": refund_request.remarks,
-                "initiated_by": current_user.email,
-                "user_id": str(current_user.id),
-                "pesapal_status": result.get("status"),
-                "pesapal_message": result.get("message"),
-            },
-        )
-
-        return RefundResponse(
-            status=result.get("status"),
-            message=result.get("message", "Unknown response from Pesapal"),
-            confirmation_code=refund_request.confirmation_code,
-        )
-
-    except ValueError as e:
-        logger.error(f"Refund request validation error: {str(e)}")
+        return RefundResponse(**result.as_response())
+    except PaymentRefundValidationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except PaymentRefundProcessingError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process refund request: {str(e)}",
+        )
     except Exception as e:
-        logger.error(f"Refund request failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process refund request: {str(e)}",
