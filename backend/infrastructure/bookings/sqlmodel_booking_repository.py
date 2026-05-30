@@ -10,6 +10,9 @@ from backend.application.bookings.get_flight_order_details import (
     FlightOrderDetailsRecord,
 )
 from backend.application.payments.initiate_pesapal_payment import PaymentBookingRecord
+from backend.application.payments.process_pesapal_callback import (
+    PaymentCallbackBookingRecord,
+)
 from backend.models.bookings import Booking
 
 
@@ -77,3 +80,39 @@ class SqlModelBookingRepository:
             user_id=booking.user_id,
             status=booking.status,
         )
+
+    def get_payment_callback_booking(
+        self, booking_id: str
+    ) -> PaymentCallbackBookingRecord | None:
+        booking = self.session.exec(
+            select(Booking).where(Booking.id == booking_id)
+        ).first()
+        if not booking:
+            return None
+
+        pnr = "N/A"
+        if booking.amadeus_order_response:
+            associated_records = booking.amadeus_order_response.get(
+                "associatedRecords", []
+            )
+            if associated_records:
+                pnr = associated_records[0].get("reference", "N/A")
+
+        return PaymentCallbackBookingRecord(
+            id=booking.id,
+            user_id=booking.user_id,
+            user_email=booking.user.email,
+            pnr=pnr,
+        )
+
+    def update_payment_booking_status(self, booking_id: UUID, status: str) -> None:
+        booking = self.session.exec(
+            select(Booking).where(Booking.id == booking_id)
+        ).first()
+        if not booking:
+            return
+
+        booking.status = status
+        self.session.add(booking)
+        self.session.commit()
+        self.session.refresh(booking)

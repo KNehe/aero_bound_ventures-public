@@ -4,6 +4,9 @@ from backend.application.payments.initiate_pesapal_payment import (
     InitiatedPesapalPayment,
     PaymentProviderValidationError,
 )
+from backend.application.payments.process_pesapal_callback import (
+    PaymentTransactionStatusError,
+)
 
 
 class PesapalClientProtocol(Protocol):
@@ -18,6 +21,10 @@ class PesapalClientProtocol(Protocol):
         callback_url: str,
         notification_id: str,
         billing_address: dict[str, Any],
+    ) -> dict[str, Any]: ...
+
+    async def get_transaction_status(
+        self, order_tracking_id: str
     ) -> dict[str, Any]: ...
 
 
@@ -60,3 +67,9 @@ class PesapalPaymentGateway:
             redirect_url=result["redirect_url"],
             status=result.get("status"),
         )
+
+    async def get_transaction_status(self, order_tracking_id: str) -> dict[str, Any]:
+        try:
+            return await self.client.get_transaction_status(order_tracking_id)
+        except ValueError as exc:
+            raise PaymentTransactionStatusError(str(exc)) from exc

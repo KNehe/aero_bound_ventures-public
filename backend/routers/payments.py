@@ -15,10 +15,17 @@ from backend.application.payments.initiate_pesapal_payment import (
     PaymentProviderValidationError,
     PaymentSystemNotConfigured,
 )
+from backend.application.payments.process_pesapal_callback import (
+    ProcessPesapalCallbackCommand,
+    ProcessPesapalPaymentCallback,
+)
 from backend.crud.database import get_session
 from backend.external_services.pesapal import pesapal_client
 from backend.infrastructure.bookings.sqlmodel_booking_repository import (
     SqlModelBookingRepository,
+)
+from backend.infrastructure.payments.kafka_payment_event_publisher import (
+    KafkaPaymentEventPublisher,
 )
 from backend.infrastructure.payments.pesapal_payment_gateway import (
     PesapalPaymentGateway,
@@ -55,6 +62,16 @@ def get_initiate_pesapal_payment_use_case(
         booking_repository=SqlModelBookingRepository(session),
         payment_provider=PesapalPaymentGateway(pesapal_client),
         default_callback_url=f"{frontend_url}/booking/payment/callback",
+    )
+
+
+def get_process_pesapal_callback_use_case(
+    session: Session = Depends(get_session),
+) -> ProcessPesapalPaymentCallback:
+    return ProcessPesapalPaymentCallback(
+        booking_repository=SqlModelBookingRepository(session),
+        transaction_provider=PesapalPaymentGateway(pesapal_client),
+        event_publisher=KafkaPaymentEventPublisher(kafka_producer),
     )
 
 
@@ -140,7 +157,9 @@ async def initiate_pesapal_payment(
 async def pesapal_payment_callback(
     OrderTrackingId: str,
     OrderMerchantReference: str,
-    session: Session = Depends(get_session),
+    process_callback_use_case: ProcessPesapalPaymentCallback = Depends(
+        get_process_pesapal_callback_use_case
+    ),
 ):
     """
     Handle Pesapal payment callback (user redirect after payment)
@@ -157,127 +176,13 @@ async def pesapal_payment_callback(
     2. Updates booking payment status
     3. Redirects user to appropriate page
     """
-    try:
-        # Extract original booking ID from merchant reference (format: booking_id-timestamp)
-        original_booking_id = (
-            OrderMerchantReference.rsplit("-", 1)[0]
-            if "-" in OrderMerchantReference
-            else OrderMerchantReference
+    result = await process_callback_use_case.execute(
+        ProcessPesapalCallbackCommand(
+            order_tracking_id=OrderTrackingId,
+            order_merchant_reference=OrderMerchantReference,
         )
-
-        # 1. Get booking to update
-        booking = get_booking_by_id(session, original_booking_id)
-
-        if not booking:
-            logger.error(f"Booking not found for ID: {original_booking_id}")
-            return {
-                "status": "error",
-                "message": "Booking not found",
-                "order_tracking_id": OrderTrackingId,
-            }
-
-        pnr = booking.amadeus_order_response.get("associatedRecords", [{}])[0].get(
-            "reference", "N/A"
-        )
-        # 2. Fetch transaction status from Pesapal
-        try:
-            transaction_status = await pesapal_client.get_transaction_status(
-                OrderTrackingId
-            )
-        except ValueError as e:
-            # If it's a "Pending Payment" error that slipped through, handle it gracefully
-            if "Pending Payment" in str(e):
-                return {
-                    "status": "pending",
-                    "message": "Payment is pending. Please complete the payment or try again.",
-                    "order_tracking_id": OrderTrackingId,
-                }
-            # Otherwise, re-raise
-            raise
-
-        # 3. Check payment status
-        payment_status_code = transaction_status.get("status_code")
-        payment_status_description = transaction_status.get(
-            "payment_status_description", ""
-        )
-
-        if payment_status_code == 1:  # COMPLETED
-            update_booking_status(session, str(booking.id), BookingStatus.PAID)
-
-            kafka_producer.send(
-                KafkaTopics.PAYMENT_EVENTS,
-                {
-                    "event_type": KafkaEventTypes.PAYMENT_SUCCESSFUL,
-                    "booking_id": str(booking.id),
-                    "pnr": pnr,
-                    "user_email": booking.user.email,
-                    "user_id": str(booking.user_id),
-                },
-            )
-
-            return {
-                "status": "success",
-                "message": "Payment completed successfully",
-                "order_tracking_id": OrderTrackingId,
-                "payment_method": transaction_status.get("payment_method"),
-                "amount": transaction_status.get("amount"),
-                "confirmation_code": transaction_status.get("confirmation_code"),
-            }
-
-        elif payment_status_code == 2:  # FAILED
-            update_booking_status(session, str(booking.id), BookingStatus.FAILED)
-
-            kafka_producer.send(
-                KafkaTopics.PAYMENT_EVENTS,
-                {
-                    "event_type": KafkaEventTypes.PAYMENT_FAILED,
-                    "booking_id": str(booking.id),
-                    "pnr": pnr,
-                    "user_id": str(booking.user_id),
-                    "reason": transaction_status.get("description", "Unknown error"),
-                },
-            )
-
-            return {
-                "status": "failed",
-                "message": f"Payment failed: {transaction_status.get('description', 'Unknown error')}",
-                "order_tracking_id": OrderTrackingId,
-            }
-
-        elif payment_status_code == 3:  # REVERSED
-            update_booking_status(session, str(booking.id), BookingStatus.REVERSED)
-            return {
-                "status": "reversed",
-                "message": "Payment was reversed",
-                "order_tracking_id": OrderTrackingId,
-            }
-
-        else:  # INVALID, PENDING, or unknown (status_code = 0)
-            update_booking_status(session, str(booking.id), BookingStatus.PENDING)
-            error = transaction_status.get("error", {})
-            if error and error.get("code") == "payment_details_not_found":
-                return {
-                    "status": "pending",
-                    "message": "Payment is pending. Please complete the payment or try again.",
-                    "order_tracking_id": OrderTrackingId,
-                }
-
-            # Otherwise it's invalid
-            return {
-                "status": "invalid",
-                "message": f"Invalid payment status: {payment_status_description}",
-                "order_tracking_id": OrderTrackingId,
-            }
-
-    except Exception as e:
-        update_booking_status(session, str(booking.id), BookingStatus.CANCELLED)
-        print("Error processing Pesapal callback:", str(e))
-        logger.error(f"Error processing Pesapal callback: {str(e)}")
-        return {
-            "status": "error",
-            "message": f"Error processing callback: {str(e)}",
-            "order_tracking_id": OrderTrackingId,
-        }
+    )
+    return result.as_response()
 
 
 @router.get("/pesapal/ipn")

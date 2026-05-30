@@ -6,6 +6,9 @@ from backend.application.bookings.create_flight_order import CreatedFlightBookin
 from backend.application.payments.initiate_pesapal_payment import (
     InitiatedPesapalPayment,
 )
+from backend.application.payments.process_pesapal_callback import (
+    ProcessedPesapalCallback,
+)
 from backend.crud.users import create_user
 from backend.routers.flights import (
     get_confirm_flight_price_use_case,
@@ -14,6 +17,7 @@ from backend.routers.flights import (
     get_search_flights_use_case,
 )
 from backend.routers.payments import get_initiate_pesapal_payment_use_case
+from backend.routers.payments import get_process_pesapal_callback_use_case
 
 
 API_V1_PREFIX = "/api/v1"
@@ -90,6 +94,22 @@ class StubInitiatePesapalPaymentUseCase:
         )
 
 
+class StubProcessPesapalCallbackUseCase:
+    def __init__(self):
+        self.calls = []
+
+    async def execute(self, command):
+        self.calls.append(command)
+        return ProcessedPesapalCallback(
+            status="success",
+            message="Payment completed successfully",
+            order_tracking_id=command.order_tracking_id,
+            payment_method="Visa",
+            amount=100,
+            confirmation_code="CONFIRM123",
+        )
+
+
 @pytest.fixture
 def test_user(session):
     return create_user(session, "test_external@example.com", "password")
@@ -138,6 +158,37 @@ def test_initiate_payment_route_uses_payment_use_case(client, test_user, auth_he
     assert command.currency == "USD"
     assert command.callback_url == "https://frontend.com/callback"
     assert command.billing_address.email_address == "test@example.com"
+
+
+def test_pesapal_callback_route_uses_callback_use_case(client):
+    use_case = StubProcessPesapalCallbackUseCase()
+    client.app.dependency_overrides[get_process_pesapal_callback_use_case] = (
+        lambda: use_case
+    )
+
+    try:
+        response = client.get(
+            f"{API_V1_PREFIX}/payments/pesapal/callback",
+            params={
+                "OrderTrackingId": "track_123",
+                "OrderMerchantReference": "booking_123-1234567890",
+            },
+        )
+    finally:
+        client.app.dependency_overrides.pop(get_process_pesapal_callback_use_case, None)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "success",
+        "message": "Payment completed successfully",
+        "order_tracking_id": "track_123",
+        "payment_method": "Visa",
+        "amount": 100,
+        "confirmation_code": "CONFIRM123",
+    }
+    assert len(use_case.calls) == 1
+    assert use_case.calls[0].order_tracking_id == "track_123"
+    assert use_case.calls[0].order_merchant_reference == "booking_123-1234567890"
 
 
 def test_search_flights_mock(client):
