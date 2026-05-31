@@ -16,8 +16,10 @@ from backend.crud.database import init_db
 from backend.utils.constants import KafkaTopics
 from backend.utils.dependencies import notification_consumer
 from backend.utils.kafka import kafka_producer
+from backend.utils.log_manager import log_manager
 
 load_dotenv()
+log_manager.setup_security_logger()
 
 
 security_config = SecurityConfig(
@@ -30,7 +32,7 @@ security_config = SecurityConfig(
     enable_penetration_detection=(
         os.getenv("ENABLE_PENETRATION_DETECTION", "true").strip().lower() == "true"
     ),
-    custom_log_file=os.getenv("CUSTOM_LOG_FILE", "security.log"),
+    custom_log_file=None,
     # Log suspicious activity but don't block for testing.
     passive_mode=os.getenv("PASSIVE_MODE", "true").strip().lower() == "true",
 )
