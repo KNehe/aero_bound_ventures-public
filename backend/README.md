@@ -49,13 +49,20 @@ doppler run -- docker compose up --build
 ```
 
 The docs show `1m` as an example, but `15m` is safer for `docker compose up --build` because the image build can take longer than a minute.
+Use the dev compose overlay when you want host source changes mounted into the container:
+
+```bash
+cd backend
+export DOPPLER_TOKEN="$(doppler configs tokens create docker --max-age 15m --plain)"
+doppler run -- docker compose -f compose.yaml -f compose.dev.yaml up --build
+```
 
 If you only want the backend core services, skip the observability stack:
 
 ```bash
 cd backend
 export DOPPLER_TOKEN="$(doppler configs tokens create docker --max-age 15m --plain)"
-doppler run -- docker compose up fastapi-app db redis kafka
+doppler run -- docker compose -f compose.yaml -f compose.dev.yaml up fastapi-app db redis kafka
 ```
 
 You can also run backend commands directly on the host with Doppler injected at runtime:
@@ -80,6 +87,8 @@ The deployment flow is:
 ```bash
 sudo --preserve-env=DOPPLER_TOKEN doppler run -- docker compose up -d --build
 ```
+
+Production deploys intentionally use only `compose.yaml`. The host source mount and backend virtualenv volume live in `compose.dev.yaml` so EC2 does not copy the image virtualenv into an anonymous Docker volume during each deploy.
 
 Required GitHub secret for backend runtime secrets:
 - `DOPPLER_TOKEN`

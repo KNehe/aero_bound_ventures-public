@@ -13,9 +13,6 @@ services:
       - FLIGHT_SERVICE_PROVIDER=${FLIGHT_SERVICE_PROVIDER:-amadeus}
     depends_on:
       - redis
-    volumes:
-      - .:/app/backend
-      - /app/backend/.venv  # Exclude virtual environment from volume mount
   db:
     image: postgres:17
     container_name: postgres-db

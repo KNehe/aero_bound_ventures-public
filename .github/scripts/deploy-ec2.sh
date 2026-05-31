@@ -61,13 +61,15 @@ cleanup_docker_disk() {
   echo 'Docker disk usage before cleanup:'
   sudo docker system df || true
 
-  echo 'Cleaning Docker build cache, stopped containers, and unused images...'
+  echo 'Cleaning Docker build cache, stopped containers, dangling volumes, and unused images...'
   sudo docker builder prune -af || true
   sudo docker container prune -f || true
+  sudo docker volume prune -f || true
   sudo docker image prune -af || true
 
   echo 'Docker disk usage after cleanup:'
   sudo docker system df || true
+  df -h / /var/lib/docker 2>/dev/null || df -h /
 }
 
 # 3. Clone or Pull
@@ -91,12 +93,12 @@ CERTBOT_EMAIL=$(doppler secrets get MAIL_FROM --plain)
 # Use 'docker compose' (v2) if available, otherwise 'docker-compose'
 if docker compose version &> /dev/null; then
   echo 'Using docker compose v2'
-  run_compose down
+  run_compose down --remove-orphans
   cleanup_docker_disk
   run_compose up -d --build
 else
   echo 'Using legacy docker-compose'
-  run_compose down
+  run_compose down --remove-orphans
   cleanup_docker_disk
   run_compose up -d --build
 fi
