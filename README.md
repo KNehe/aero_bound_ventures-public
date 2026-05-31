@@ -396,6 +396,12 @@ CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>
 # Redis
 REDIS_URL=redis://redis:6379
 
+# Guard Core dashboard telemetry (optional)
+# GUARD_API_KEY=<guard-core-api-key>
+# GUARD_PROJECT_ID=<guard-core-project-id>
+# GUARD_CORE_URL=https://api.guard-core.com/api/v1
+# GUARD_PROJECT_ENCRYPTION_KEY=<only-if-key-was-created-with-encryption>
+
 # Email (SMTP)
 MAIL_USERNAME=<your-email>
 MAIL_PASSWORD=<your-app-password>

@@ -104,6 +104,24 @@ The workflow uses that role with `aws-actions/configure-aws-credentials`, so lon
 The workflow also resolves the Certbot contact email from the Doppler secret `MAIL_FROM`, so that value no longer needs to be duplicated as a separate GitHub Actions secret.
 Make sure the backend production config also sets `CORS_ORIGINS` to the frontend origin(s) you serve, for example `https://www.aeroboundventures.com,https://aeroboundventures.com`.
 
+### Guard Core dashboard telemetry
+
+Guard Core is optional. To send monitoring data to the Guard Core dashboard, create an API key in the dashboard and add these secrets to the backend Doppler config:
+
+```env
+GUARD_API_KEY=<guard-core-api-key>
+GUARD_PROJECT_ID=<guard-core-project-id>
+GUARD_CORE_URL=https://api.guard-core.com/api/v1
+```
+
+If the API key was created with encryption enabled, also set the encryption key shown during key creation:
+
+```env
+GUARD_PROJECT_ENCRYPTION_KEY=<guard-core-project-encryption-key>
+```
+
+Keep `PASSIVE_MODE=true` during the first rollout so detections and metrics are visible without blocking user traffic. Set `GUARD_ENABLE_DYNAMIC_RULES=true` only after you are ready for dashboard rule changes to affect the running API.
+
 For direct host usage outside GitHub Actions:
 
 ```bash
