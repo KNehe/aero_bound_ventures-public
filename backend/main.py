@@ -35,11 +35,14 @@ def _csv_env(name: str, default: str = "") -> list[str]:
     ]
 
 
+def _guard_agent_endpoint() -> str:
+    core_url = os.getenv("GUARD_CORE_URL", "https://api.guard-core.com/api/v1")
+    return core_url.rstrip("/").removesuffix("/api/v1")
+
+
 guard_api_key = os.getenv("GUARD_API_KEY", "")
 guard_project_id = os.getenv("GUARD_PROJECT_ID", "")
-guard_agent_endpoint = os.getenv(
-    "GUARD_CORE_URL", "https://api.guard-core.com/api/v1"
-).rstrip("/")
+guard_agent_endpoint = _guard_agent_endpoint()
 cors_origins = _csv_env("CORS_ORIGINS")
 
 

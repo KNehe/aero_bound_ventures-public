@@ -116,6 +116,7 @@ PASSIVE_MODE=true
 ```
 
 Encryption is disabled for the current Guard Core API key, so no project encryption key is configured. Keep `PASSIVE_MODE=true` during the first rollout so detections and metrics are visible without blocking user traffic.
+The app accepts the dashboard URL with `/api/v1` and normalizes it internally for the installed Guard agent transport.
 
 For direct host usage outside GitHub Actions:
 
