@@ -22,25 +22,11 @@ load_dotenv()
 log_manager.setup_security_logger()
 
 
-try:
-    from guard import __version__ as _GUARD_VERSION
-except ImportError:
-    _GUARD_VERSION = None
-
-
 def _env_bool(name: str, default: bool = False) -> bool:
     value = os.getenv(name)
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
-def _env_first(*names: str, default: str = "") -> str:
-    for name in names:
-        value = os.getenv(name)
-        if value:
-            return value
-    return default
 
 
 def _csv_env(name: str, default: str = "") -> list[str]:
@@ -49,28 +35,11 @@ def _csv_env(name: str, default: str = "") -> list[str]:
     ]
 
 
-guard_api_key = _env_first("GUARD_API_KEY_W_ENCRYPTION", "GUARD_API_KEY")
-guard_api_key = guard_api_key or _env_first(
-    "GUARD_CORE_API_KEY_W_ENCRYPTION", "GUARD_CORE_API_KEY"
-)
-guard_project_id = _env_first("GUARD_PROJECT_ID", "GUARD_CORE_PROJECT_ID")
-guard_core_url = _env_first(
-    "GUARD_CORE_URL",
-    "GUARD_CORE_ENDPOINT",
-    default="https://api.guard-core.com/api/v1",
-)
-guard_agent_endpoint = guard_core_url.rstrip("/").removesuffix("/api/v1")
-guard_project_encryption_key = _env_first(
-    "GUARD_PROJECT_ENCRYPTION_KEY",
-    "GUARD_ENCRYPTION_KEY",
-    "GUARD_CORE_PROJECT_ENCRYPTION_KEY",
-) or None
-guard_enable_agent = _env_bool(
-    "GUARD_ENABLE_AGENT", _env_bool("GUARD_CORE_ENABLE_AGENT", True)
-)
-guard_enable_dynamic_rules = _env_bool(
-    "GUARD_ENABLE_DYNAMIC_RULES", _env_bool("GUARD_CORE_ENABLE_DYNAMIC_RULES", False)
-)
+guard_api_key = os.getenv("GUARD_API_KEY", "")
+guard_project_id = os.getenv("GUARD_PROJECT_ID", "")
+guard_agent_endpoint = os.getenv(
+    "GUARD_CORE_URL", "https://api.guard-core.com/api/v1"
+).rstrip("/")
 cors_origins = _csv_env("CORS_ORIGINS")
 
 
@@ -86,23 +55,11 @@ security_config = SecurityConfig(
     enable_penetration_detection=(
         os.getenv("ENABLE_PENETRATION_DETECTION", "true").strip().lower() == "true"
     ),
-    enable_ip_banning=_env_bool("ENABLE_IP_BANNING", True),
-    enable_rate_limiting=_env_bool("ENABLE_RATE_LIMITING", True),
-    enable_agent=bool(guard_api_key) and guard_enable_agent,
+    enable_rate_limiting=True,
+    enable_agent=bool(guard_api_key),
     agent_api_key=guard_api_key or None,
-    agent_endpoint=guard_agent_endpoint,
     agent_project_id=guard_project_id or None,
-    agent_project_encryption_key=guard_project_encryption_key,
-    agent_guard_version=_GUARD_VERSION,
-    agent_buffer_size=int(os.getenv("GUARD_AGENT_BUFFER_SIZE", 5000)),
-    agent_flush_interval=int(os.getenv("GUARD_AGENT_FLUSH_INTERVAL", 2)),
-    agent_enable_events=True,
-    agent_enable_metrics=True,
-    agent_retry_attempts=int(os.getenv("GUARD_AGENT_RETRY_ATTEMPTS", 3)),
-    agent_timeout=int(os.getenv("GUARD_AGENT_TIMEOUT", 30)),
-    agent_status_interval=int(os.getenv("GUARD_AGENT_STATUS_INTERVAL", 300)),
-    enable_dynamic_rules=bool(guard_api_key) and guard_enable_dynamic_rules,
-    dynamic_rule_interval=int(os.getenv("GUARD_DYNAMIC_RULE_INTERVAL", 60)),
+    agent_endpoint=guard_agent_endpoint,
     fail_secure=_env_bool("GUARD_FAIL_SECURE", True),
     enable_cors=bool(cors_origins),
     cors_allow_origins=cors_origins,

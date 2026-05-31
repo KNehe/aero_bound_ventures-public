@@ -112,15 +112,10 @@ Guard Core is optional. To send monitoring data to the Guard Core dashboard, cre
 GUARD_API_KEY=<guard-core-api-key>
 GUARD_PROJECT_ID=<guard-core-project-id>
 GUARD_CORE_URL=https://api.guard-core.com/api/v1
+PASSIVE_MODE=true
 ```
 
-If the API key was created with encryption enabled, also set the encryption key shown during key creation:
-
-```env
-GUARD_PROJECT_ENCRYPTION_KEY=<guard-core-project-encryption-key>
-```
-
-Keep `PASSIVE_MODE=true` during the first rollout so detections and metrics are visible without blocking user traffic. Set `GUARD_ENABLE_DYNAMIC_RULES=true` only after you are ready for dashboard rule changes to affect the running API.
+Encryption is disabled for the current Guard Core API key, so no project encryption key is configured. Keep `PASSIVE_MODE=true` during the first rollout so detections and metrics are visible without blocking user traffic.
 
 For direct host usage outside GitHub Actions:
 
