@@ -85,7 +85,7 @@ app.add_middleware(
 )
 app.add_middleware(SecurityMiddleware, config=security_config)
 
-from backend.routers import (
+from backend.routers import (  # noqa: E402
     admin,
     flights,
     health,
@@ -94,7 +94,7 @@ from backend.routers import (
     payments,
     tickets,
     users,
-)  # noqa: E402
+)
 
 api_v1_router = APIRouter(prefix="/api/v1", tags=["Version One"])
 
@@ -108,6 +108,7 @@ api_v1_router.include_router(notifications.router)
 api_v1_router.include_router(health.router)
 
 app.include_router(api_v1_router)
+app.include_router(health.router, include_in_schema=False)
 
 
 @app.get("/")

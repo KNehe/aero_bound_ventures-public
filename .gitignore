@@ -19,3 +19,4 @@ terraform/terraform.tfvars.json
 
 # Logs
 .logs/
+security.log

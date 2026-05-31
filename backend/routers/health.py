@@ -1,18 +1,41 @@
 import os
-import time
 
-import redis
 from fastapi import APIRouter, Depends
-from sqlmodel import Session, text
+from sqlmodel import Session
 
+from backend.application.health.check_system_health import CheckSystemHealth
 from backend.crud.database import get_session
+from backend.infrastructure.health.kafka_producer_health_probe import (
+    KafkaProducerHealthProbe,
+)
+from backend.infrastructure.health.redis_health_probe import RedisHealthProbe
+from backend.infrastructure.health.sqlmodel_database_health_probe import (
+    SqlModelDatabaseHealthProbe,
+)
 from backend.utils.kafka import kafka_producer
 
 router = APIRouter(prefix="/health", tags=["Health"])
 
 
+def get_check_system_health_use_case(
+    session: Session = Depends(get_session),
+) -> CheckSystemHealth:
+    redis_url = os.getenv("REDIS_URL", "redis://redis:6379")
+    return CheckSystemHealth(
+        probes=(
+            SqlModelDatabaseHealthProbe(session),
+            RedisHealthProbe(redis_url),
+            KafkaProducerHealthProbe(kafka_producer),
+        )
+    )
+
+
 @router.get("")
-async def health_check(session: Session = Depends(get_session)):
+async def health_check(
+    check_system_health_use_case: CheckSystemHealth = Depends(
+        get_check_system_health_use_case
+    ),
+):
     """
     Comprehensive health check for the system.
     Checks:
@@ -20,50 +43,4 @@ async def health_check(session: Session = Depends(get_session)):
     - Redis connectivity
     - Kafka producer status
     """
-    health_status = {
-        "status": "healthy",
-        "timestamp": time.time(),
-        "services": {
-            "database": "unknown",
-            "redis": "unknown",
-            "kafka_producer": "unknown",
-        },
-    }
-
-    # 1. Check postgreSQL
-    try:
-        session.exec(text("SELECT 1"))
-        health_status["services"]["database"] = "healthy"
-    except Exception as e:
-        health_status["services"]["database"] = f"unhealthy: {str(e)}"
-        health_status["status"] = "degraded"
-
-    # 2. Check redis
-    try:
-        r = redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379"))
-        r.ping()
-        health_status["services"]["redis"] = "healthy"
-    except Exception as e:
-        health_status["services"]["redis"] = f"unhealthy: {str(e)}"
-        health_status["status"] = "degraded"
-
-    # 3. Check kafka producer
-    try:
-        metadata = kafka_producer.producer.list_topics(timeout=1)
-        if metadata and metadata.brokers:
-            health_status["services"]["kafka_producer"] = "healthy"
-        else:
-            health_status["services"]["kafka_producer"] = (
-                "unhealthy: No brokers reached"
-            )
-            health_status["status"] = "degraded"
-    except Exception as e:
-        health_status["services"]["kafka_producer"] = f"unhealthy: {str(e)}"
-        health_status["status"] = "degraded"
-
-    if all(
-        status.startswith("unhealthy") for status in health_status["services"].values()
-    ):
-        health_status["status"] = "down"
-
-    return health_status
+    return check_system_health_use_case.execute().as_response()
