@@ -35,14 +35,7 @@ def _csv_env(name: str, default: str = "") -> list[str]:
     ]
 
 
-def _guard_agent_endpoint() -> str:
-    core_url = os.getenv("GUARD_CORE_URL", "https://api.guard-core.com/api/v1")
-    return core_url.rstrip("/").removesuffix("/api/v1")
-
-
-guard_api_key = os.getenv("GUARD_API_KEY", "")
-guard_project_id = os.getenv("GUARD_PROJECT_ID", "")
-guard_agent_endpoint = _guard_agent_endpoint()
+guard_api_key = os.environ["GUARD_API_KEY"]
 cors_origins = _csv_env("CORS_ORIGINS")
 
 
@@ -59,16 +52,13 @@ security_config = SecurityConfig(
         os.getenv("ENABLE_PENETRATION_DETECTION", "true").strip().lower() == "true"
     ),
     enable_rate_limiting=True,
-    enable_agent=bool(guard_api_key),
-    agent_api_key=guard_api_key or None,
-    agent_project_id=guard_project_id or None,
-    agent_endpoint=guard_agent_endpoint,
+    enable_agent=True,
+    agent_api_key=guard_api_key,
+    agent_endpoint="https://api.guard-core.com",
     fail_secure=_env_bool("GUARD_FAIL_SECURE", True),
     enable_cors=bool(cors_origins),
     cors_allow_origins=cors_origins,
-    cors_allow_methods=_csv_env(
-        "CORS_METHODS", "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-    ),
+    cors_allow_methods=_csv_env("CORS_METHODS", "GET,POST,PUT,PATCH,DELETE,OPTIONS"),
     cors_allow_headers=_csv_env("CORS_HEADERS", "*"),
     cors_allow_credentials=("*" not in cors_origins),
     custom_log_file=None,

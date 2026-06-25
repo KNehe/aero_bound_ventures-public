@@ -106,17 +106,15 @@ Make sure the backend production config also sets `CORS_ORIGINS` to the frontend
 
 ### Guard Core dashboard telemetry
 
-Guard Core is optional. To send monitoring data to the Guard Core dashboard, create an API key in the dashboard and add these secrets to the backend Doppler config:
+Guard Core telemetry is enabled for this app. Create an API key in the dashboard and add this secret to the backend Doppler config:
 
 ```env
 GUARD_API_KEY=<guard-core-api-key>
-GUARD_PROJECT_ID=<guard-core-project-id>
-GUARD_CORE_URL=https://api.guard-core.com/api/v1
 PASSIVE_MODE=true
 ```
 
 Encryption is disabled for the current Guard Core API key, so no project encryption key is configured. Keep `PASSIVE_MODE=true` during the first rollout so detections and metrics are visible without blocking user traffic.
-The app accepts the dashboard URL with `/api/v1` and normalizes it internally for the installed Guard agent transport.
+The Guard Agent endpoint is configured in code as `https://api.guard-core.com`.
 
 For direct host usage outside GitHub Actions:
 

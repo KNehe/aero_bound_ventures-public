@@ -18,6 +18,7 @@ if TEST_URL.endswith("/postgres"):
     TEST_URL = TEST_URL.rsplit("/postgres", 1)[0] + f"/{TEST_DB_NAME}"
 
 os.environ["DATABASE_URL"] = TEST_URL
+os.environ.setdefault("GUARD_API_KEY", "test")
 
 from backend.main import app  # noqa: E402
 from backend.crud.database import get_session  # noqa: E402
