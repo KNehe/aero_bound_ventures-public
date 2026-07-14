@@ -5,6 +5,17 @@ services:
     restart: always
     ports:
       - "8000:80"
+    command:
+      - doppler
+      - run
+      - --
+      - fastapi
+      - run
+      - main.py
+      - --port
+      - "80"
+      - --host
+      - 0.0.0.0
     environment:
       - DOPPLER_TOKEN=${DOPPLER_TOKEN}
       - REDIS_HOST=redis

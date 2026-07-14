@@ -24,7 +24,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends apt-transport-h
     rm -rf /var/lib/apt/lists/*
 
 ENV DOPPLER_CONFIG_DIR=/tmp/.doppler
+ENV PYTHONPATH=/app
+ENV PATH="/app/backend/.venv/bin:$PATH"
 
 COPY --from=builder /app/backend /app/backend
 
-CMD ["doppler", "run", "--", "/app/backend/.venv/bin/fastapi", "run", "main.py", "--port", "80", "--host", "0.0.0.0"]
+CMD ["fastapi", "run", "main.py", "--port", "80", "--host", "0.0.0.0"]

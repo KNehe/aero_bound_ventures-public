@@ -38,7 +38,10 @@ Then replace placeholder values in Doppler with real values.
 
 ## Running Locally
 
-The backend image includes the Doppler CLI and starts the app through `doppler run`.
+The backend image can start with plain environment variables, which is the
+runtime contract Kubernetes will use later. The image still includes the Doppler
+CLI for compatibility, and local Docker Compose wraps the app command with
+`doppler run`.
 
 For local Docker development, create a short-lived service token right before you start the stack:
 
@@ -65,6 +68,15 @@ export DOPPLER_TOKEN="$(doppler configs tokens create docker --max-age 15m --pla
 doppler run -- docker compose -f compose.yaml -f compose.dev.yaml up fastapi-app db redis kafka
 ```
 
+You can also build and inspect the backend image without Doppler:
+
+```bash
+# From the repository root
+docker build -t aero-backend:local backend
+docker run --rm aero-backend:local python --version
+docker run --rm aero-backend:local fastapi --version
+```
+
 You can also run backend commands directly on the host with Doppler injected at runtime:
 
 ```bash
@@ -82,7 +94,9 @@ The deployment flow is:
 - Terraform creates or updates the EC2 instance and Elastic IP.
 - GitHub Actions SSHes into the EC2 host.
 - The workflow installs Docker and the Doppler CLI if missing.
-- The backend is started on the host with:
+- The backend is started on the host with Docker Compose. Compose passes
+  `DOPPLER_TOKEN` into the container and the `fastapi-app` service wraps the app
+  command with `doppler run`:
 
 ```bash
 sudo --preserve-env=DOPPLER_TOKEN doppler run -- docker compose up -d --build
@@ -133,6 +147,8 @@ Practical notes:
 ## Notes For This Codebase
 
 - The backend still supports plain environment variables, so Doppler is an injection layer, not a rewrite.
+- The Docker image default command starts FastAPI directly. Docker Compose adds
+  the local Doppler wrapper through `backend/compose.yaml`.
 - Several modules call `load_dotenv()`. That does not conflict with Doppler.
 - Avoid committing `.env` files. The repository root `.gitignore` already excludes them.
 
