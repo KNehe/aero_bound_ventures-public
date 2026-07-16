@@ -52,21 +52,18 @@ doppler run -- docker compose up --build
 ```
 
 The docs show `1m` as an example, but `15m` is safer for `docker compose up --build` because the image build can take longer than a minute.
-Use the dev compose overlay when you want host source changes mounted into the container:
-
-```bash
-cd backend
-export DOPPLER_TOKEN="$(doppler configs tokens create docker --max-age 15m --plain)"
-doppler run -- docker compose -f compose.yaml -f compose.dev.yaml up --build
-```
 
 If you only want the backend core services, skip the observability stack:
 
 ```bash
 cd backend
 export DOPPLER_TOKEN="$(doppler configs tokens create docker --max-age 15m --plain)"
-doppler run -- docker compose -f compose.yaml -f compose.dev.yaml up fastapi-app db redis kafka
+doppler run -- docker compose up --build fastapi-app notification-worker db redis kafka
 ```
+
+The single Compose file is used locally and on EC2. It does not mount host
+source code into backend containers. Rebuild after code changes so local Compose,
+local Kubernetes, and EC2 all test the immutable image produced by the Dockerfile.
 
 You can also build and inspect the backend image without Doppler:
 
@@ -86,6 +83,33 @@ doppler run -- uv run pytest
 doppler run -- uv run python manage.py create-admin
 ```
 
+## Runtime Processes
+
+The backend image provides two separate process types:
+
+- `fastapi run main.py` serves HTTP and publishes Kafka events.
+- `python -m backend.worker` consumes Kafka events and sends notifications.
+
+Run either process directly from the repository root:
+
+```bash
+backend/.venv/bin/fastapi dev backend/main.py
+backend/.venv/bin/python -m backend.worker
+```
+
+Docker Compose runs both as separate services from `aero-backend:local`.
+Kubernetes will use the image's default FastAPI command for the API Deployment
+and override the command to `python -m backend.worker` for the worker Deployment.
+
+`fastapi-app` owns the Compose build configuration. To start only the worker on
+a machine where the image has not been built yet, build the shared image first:
+
+```bash
+cd backend
+docker compose build fastapi-app
+docker compose up notification-worker
+```
+
 ## Deployment
 
 This repository deploys to EC2 through [`.github/workflows/terraform.yml`](../.github/workflows/terraform.yml).
@@ -95,14 +119,16 @@ The deployment flow is:
 - GitHub Actions SSHes into the EC2 host.
 - The workflow installs Docker and the Doppler CLI if missing.
 - The backend is started on the host with Docker Compose. Compose passes
-  `DOPPLER_TOKEN` into the container and the `fastapi-app` service wraps the app
-  command with `doppler run`:
+  `DOPPLER_TOKEN` into both backend containers and wraps the API and worker
+  commands with `doppler run`:
 
 ```bash
 sudo --preserve-env=DOPPLER_TOKEN doppler run -- docker compose up -d --build
 ```
 
-Production deploys intentionally use only `compose.yaml`. The host source mount and backend virtualenv volume live in `compose.dev.yaml` so EC2 does not copy the image virtualenv into an anonymous Docker volume during each deploy.
+EC2 and local development intentionally use the same `compose.yaml` file and the
+same immutable backend image. Kubernetes will replace the EC2 orchestration only
+after the image and Helm deployment pass local Kubernetes validation.
 
 Required GitHub secret for backend runtime secrets:
 - `DOPPLER_TOKEN`
@@ -148,7 +174,8 @@ Practical notes:
 
 - The backend still supports plain environment variables, so Doppler is an injection layer, not a rewrite.
 - The Docker image default command starts FastAPI directly. Docker Compose adds
-  the local Doppler wrapper through `backend/compose.yaml`.
+  the local Doppler wrapper and starts a separate notification worker through
+  `backend/compose.yaml`.
 - Several modules call `load_dotenv()`. That does not conflict with Doppler.
 - Avoid committing `.env` files. The repository root `.gitignore` already excludes them.
 

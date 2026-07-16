@@ -1,8 +1,0 @@
-services:
-  fastapi-app:
-    volumes:
-      - .:/app/backend
-      - fastapi_app_venv:/app/backend/.venv
-
-volumes:
-  fastapi_app_venv:

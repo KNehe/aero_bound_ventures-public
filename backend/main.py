@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-import asyncio
 import os
 
 from dotenv import load_dotenv
@@ -8,13 +7,7 @@ from guard import SecurityConfig, SecurityMiddleware
 from guard.lifespan import make_lifespan
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from backend.consumers.booking_notifications import process_booking_notifications
-from backend.consumers.payment_notifications import process_payment_notifications
-from backend.consumers.ticket_notifications import process_ticket_notifications
-from backend.consumers.user_notifications import process_user_notifications
 from backend.crud.database import init_db
-from backend.utils.constants import KafkaTopics
-from backend.utils.dependencies import notification_consumer
 from backend.utils.kafka import kafka_producer
 from backend.utils.log_manager import log_manager
 
@@ -79,33 +72,13 @@ security_config = SecurityConfig(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     init_db()
-
     kafka_producer.start()
 
-    notification_consumer.register_handler(
-        KafkaTopics.USER_EVENTS, process_user_notifications
-    )
-    notification_consumer.register_handler(
-        KafkaTopics.BOOKING_EVENTS, process_booking_notifications
-    )
-    notification_consumer.register_handler(
-        KafkaTopics.PAYMENT_EVENTS, process_payment_notifications
-    )
-    notification_consumer.register_handler(
-        KafkaTopics.TICKET_EVENTS, process_ticket_notifications
-    )
-
-    loop = asyncio.get_running_loop()
-
-    notification_consumer.start(loop)
-
-    yield
-    # Shutdown
-
-    notification_consumer.stop()
-    kafka_producer.stop()
+    try:
+        yield
+    finally:
+        kafka_producer.stop()
 
 
 app = FastAPI(lifespan=make_lifespan(lifespan))

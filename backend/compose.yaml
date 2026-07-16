@@ -1,6 +1,7 @@
 services:
   fastapi-app:
     build: .
+    image: aero-backend:local
     container_name: fastapi-app
     restart: always
     ports:
@@ -23,7 +24,29 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       - FLIGHT_SERVICE_PROVIDER=${FLIGHT_SERVICE_PROVIDER:-amadeus}
     depends_on:
-      - redis
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+  notification-worker:
+    image: aero-backend:local
+    restart: always
+    command:
+      - doppler
+      - run
+      - --
+      - python
+      - -m
+      - backend.worker
+    environment:
+      - DOPPLER_TOKEN=${DOPPLER_TOKEN}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_healthy
   db:
     image: postgres:17
     container_name: postgres-db
