@@ -1,23 +1,20 @@
 import os
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
+from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
 from backend.application.health.check_system_health import CheckSystemHealth
 from backend.crud.database import get_session
-from backend.infrastructure.health.kafka_producer_health_probe import (
-    KafkaProducerHealthProbe,
-)
 from backend.infrastructure.health.redis_health_probe import RedisHealthProbe
 from backend.infrastructure.health.sqlmodel_database_health_probe import (
     SqlModelDatabaseHealthProbe,
 )
-from backend.utils.kafka import kafka_producer
 
-router = APIRouter(prefix="/health", tags=["Health"])
+router = APIRouter(tags=["Health"])
 
 
-def get_check_system_health_use_case(
+def get_check_readiness_use_case(
     session: Session = Depends(get_session),
 ) -> CheckSystemHealth:
     redis_url = os.getenv("REDIS_URL", "redis://redis:6379")
@@ -25,22 +22,27 @@ def get_check_system_health_use_case(
         probes=(
             SqlModelDatabaseHealthProbe(session),
             RedisHealthProbe(redis_url),
-            KafkaProducerHealthProbe(kafka_producer),
         )
     )
 
 
-@router.get("")
-async def health_check(
-    check_system_health_use_case: CheckSystemHealth = Depends(
-        get_check_system_health_use_case
-    ),
-):
-    """
-    Comprehensive health check for the system.
-    Checks:
-    - Database connectivity
-    - Redis connectivity
-    - Kafka producer status
-    """
-    return check_system_health_use_case.execute().as_response()
+@router.get("/live", include_in_schema=False)
+async def liveness_check() -> dict[str, str]:
+    return {"status": "alive"}
+
+
+@router.get("/ready", include_in_schema=False)
+async def readiness_check(
+    check_readiness_use_case: CheckSystemHealth = Depends(get_check_readiness_use_case),
+) -> JSONResponse:
+    readiness = check_readiness_use_case.execute()
+    if readiness.status != "healthy":
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "not_ready"},
+        )
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"status": "ready"},
+    )

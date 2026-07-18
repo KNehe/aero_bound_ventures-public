@@ -64,7 +64,8 @@ security_config = SecurityConfig(
         "/openapi.yaml",
         "/favicon.ico",
         "/static",
-        "/health",
+        "/live",
+        "/ready",
         "/metrics",
     ],
 )
@@ -108,10 +109,9 @@ api_v1_router.include_router(payments.router)
 api_v1_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_v1_router.include_router(tickets.router)
 api_v1_router.include_router(notifications.router)
-api_v1_router.include_router(health.router)
 
 app.include_router(api_v1_router)
-app.include_router(health.router, include_in_schema=False)
+app.include_router(health.router)
 
 
 @app.get("/")
