@@ -2,6 +2,7 @@ import asyncio
 from unittest.mock import call
 
 import pytest
+from sqlmodel import SQLModel
 
 from backend import main as backend_main
 from backend import worker
@@ -35,8 +36,8 @@ def test_register_notification_handlers(mocker):
 
 
 @pytest.mark.asyncio
-async def test_api_lifespan_manages_database_and_producer_only(mocker):
-    init_db = mocker.patch.object(backend_main, "init_db")
+async def test_api_lifespan_manages_producer_without_creating_schema(mocker):
+    create_all = mocker.patch.object(SQLModel.metadata, "create_all")
     producer_start = mocker.patch.object(backend_main.kafka_producer, "start")
     producer_stop = mocker.patch.object(backend_main.kafka_producer, "stop")
     consumer_start = mocker.patch.object(
@@ -49,7 +50,7 @@ async def test_api_lifespan_manages_database_and_producer_only(mocker):
     async with backend_main.lifespan(backend_main.app):
         pass
 
-    init_db.assert_called_once_with()
+    create_all.assert_not_called()
     producer_start.assert_called_once_with()
     producer_stop.assert_called_once_with()
     consumer_start.assert_not_called()

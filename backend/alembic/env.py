@@ -28,8 +28,10 @@ from sqlmodel import SQLModel  # noqa: E402
 # access to the values within the .ini file in use.
 config = context.config
 
-# Set sqlalchemy.url from environment variable
-config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL", ""))
+# ConfigParser treats percent signs as interpolation markers, so preserve any
+# percent-encoded characters in database credentials.
+database_url = os.environ["DATABASE_URL"]
+config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

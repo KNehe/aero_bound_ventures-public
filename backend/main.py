@@ -7,7 +7,6 @@ from guard import SecurityConfig, SecurityMiddleware
 from guard.lifespan import make_lifespan
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from backend.crud.database import init_db
 from backend.utils.kafka import kafka_producer
 from backend.utils.log_manager import log_manager
 
@@ -73,7 +72,6 @@ security_config = SecurityConfig(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
     kafka_producer.start()
 
     try:

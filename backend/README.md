@@ -43,22 +43,27 @@ runtime contract Kubernetes will use later. The image still includes the Doppler
 CLI for compatibility, and local Docker Compose wraps the app command with
 `doppler run`.
 
-For local Docker development, create a short-lived service token right before you start the stack:
+For local Docker development, create a short-lived service token right before
+you start the stack. Start infrastructure, build the shared image, run the
+one-shot migration, and only then start the API and worker:
 
 ```bash
 cd backend
 export DOPPLER_TOKEN="$(doppler configs tokens create docker --max-age 15m --plain)"
-doppler run -- docker compose up --build
+docker compose up -d --wait db redis kafka
+docker compose build fastapi-app
+docker compose run --rm migrate
+docker compose up -d fastapi-app notification-worker
 ```
 
-The docs show `1m` as an example, but `15m` is safer for `docker compose up --build` because the image build can take longer than a minute.
+The docs show `1m` as an example, but `15m` is safer because an image build can
+take longer than a minute.
 
-If you only want the backend core services, skip the observability stack:
+Start the optional observability services separately when needed:
 
 ```bash
 cd backend
-export DOPPLER_TOKEN="$(doppler configs tokens create docker --max-age 15m --plain)"
-doppler run -- docker compose up --build fastapi-app notification-worker db redis kafka
+docker compose up -d kafka-ui prometheus grafana
 ```
 
 The single Compose file is used locally and on EC2. It does not mount host
@@ -85,12 +90,14 @@ doppler run -- uv run python manage.py create-admin
 
 ## Runtime Processes
 
-The backend image provides two separate process types:
+The backend image provides two long-running process types and one one-shot
+administrative command:
 
 - `fastapi run main.py` serves HTTP and publishes Kafka events.
 - `python -m backend.worker` consumes Kafka events and sends notifications.
+- `alembic -c alembic.ini upgrade head` applies database schema migrations.
 
-Run either process directly from the repository root:
+Run either long-running process directly from the repository root:
 
 ```bash
 backend/.venv/bin/fastapi dev backend/main.py
@@ -100,6 +107,8 @@ backend/.venv/bin/python -m backend.worker
 Docker Compose runs both as separate services from `aero-backend:local`.
 Kubernetes will use the image's default FastAPI command for the API Deployment
 and override the command to `python -m backend.worker` for the worker Deployment.
+The Compose `migrate` service uses the same image and exits after Alembic
+finishes. It is manual and is never a dependency of the API or worker.
 
 `fastapi-app` owns the Compose build configuration. To start only the worker on
 a machine where the image has not been built yet, build the shared image first:
@@ -109,6 +118,43 @@ cd backend
 docker compose build fastapi-app
 docker compose up notification-worker
 ```
+
+## Database Migrations
+
+Alembic is the only schema owner in every environment. API and worker startup
+never call `SQLModel.metadata.create_all()`. For a fresh database or one already
+at revision `20260718base`, run:
+
+```bash
+cd backend
+docker compose build fastapi-app
+docker compose run --rm migrate
+```
+
+The old migration history ended at `f86c6233ffc8` but could not construct the
+current schema from an empty database. Revision `20260718base` replaces that
+history with a tested baseline. An existing database must make this transition
+once; do not run the baseline upgrade against its existing tables.
+
+Before deploying this migration history to an existing environment:
+
+1. Back up the database.
+2. From the old release, run `alembic current` and `alembic check` and resolve
+   any schema drift.
+3. Build the new image and replace only Alembic's version marker:
+
+```bash
+cd backend
+docker compose build fastapi-app
+docker compose run --rm migrate stamp --purge 20260718base
+docker compose run --rm migrate current
+docker compose run --rm migrate check
+```
+
+`stamp --purge` executes no schema DDL. It is safe only after confirming that
+the existing tables match the baseline, and it must be run only once per
+existing database. Normal releases after that run the `migrate` service before
+starting the new application version.
 
 ## Deployment
 
@@ -125,6 +171,11 @@ The deployment flow is:
 ```bash
 sudo --preserve-env=DOPPLER_TOKEN doppler run -- docker compose up -d --build
 ```
+
+The EC2 deployment script is not yet responsible for migrations. Until the
+Kubernetes migration Job replaces it, an operator must complete the one-time
+baseline procedure above and run later migrations before deploying code that
+depends on them.
 
 EC2 and local development intentionally use the same `compose.yaml` file and the
 same immutable backend image. Kubernetes will replace the EC2 orchestration only
