@@ -1,0 +1,36 @@
+image:
+  repository: aero-backend
+  tag: local
+  pullPolicy: IfNotPresent
+
+api:
+  replicas: 1
+  hpa:
+    enabled: false
+
+service:
+  port: 80
+
+ingress:
+  enabled: false
+
+config:
+  ENVIRONMENT: development
+  FRONTEND_URL: http://localhost:3000
+  CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+  REDIS_URL: redis://redis:6379
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+  FLIGHT_SERVICE_PROVIDER: mock
+  ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+  ALGORITHM: HS256
+  MAIL_PORT: "587"
+  MAIL_SERVER: localhost
+  ENABLE_REDIS: "true"
+  PASSIVE_MODE: "true"
+
+secrets:
+  create: false
+  existingSecretName: backend-secrets
+  data: {}
