@@ -129,7 +129,7 @@ def test_security_config_keeps_guard_settings_and_minimal_agent_config():
         "/metrics",
     ]
 
-    assert security_config.enable_agent is True
+    assert security_config.enable_agent is _env_bool("ENABLE_GUARD_AGENT", True)
     assert security_config.agent_api_key == os.environ["GUARD_API_KEY"]
     assert security_config.agent_endpoint == "https://api.guard-core.com"
     assert security_config.agent_project_id is None

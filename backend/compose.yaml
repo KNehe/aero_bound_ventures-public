@@ -61,7 +61,7 @@ services:
     environment:
       - DOPPLER_TOKEN=${DOPPLER_TOKEN}
   db:
-    image: postgres:17
+    image: postgres:16
     container_name: postgres-db
     restart: always
     profiles: ["local"]

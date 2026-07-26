@@ -28,6 +28,7 @@ config:
   MAIL_PORT: "587"
   MAIL_SERVER: localhost
   ENABLE_REDIS: "true"
+  ENABLE_GUARD_AGENT: "true"
   PASSIVE_MODE: "true"
 
 secrets:

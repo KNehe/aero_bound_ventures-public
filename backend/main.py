@@ -44,7 +44,7 @@ security_config = SecurityConfig(
         os.getenv("ENABLE_PENETRATION_DETECTION", "true").strip().lower() == "true"
     ),
     enable_rate_limiting=True,
-    enable_agent=True,
+    enable_agent=_env_bool("ENABLE_GUARD_AGENT", True),
     agent_api_key=guard_api_key,
     agent_endpoint="https://api.guard-core.com",
     fail_secure=_env_bool("GUARD_FAIL_SECURE", True),

@@ -1,13 +1,14 @@
 config:
-  REDIS_URL: redis://host.k3d.internal:6379
-  REDIS_HOST: host.k3d.internal
-  KAFKA_BOOTSTRAP_SERVERS: host.k3d.internal:9092
+  ENABLE_GUARD_AGENT: "false"
+  REDIS_URL: redis://redis:6379
+  REDIS_HOST: redis
+  KAFKA_BOOTSTRAP_SERVERS: kafka:29092
 
 secrets:
   create: true
   existingSecretName: ""
   data:
-    DATABASE_URL: postgresql://postgres:postgres@host.k3d.internal:5432/postgres
+    DATABASE_URL: postgresql://postgres:postgres@db:5432/postgres
     SECRET_KEY: local-development-only
     GUARD_API_KEY: local-development-only
     AMADEUS_API_KEY: local-development-only
