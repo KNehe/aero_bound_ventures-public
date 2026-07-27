@@ -16,6 +16,7 @@ const navLinks = [
 
 const brandName = "Aero Bound Ventures";
 const brandTagline = "Flights & Travel Concierge";
+const travelHomePath = "/travel";
 
 export default function Navbar() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function Navbar() {
 
   // Handle active section tracking (only on home page)
   useEffect(() => {
-    if (pathname !== "/") return;
+    if (pathname !== travelHomePath) return;
 
     const handleScroll = () => {
       const sections = navLinks.map(link => link.href.replace('#', ''));
@@ -51,7 +52,7 @@ export default function Navbar() {
   const handleNavigation = (href: string) => {
     const sectionId = href.replace('#', '');
 
-    if (pathname === "/") {
+    if (pathname === travelHomePath) {
       // On home page, scroll to section
       if (sectionId === '') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -63,7 +64,7 @@ export default function Navbar() {
       }
     } else {
       // On other pages, navigate to home and then scroll
-      router.push('/');
+      router.push(travelHomePath);
       // Use setTimeout to ensure navigation completes before scrolling
       setTimeout(() => {
         if (sectionId === '') {
@@ -82,7 +83,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     logout();
-    router.push("/");
+    router.push(travelHomePath);
     setMenuOpen(false);
   };
 
@@ -105,7 +106,7 @@ export default function Navbar() {
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90"
       />
       {/* Left: Logo and Name */}
-      <Link href="/" className="relative z-10 flex min-w-0 flex-1 items-center gap-2.5 md:flex-none md:gap-3">
+      <Link href={travelHomePath} className="relative z-10 flex min-w-0 flex-1 items-center gap-2.5 md:flex-none md:gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/90 shadow-[0_10px_24px_rgba(14,116,144,0.16)] ring-1 ring-sky-100/80 md:h-11 md:w-11">
           <Image src="/logo.png" alt="AeroBound logo" width={34} height={34} className="object-contain" />
         </div>
@@ -121,7 +122,7 @@ export default function Navbar() {
       {/* Desktop Nav Links */}
       <div className="relative z-10 hidden items-center gap-8 md:flex">
         {navLinks.map((link) => {
-          const isActive = pathname === "/" && (activeSection === link.href.replace('#', '') ||
+          const isActive = pathname === travelHomePath && (activeSection === link.href.replace('#', '') ||
             (link.href === '#' && activeSection === ''));
           return (
             <button
@@ -211,7 +212,7 @@ export default function Navbar() {
             &times;
           </button>
           {navLinks.map((link) => {
-            const isActive = pathname === "/" && (activeSection === link.href.replace('#', '') ||
+            const isActive = pathname === travelHomePath && (activeSection === link.href.replace('#', '') ||
               (link.href === '#' && activeSection === ''));
             return (
               <button

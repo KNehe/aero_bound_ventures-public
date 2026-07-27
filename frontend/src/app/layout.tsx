@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { Suspense } from "react";
+import { DM_Mono, Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import ConstructionBanner from '@/components/ConstructionBanner';
-import NavigationProgress from '@/components/NavigationProgress';
 import Providers from '@/app/providers';
+import SiteChrome from '@/components/SiteChrome';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,9 +14,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-hybrid-display",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const dmMono = DM_Mono({
+  variable: "--font-hybrid-mono",
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Aero Bound Ventures | Seamless Travel Services",
-  description: "Discover premium travel services with Aero Bound Ventures. We specialize in air ticketing, hotel bookings, airport transfers, travel insurance, car rentals, tour & honeymoon packages, as well as passport and visa processing.",
+  title: "Aero Bound Ventures | Air Travel + Software Development",
+  description:
+    "Aero Bound Ventures provides dependable air travel support and custom software development.",
   icons: {
     icon: [
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
@@ -38,18 +48,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${dmMono.variable} antialiased`}>
         <Providers>
-          <Suspense fallback={null}>
-            <NavigationProgress />
-          </Suspense>
-          <div className="sticky top-0 z-50 w-full">
-            <ConstructionBanner />
-            <Navbar />
-          </div>
-          {children}
-
-          <Footer />
+          <SiteChrome>{children}</SiteChrome>
         </Providers>
       </body>
     </html>

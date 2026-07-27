@@ -1,10 +1,10 @@
 import { FaTwitter, FaInstagram, FaFacebookF } from 'react-icons/fa';
 
 const navLinks = [
-  { name: 'Home', href: '/' },
-  { name: 'Destinations', href: '#' },
-  { name: 'About', href: '#' },
-  { name: 'Contact', href: '#' },
+  { name: 'Company', href: '/' },
+  { name: 'Travel', href: '/travel' },
+  { name: 'Destinations', href: '/travel#destinations' },
+  { name: 'Contact', href: '/travel#contact' },
 ];
 
 export default function Footer() {
@@ -37,4 +37,4 @@ export default function Footer() {
       </div>
     </footer>
   );
-} 
+}

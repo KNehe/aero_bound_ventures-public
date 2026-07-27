@@ -16,7 +16,7 @@ const ConstructionBanner = () => {
 
                 <p className="drop-shadow-sm flex items-center gap-1.5">
                     <span className="opacity-80">⚠️</span>
-                    Web application still under construction
+                    Flight features still under construction. Launching soon...
                     <span className="opacity-80">⚠️</span>
                 </p>
 
