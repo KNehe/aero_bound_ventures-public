@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-worker
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-worker
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/app/backend/.venv/bin/python"]
+          args: ["-m", "backend.worker"]
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-config
+            - secretRef:
+                {{- if .Values.secrets.create }}
+                name: {{ .Release.Name }}-secrets
+                {{- else }}
+                name: {{ required "secrets.existingSecretName is required" .Values.secrets.existingSecretName }}
+                {{- end }}

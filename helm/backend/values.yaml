@@ -8,6 +8,9 @@ api:
   hpa:
     enabled: false
 
+worker:
+  replicas: 1
+
 service:
   port: 80
 
