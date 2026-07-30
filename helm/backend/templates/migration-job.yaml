@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-migration
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      containers:
+        - name: migration
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/app/backend/.venv/bin/alembic"]
+          args: ["-c", "alembic.ini", "upgrade", "head"]
+          env:
+            - name: DATABASE_URL
+              {{- if .Values.secrets.create }}
+              value: {{ required "secrets.data.DATABASE_URL is required" .Values.secrets.data.DATABASE_URL | quote }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "secrets.existingSecretName is required" .Values.secrets.existingSecretName }}
+                  key: DATABASE_URL
+              {{- end }}
