@@ -5,8 +5,18 @@ image:
 
 api:
   replicas: 1
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 1
+  resources: {}
   hpa:
     enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+  pdb:
+    enabled: false
+    minAvailable: 1
 
 worker:
   replicas: 1

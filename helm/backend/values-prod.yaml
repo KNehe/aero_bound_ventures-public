@@ -1,0 +1,43 @@
+# Replaced with real ECR and service endpoints in the AWS deployment streams.
+image:
+  repository: replace-me.dkr.ecr.us-east-2.amazonaws.com/aero-backend
+  tag: replace-me
+
+api:
+  replicas: 2
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+worker:
+  replicas: 1
+
+config:
+  ENVIRONMENT: production
+  FRONTEND_URL: https://www.aeroboundventures.com
+  CORS_ORIGINS: https://www.aeroboundventures.com,https://aeroboundventures.com
+  REDIS_URL: redis://replace-me:6379
+  REDIS_HOST: replace-me
+  KAFKA_BOOTSTRAP_SERVERS: replace-me:9092
+  KAFKA_SECURITY_PROTOCOL: SASL_SSL
+  KAFKA_SASL_MECHANISM: SCRAM-SHA-512
+  FLIGHT_SERVICE_PROVIDER: amadeus
+
+secrets:
+  create: false
+  existingSecretName: backend-secrets

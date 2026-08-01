@@ -1,0 +1,34 @@
+# Replaced with real ECR and service endpoints in the AWS deployment streams.
+image:
+  repository: replace-me.dkr.ecr.us-east-2.amazonaws.com/aero-backend
+  tag: replace-me
+
+api:
+  replicas: 1
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+  resources:
+    requests:
+      cpu: 125m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+worker:
+  replicas: 1
+
+config:
+  ENVIRONMENT: staging
+  FRONTEND_URL: https://staging.aeroboundventures.com
+  CORS_ORIGINS: https://staging.aeroboundventures.com
+  REDIS_URL: redis://replace-me:6379
+  REDIS_HOST: replace-me
+  KAFKA_BOOTSTRAP_SERVERS: replace-me:9092
+  KAFKA_SECURITY_PROTOCOL: SASL_SSL
+  KAFKA_SASL_MECHANISM: SCRAM-SHA-512
+
+secrets:
+  create: false
+  existingSecretName: backend-secrets
