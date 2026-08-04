@@ -13,6 +13,11 @@ terraform/*.tfstate
 terraform/*.tfstate.*
 terraform/terraform.tfvars
 terraform/terraform.tfvars.json
+terraform/**/.terraform/
+terraform/**/*.tfstate
+terraform/**/*.tfstate.*
+terraform/**/terraform.tfvars
+terraform/**/terraform.tfvars.json
 
 # AI Agent
 .github/copilot-instructions.md
