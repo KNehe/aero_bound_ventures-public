@@ -19,11 +19,7 @@ spec:
           args: ["-c", "alembic.ini", "upgrade", "head"]
           env:
             - name: DATABASE_URL
-              {{- if .Values.secrets.create }}
-              value: {{ required "secrets.data.DATABASE_URL is required" .Values.secrets.data.DATABASE_URL | quote }}
-              {{- else }}
               valueFrom:
                 secretKeyRef:
                   name: {{ required "secrets.existingSecretName is required" .Values.secrets.existingSecretName }}
                   key: DATABASE_URL
-              {{- end }}

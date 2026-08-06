@@ -1,0 +1,13 @@
+dopplerSecret:
+  name: aero-backend
+
+tokenSecret:
+  name: doppler-token-secret
+
+doppler:
+  project: ""
+  config: ""
+
+managedSecret:
+  name: backend-secrets
+  namespace: ""

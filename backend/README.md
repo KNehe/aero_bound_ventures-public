@@ -172,16 +172,56 @@ The deployment flow is:
 sudo --preserve-env=DOPPLER_TOKEN doppler run -- docker compose up -d --build
 ```
 
-The EC2 deployment script is not yet responsible for migrations. Until the
-Kubernetes migration Job replaces it, an operator must complete the one-time
-baseline procedure above and run later migrations before deploying code that
-depends on them.
+The EC2 deployment script is not yet responsible for migrations. The EKS
+staging migration Job does not replace this production responsibility, so an
+operator must complete the one-time baseline procedure above and run later
+migrations before deploying EC2 code that depends on them.
 
 EC2 and local development intentionally use the same `compose.yaml` file and the
-same immutable backend image. Kubernetes will replace the EC2 orchestration only
-after the image and Helm deployment pass local Kubernetes validation.
+same immutable backend image. EC2/Compose remains the production deployment.
+The EKS environment is an isolated, production-like staging platform and does
+not replace or modify the EC2 deployment.
 
-Required GitHub secret for backend runtime secrets:
+### Kubernetes configuration with Doppler
+
+Every Kubernetes environment uses the official Doppler Kubernetes Operator to
+copy its complete backend config into a Kubernetes Secret named
+`backend-secrets`. This Secret is the only source for container environment
+variables; the backend chart does not create a ConfigMap or store runtime values.
+The operator is cluster infrastructure, so install it before the backend charts.
+
+For local k3d, select the developer's personal Doppler config and run the
+bootstrap script from the repository root:
+
+```bash
+doppler setup
+./scripts/bootstrap-kubernetes-dev.sh
+```
+
+The script installs the pinned Doppler Operator, creates a short-lived read-only
+service token, installs `helm/backend-secrets`, waits for `backend-secrets`, and
+then installs `helm/backend`. The wait is required because the backend chart's
+migration Job needs `DATABASE_URL` before the API and worker can deploy.
+
+The separate secrets chart creates a `DopplerSecret`, not the configuration
+values themselves. Omitting `spec.secrets` intentionally synchronizes every key
+from the selected backend config. Staging automation will run the equivalent
+ordered operations with its protected Doppler config.
+
+API and worker Deployments use the same Secret through `envFrom` and carry the
+`secrets.doppler.com/reload: "true"` annotation, so the operator restarts them
+after synchronized values change.
+
+If Doppler is unavailable or the service token is invalid, the operator keeps
+the last successfully synchronized Kubernetes Secret, skips Deployment reloads,
+reports the failure in `DopplerSecret.status.conditions`, and retries. Operator
+upgrades require following Doppler's CRD upgrade procedure; a normal Helm upgrade
+does not update the CRD automatically.
+
+EKS pulls the private backend image from ECR using AWS IAM. Do not create an ECR
+password in Doppler or add an `imagePullSecret` for this deployment.
+
+The existing EC2/Compose GitHub workflow still requires this production secret:
 - `DOPPLER_TOKEN`
 
 That token should be a Doppler service token scoped only to the backend production config.

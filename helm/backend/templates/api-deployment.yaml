@@ -2,6 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Release.Name }}-api
+  {{- if .Values.secrets.reloadOnChange }}
+  annotations:
+    secrets.doppler.com/reload: "true"
+  {{- end }}
 spec:
   replicas: {{ .Values.api.replicas }}
   strategy:
@@ -28,14 +32,8 @@ spec:
             - name: http
               containerPort: 80
           envFrom:
-            - configMapRef:
-                name: {{ .Release.Name }}-config
             - secretRef:
-                {{- if .Values.secrets.create }}
-                name: {{ .Release.Name }}-secrets
-                {{- else }}
                 name: {{ required "secrets.existingSecretName is required" .Values.secrets.existingSecretName }}
-                {{- end }}
           livenessProbe:
             httpGet:
               path: /live

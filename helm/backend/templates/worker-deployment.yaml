@@ -2,6 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Release.Name }}-worker
+  {{- if .Values.secrets.reloadOnChange }}
+  annotations:
+    secrets.doppler.com/reload: "true"
+  {{- end }}
 spec:
   replicas: {{ .Values.worker.replicas }}
   selector:
@@ -20,11 +24,5 @@ spec:
           command: ["/app/backend/.venv/bin/python"]
           args: ["-m", "backend.worker"]
           envFrom:
-            - configMapRef:
-                name: {{ .Release.Name }}-config
             - secretRef:
-                {{- if .Values.secrets.create }}
-                name: {{ .Release.Name }}-secrets
-                {{- else }}
                 name: {{ required "secrets.existingSecretName is required" .Values.secrets.existingSecretName }}
-                {{- end }}

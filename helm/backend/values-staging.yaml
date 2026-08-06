@@ -18,17 +18,3 @@ api:
 
 worker:
   replicas: 1
-
-config:
-  ENVIRONMENT: staging
-  FRONTEND_URL: https://staging.aeroboundventures.com
-  CORS_ORIGINS: https://staging.aeroboundventures.com
-  REDIS_URL: redis://replace-me:6379
-  REDIS_HOST: replace-me
-  KAFKA_BOOTSTRAP_SERVERS: replace-me:9092
-  KAFKA_SECURITY_PROTOCOL: SASL_SSL
-  KAFKA_SASL_MECHANISM: SCRAM-SHA-512
-
-secrets:
-  create: false
-  existingSecretName: backend-secrets
