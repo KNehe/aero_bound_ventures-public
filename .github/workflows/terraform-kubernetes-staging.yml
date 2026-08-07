@@ -1,0 +1,68 @@
+name: Provision EKS Staging Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "terraform/kubernetes-staging/**"
+      - ".github/workflows/terraform-kubernetes-staging.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "terraform/kubernetes-staging/**"
+      - ".github/workflows/terraform-kubernetes-staging.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-kubernetes-staging-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  terraform:
+    name: Plan or Apply Staging Infrastructure
+    if: github.repository == 'KNehe/aero_bound_ventures'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Configure infrastructure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: github-actions-eks-staging-terraform
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Initialize Terraform
+        run: terraform -chdir=terraform/kubernetes-staging init -input=false
+
+      - name: Check Terraform formatting
+        run: terraform -chdir=terraform/kubernetes-staging fmt -check -recursive
+
+      - name: Validate Terraform
+        run: terraform -chdir=terraform/kubernetes-staging validate
+
+      - name: Plan staging infrastructure
+        if: github.event_name == 'pull_request'
+        run: terraform -chdir=terraform/kubernetes-staging plan -input=false -no-color
+
+      - name: Create staging apply plan
+        if: github.event_name == 'push'
+        run: terraform -chdir=terraform/kubernetes-staging plan -input=false -out=tfplan
+
+      - name: Apply staging infrastructure
+        if: github.event_name == 'push'
+        run: terraform -chdir=terraform/kubernetes-staging apply -input=false -auto-approve tfplan

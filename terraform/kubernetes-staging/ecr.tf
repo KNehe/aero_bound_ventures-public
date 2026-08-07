@@ -1,5 +1,6 @@
 resource "aws_ecr_repository" "backend" {
   name                 = var.project_name
+  force_delete         = true
   image_tag_mutability = "IMMUTABLE"
 
   encryption_configuration {
