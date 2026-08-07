@@ -6,12 +6,14 @@ on:
       - main
     paths:
       - "terraform/kubernetes-staging/**"
+      - "helm/backend-secrets/**"
       - ".github/workflows/terraform-kubernetes-staging.yml"
   pull_request:
     branches:
       - main
     paths:
       - "terraform/kubernetes-staging/**"
+      - "helm/backend-secrets/**"
       - ".github/workflows/terraform-kubernetes-staging.yml"
 
 permissions:
@@ -25,6 +27,11 @@ concurrency:
 env:
   AWS_REGION: us-east-2
   TF_IN_AUTOMATION: "true"
+  EKS_CLUSTER_NAME: aero-backend-staging
+  KUBERNETES_NAMESPACE: aero-staging
+  DOPPLER_OPERATOR_NAMESPACE: doppler-operator-system
+  DOPPLER_PROJECT: fastapi-backend
+  DOPPLER_CONFIG: stg
 
 jobs:
   terraform:
@@ -66,3 +73,71 @@ jobs:
       - name: Apply staging infrastructure
         if: github.event_name == 'push'
         run: terraform -chdir=terraform/kubernetes-staging apply -input=false -auto-approve tfplan
+
+      - name: Set up kubectl
+        if: github.event_name == 'push'
+        uses: azure/setup-kubectl@v5
+
+      - name: Set up Helm
+        if: github.event_name == 'push'
+        uses: azure/setup-helm@v5
+
+      - name: Configure staging kubeconfig
+        if: github.event_name == 'push'
+        run: |
+          aws eks update-kubeconfig \
+            --region "${AWS_REGION}" \
+            --name "${EKS_CLUSTER_NAME}"
+
+      - name: Install Doppler Operator
+        if: github.event_name == 'push'
+        run: |
+          helm repo add doppler https://helm.doppler.com --force-update
+          helm repo update doppler
+          helm upgrade --install doppler-operator \
+            doppler/doppler-kubernetes-operator \
+            --namespace "${DOPPLER_OPERATOR_NAMESPACE}" \
+            --create-namespace \
+            --version 1.5.7 \
+            --wait \
+            --timeout 5m
+
+      - name: Configure Doppler authentication
+        if: github.event_name == 'push'
+        env:
+          DOPPLER_STAGING_TOKEN: ${{ secrets.DOPPLER_STAGING_TOKEN }}
+        run: |
+          : "${DOPPLER_STAGING_TOKEN:?DOPPLER_STAGING_TOKEN is required}"
+
+          kubectl create namespace "${KUBERNETES_NAMESPACE}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          printf '%s' "${DOPPLER_STAGING_TOKEN}" |
+            kubectl --namespace "${DOPPLER_OPERATOR_NAMESPACE}" \
+              create secret generic doppler-token-secret \
+              --from-file=serviceToken=/dev/stdin \
+              --dry-run=client -o yaml |
+            kubectl apply -f -
+
+      - name: Synchronize backend configuration
+        if: github.event_name == 'push'
+        run: |
+          helm lint helm/backend-secrets --strict \
+            --set-string "doppler.project=${DOPPLER_PROJECT}" \
+            --set-string "doppler.config=${DOPPLER_CONFIG}" \
+            --set-string "managedSecret.namespace=${KUBERNETES_NAMESPACE}"
+
+          helm upgrade --install aero-backend-secrets helm/backend-secrets \
+            --namespace "${DOPPLER_OPERATOR_NAMESPACE}" \
+            --set-string "doppler.project=${DOPPLER_PROJECT}" \
+            --set-string "doppler.config=${DOPPLER_CONFIG}" \
+            --set-string "managedSecret.namespace=${KUBERNETES_NAMESPACE}"
+
+          kubectl --namespace "${DOPPLER_OPERATOR_NAMESPACE}" wait \
+            --for=condition=secrets.doppler.com/SecretSyncReady \
+            dopplersecret/aero-backend \
+            --timeout=120s
+
+          kubectl --namespace "${KUBERNETES_NAMESPACE}" wait \
+            --for=create secret/backend-secrets \
+            --timeout=120s
