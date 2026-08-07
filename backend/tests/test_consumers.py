@@ -74,6 +74,11 @@ async def test_process_paymeny_sucess_event(session, mocker):
     mock_email = mocker.patch(
         "backend.consumers.payment_notifications.send_email", new_callable=AsyncMock
     )
+    mocker.patch(
+        "backend.consumers.payment_notifications.get_payment_success_message",
+        new_callable=AsyncMock,
+        return_value="AI generated payment message",
+    )
     mock_notif = mocker.patch(
         "backend.consumers.payment_notifications.create_and_publish_notification",
         new_callable=AsyncMock,
@@ -104,6 +109,7 @@ async def test_process_paymeny_sucess_event(session, mocker):
         extra={
             "pnr": "PNR123",
             "booking_id": str(booking_id),
+            "ai_personalized_message": "AI generated payment message",
         },
     )
     mock_notif.assert_called_once()
