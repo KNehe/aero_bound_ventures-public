@@ -62,8 +62,9 @@ resource "aws_iam_role_policy_attachment" "eks_node" {
 }
 
 resource "aws_eks_cluster" "staging" {
-  name     = local.name
-  role_arn = aws_iam_role.eks_cluster.arn
+  name                          = local.name
+  role_arn                      = aws_iam_role.eks_cluster.arn
+  bootstrap_self_managed_addons = false
 
   access_config {
     authentication_mode                         = "API"
