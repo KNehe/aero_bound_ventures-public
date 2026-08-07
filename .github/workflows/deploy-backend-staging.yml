@@ -1,0 +1,202 @@
+name: Deploy Backend to EKS Staging
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "helm/**"
+      - ".github/workflows/deploy-backend-staging.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: backend-staging
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  AWS_STAGING_DEPLOY_ROLE_ARN: arn:aws:iam::245209218155:role/aero-backend-staging-github-deploy
+  EKS_CLUSTER_NAME: aero-backend-staging
+  ECR_REPOSITORY: aero-backend
+  KUBERNETES_NAMESPACE: aero-staging
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/backend
+  DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+  SECRET_KEY: ci-only-secret-key
+  ALGORITHM: HS256
+  ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+  GUARD_API_KEY: ci-only-guard-key
+  GUARD_FAIL_SECURE: "false"
+  ENABLE_GUARD_AGENT: "false"
+  ENABLE_REDIS: "false"
+  REDIS_URL: redis://127.0.0.1:6379
+  KAFKA_BOOTSTRAP_SERVERS: 127.0.0.1:9092
+  MAIL_PORT: "587"
+  MAIL_USERNAME: ci@example.com
+  MAIL_PASSWORD: ci-only-password
+  MAIL_FROM: ci@example.com
+  MAIL_SERVER: localhost
+  AMADEUS_API_KEY: ci-only-api-key
+  AMADEUS_API_SECRET: ci-only-api-secret
+  FLIGHT_SERVICE_PROVIDER: mock
+  ENVIRONMENT: test
+  CORS_ORIGINS: http://localhost:3000
+  PASSIVE_MODE: "true"
+
+jobs:
+  deploy:
+    name: Test, Build, and Deploy
+    if: github.repository == 'KNehe/aero_bound_ventures'
+    runs-on: ubuntu-latest
+    environment: staging
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v8
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --frozen
+
+      - name: Run backend tests
+        run: backend/.venv/bin/pytest backend/tests
+
+      - name: Configure staging AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ env.AWS_STAGING_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: github-actions-eks-staging
+
+      - name: Log in to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Resolve backend image
+        id: image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          image_repository="${ECR_REGISTRY}/${ECR_REPOSITORY}"
+          image_uri="${image_repository}:${GITHUB_SHA}"
+
+          echo "repository=${image_repository}" >> "${GITHUB_OUTPUT}"
+          echo "uri=${image_uri}" >> "${GITHUB_OUTPUT}"
+
+          image_count="$(aws ecr batch-get-image \
+            --repository-name "${ECR_REPOSITORY}" \
+            --image-ids "imageTag=${GITHUB_SHA}" \
+            --query 'length(images)' \
+            --output text)"
+
+          if [[ "${image_count}" == "1" ]]; then
+            echo "exists=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Build backend image
+        if: steps.image.outputs.exists != 'true'
+        run: docker build --tag "${{ steps.image.outputs.uri }}" backend
+
+      - name: Push backend image
+        if: steps.image.outputs.exists != 'true'
+        run: docker push "${{ steps.image.outputs.uri }}"
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v5
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v5
+
+      - name: Configure staging kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region "${AWS_REGION}" \
+            --name "${EKS_CLUSTER_NAME}"
+
+      - name: Verify Doppler-managed secret
+        run: |
+          kubectl --namespace "${KUBERNETES_NAMESPACE}" wait \
+            --for=create secret/backend-secrets \
+            --timeout=120s
+
+      - name: Validate backend Helm chart
+        run: |
+          helm lint helm/backend --strict \
+            -f helm/backend/values-staging.yaml \
+            --set-string "image.repository=${{ steps.image.outputs.repository }}" \
+            --set-string "image.tag=${GITHUB_SHA}"
+
+          helm template aero-backend helm/backend \
+            --namespace "${KUBERNETES_NAMESPACE}" \
+            -f helm/backend/values-staging.yaml \
+            --set-string "image.repository=${{ steps.image.outputs.repository }}" \
+            --set-string "image.tag=${GITHUB_SHA}" >/dev/null
+
+      - name: Deploy backend with Helm
+        run: |
+          helm upgrade --install aero-backend helm/backend \
+            --namespace "${KUBERNETES_NAMESPACE}" \
+            -f helm/backend/values-staging.yaml \
+            --set-string "image.repository=${{ steps.image.outputs.repository }}" \
+            --set-string "image.tag=${GITHUB_SHA}" \
+            --reset-values \
+            --wait \
+            --wait-for-jobs \
+            --timeout 10m
+
+      - name: Verify backend rollouts
+        run: |
+          kubectl --namespace "${KUBERNETES_NAMESPACE}" rollout status \
+            deployment/aero-backend-api --timeout=180s
+          kubectl --namespace "${KUBERNETES_NAMESPACE}" rollout status \
+            deployment/aero-backend-worker --timeout=180s
+
+      - name: Smoke test backend
+        run: |
+          kubectl --namespace "${KUBERNETES_NAMESPACE}" port-forward \
+            service/aero-backend-api 8000:80 \
+            >"${RUNNER_TEMP}/backend-port-forward.log" 2>&1 &
+          port_forward_pid=$!
+          trap 'kill "${port_forward_pid}"' EXIT
+
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8000/live >/dev/null; then
+              break
+            fi
+
+            if [[ "${attempt}" == "30" ]]; then
+              cat "${RUNNER_TEMP}/backend-port-forward.log"
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          curl --fail --silent --show-error http://127.0.0.1:8000/ready
