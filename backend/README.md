@@ -221,10 +221,44 @@ does not update the CRD automatically.
 EKS pulls the private backend image from ECR using AWS IAM. Do not create an ECR
 password in Doppler or add an `imagePullSecret` for this deployment.
 
-The existing EC2/Compose GitHub workflow still requires this production secret:
+### Automatic EKS staging deployment
+
+The staging workflow runs automatically after a backend or Helm change reaches
+`main`. It tests the backend, publishes an immutable git-SHA image to ECR,
+deploys that image with Helm, and checks `/live` and `/ready`. The workflow is
+restricted to the private repository, so pushes to the public mirror do not
+attempt to access the staging AWS account.
+
+The separate staging Terraform workflow plans changes on pull requests and
+applies them after `terraform/kubernetes-staging` changes reach `main`. It uses
+the existing `AWS_ROLE_TO_ASSUME` infrastructure role to create EKS, ECR, Redis,
+and the restricted staging deployment role. The deployment role ARN is a
+non-secret, deterministic identifier declared in the backend workflow, so no
+`AWS_STAGING_DEPLOY_ROLE_ARN` repository variable is required.
+
+For the initial rollout, push the staging Terraform workflow first and wait for
+its apply job to finish. After Terraform applies the infrastructure, the same
+workflow connects to EKS, installs the Doppler Operator, creates its Kubernetes
+authentication Secret, installs `helm/backend-secrets`, and waits for
+`backend-secrets` to synchronize into `aero-staging`. These operations are
+idempotent, so later infrastructure runs safely reconcile the same resources.
+
+The infrastructure workflow reads `DOPPLER_STAGING_TOKEN` from GitHub Secrets.
+It must be a read-only service token scoped to `fastapi-backend/stg`. The token
+value becomes the `doppler-token-secret` Kubernetes Secret; those names describe
+different secret stores, not two separate credentials.
+
+The staging Doppler config must contain the complete backend configuration,
+including the Neon `DATABASE_URL`, TLS Redis URL, and Kafka connection settings.
+The backend deployment workflow does not receive the Doppler service token. It
+only consumes the synchronized `backend-secrets` Kubernetes Secret.
+
+Required GitHub secrets:
+- `DOPPLER_STAGING_TOKEN`: read-only token scoped to `fastapi-backend/stg`
 - `DOPPLER_TOKEN`
 
-That token should be a Doppler service token scoped only to the backend production config.
+`DOPPLER_TOKEN` is used by the existing EC2/Compose production workflow and must
+be scoped only to `fastapi-backend/prd`.
 
 Required GitHub secret for AWS authentication in GitHub Actions:
 - `AWS_ROLE_TO_ASSUME`
