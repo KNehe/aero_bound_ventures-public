@@ -171,9 +171,28 @@ jobs:
             --wait-for-jobs \
             --timeout 10m
 
-      - name: Diagnose failed migration
+      - name: Diagnose failed deployment
         if: failure()
         run: |
+          kubectl --namespace "${KUBERNETES_NAMESPACE}" \
+            get deployments,pods \
+            --output wide || true
+
+          kubectl --namespace "${KUBERNETES_NAMESPACE}" \
+            describe deployment/aero-backend-api || true
+
+          kubectl --namespace "${KUBERNETES_NAMESPACE}" \
+            describe pods \
+            --selector app=aero-backend-api || true
+
+          kubectl --namespace "${KUBERNETES_NAMESPACE}" \
+            logs \
+            --selector app=aero-backend-api \
+            --all-containers=true \
+            --prefix=true \
+            --tail=200 \
+            --max-log-requests=10 || true
+
           kubectl --namespace "${KUBERNETES_NAMESPACE}" \
             describe job/aero-backend-migration || true
 
@@ -189,6 +208,10 @@ jobs:
             --prefix=true \
             --tail=-1 \
             --max-log-requests=10 || true
+
+          kubectl --namespace "${KUBERNETES_NAMESPACE}" \
+            get events \
+            --sort-by=.lastTimestamp || true
 
       - name: Verify backend rollouts
         run: |
