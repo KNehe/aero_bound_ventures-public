@@ -1,6 +1,16 @@
 name: Provision EKS Staging Infrastructure
 
 on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Staging infrastructure operation
+        required: true
+        default: apply
+        type: choice
+        options:
+          - apply
+          - destroy
   push:
     branches:
       - main
@@ -67,30 +77,34 @@ jobs:
         run: terraform -chdir=terraform/kubernetes-staging plan -input=false -no-color
 
       - name: Create staging apply plan
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || inputs.operation == 'apply'
         run: terraform -chdir=terraform/kubernetes-staging plan -input=false -out=tfplan
 
       - name: Apply staging infrastructure
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || inputs.operation == 'apply'
         run: terraform -chdir=terraform/kubernetes-staging apply -input=false -auto-approve tfplan
 
+      - name: Destroy staging infrastructure
+        if: github.event_name == 'workflow_dispatch' && inputs.operation == 'destroy'
+        run: terraform -chdir=terraform/kubernetes-staging destroy -input=false -auto-approve
+
       - name: Set up kubectl
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || inputs.operation == 'apply'
         uses: azure/setup-kubectl@v5
 
       - name: Set up Helm
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || inputs.operation == 'apply'
         uses: azure/setup-helm@v5
 
       - name: Configure staging kubeconfig
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || inputs.operation == 'apply'
         run: |
           aws eks update-kubeconfig \
             --region "${AWS_REGION}" \
             --name "${EKS_CLUSTER_NAME}"
 
       - name: Install Doppler Operator
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || inputs.operation == 'apply'
         run: |
           helm repo add doppler https://helm.doppler.com --force-update
           helm repo update doppler
@@ -103,7 +117,7 @@ jobs:
             --timeout 5m
 
       - name: Configure Doppler authentication
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || inputs.operation == 'apply'
         env:
           DOPPLER_STAGING_TOKEN: ${{ secrets.DOPPLER_STAGING_TOKEN }}
         run: |
@@ -120,7 +134,7 @@ jobs:
             kubectl apply -f -
 
       - name: Synchronize backend configuration
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || inputs.operation == 'apply'
         run: |
           helm lint helm/backend-secrets --strict \
             --set-string "doppler.project=${DOPPLER_PROJECT}" \
