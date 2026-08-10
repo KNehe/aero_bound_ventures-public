@@ -107,6 +107,8 @@ jobs:
       - name: Publish staging infrastructure configuration
         if: github.event_name == 'push' || inputs.operation == 'apply'
         run: |
+          # Redis endpoints can change after recreation, so Terraform publishes
+          # the current non-secret endpoint instead of storing it in Doppler.
           redis_endpoint="$(terraform \
             -chdir=terraform/kubernetes-staging \
             output -raw redis_primary_endpoint)"

@@ -20,4 +20,5 @@ worker:
   replicas: 1
 
 infrastructure:
+  # The explicit REDIS_URL Pod env from this ConfigMap overrides Doppler's copy.
   existingConfigMapName: backend-infrastructure
