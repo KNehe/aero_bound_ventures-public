@@ -187,6 +187,7 @@ jobs:
             --selector job-name=aero-backend-migration \
             --all-containers=true \
             --prefix=true \
+            --tail=-1 \
             --max-log-requests=10 || true
 
       - name: Verify backend rollouts
