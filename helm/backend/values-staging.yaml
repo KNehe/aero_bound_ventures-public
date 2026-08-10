@@ -18,3 +18,6 @@ api:
 
 worker:
   replicas: 1
+
+infrastructure:
+  existingConfigMapName: backend-infrastructure

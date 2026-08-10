@@ -30,3 +30,6 @@ ingress:
 secrets:
   existingSecretName: backend-secrets
   reloadOnChange: true
+
+infrastructure:
+  existingConfigMapName: ""

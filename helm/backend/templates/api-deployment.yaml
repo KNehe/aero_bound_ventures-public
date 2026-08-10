@@ -34,6 +34,14 @@ spec:
           envFrom:
             - secretRef:
                 name: {{ required "secrets.existingSecretName is required" .Values.secrets.existingSecretName }}
+          {{- with .Values.infrastructure.existingConfigMapName }}
+          env:
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ . }}
+                  key: REDIS_URL
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /live

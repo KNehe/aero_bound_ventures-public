@@ -39,6 +39,7 @@ env:
   TF_IN_AUTOMATION: "true"
   EKS_CLUSTER_NAME: aero-backend-staging
   KUBERNETES_NAMESPACE: aero-staging
+  INFRASTRUCTURE_CONFIG_MAP: backend-infrastructure
   DOPPLER_OPERATOR_NAMESPACE: doppler-operator-system
   DOPPLER_PROJECT: fastapi-backend
   DOPPLER_CONFIG: stg
@@ -102,6 +103,21 @@ jobs:
           aws eks update-kubeconfig \
             --region "${AWS_REGION}" \
             --name "${EKS_CLUSTER_NAME}"
+
+      - name: Publish staging infrastructure configuration
+        if: github.event_name == 'push' || inputs.operation == 'apply'
+        run: |
+          redis_endpoint="$(terraform \
+            -chdir=terraform/kubernetes-staging \
+            output -raw redis_primary_endpoint)"
+
+          kubectl create namespace "${KUBERNETES_NAMESPACE}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl --namespace "${KUBERNETES_NAMESPACE}" \
+            create configmap "${INFRASTRUCTURE_CONFIG_MAP}" \
+            --from-literal="REDIS_URL=rediss://${redis_endpoint}:6379" \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Install Doppler Operator
         if: github.event_name == 'push' || inputs.operation == 'apply'
