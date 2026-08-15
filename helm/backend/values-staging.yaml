@@ -19,6 +19,10 @@ api:
 worker:
   replicas: 1
 
+ingress:
+  enabled: true
+  className: aero-staging-alb
+
 infrastructure:
   # The explicit REDIS_URL Pod env from this ConfigMap overrides Doppler's copy.
   existingConfigMapName: backend-infrastructure

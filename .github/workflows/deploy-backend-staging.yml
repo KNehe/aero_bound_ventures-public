@@ -187,6 +187,13 @@ jobs:
             --selector app=aero-backend-api || true
 
           kubectl --namespace "${KUBERNETES_NAMESPACE}" \
+            get ingress/aero-backend-api \
+            --output wide || true
+
+          kubectl --namespace "${KUBERNETES_NAMESPACE}" \
+            describe ingress/aero-backend-api || true
+
+          kubectl --namespace "${KUBERNETES_NAMESPACE}" \
             logs \
             --selector app=aero-backend-api \
             --all-containers=true \
@@ -223,23 +230,43 @@ jobs:
 
       - name: Smoke test backend
         run: |
-          kubectl --namespace "${KUBERNETES_NAMESPACE}" port-forward \
-            service/aero-backend-api 8000:80 \
-            >"${RUNNER_TEMP}/backend-port-forward.log" 2>&1 &
-          port_forward_pid=$!
-          trap 'kill "${port_forward_pid}"' EXIT
+          ingress_name=aero-backend-api
+          alb_hostname=""
 
-          for attempt in {1..30}; do
-            if curl --fail --silent http://127.0.0.1:8000/live >/dev/null; then
+          for attempt in {1..60}; do
+            alb_hostname="$(kubectl --namespace "${KUBERNETES_NAMESPACE}" \
+              get "ingress/${ingress_name}" \
+              --output jsonpath='{.status.loadBalancer.ingress[0].hostname}' \
+              2>/dev/null || true)"
+
+            if [[ -n "${alb_hostname}" ]]; then
               break
             fi
 
-            if [[ "${attempt}" == "30" ]]; then
-              cat "${RUNNER_TEMP}/backend-port-forward.log"
+            if [[ "${attempt}" == "60" ]]; then
+              kubectl --namespace "${KUBERNETES_NAMESPACE}" \
+                describe "ingress/${ingress_name}"
+              echo "Ingress did not receive an ALB hostname within 10 minutes." >&2
               exit 1
             fi
 
-            sleep 2
+            sleep 10
           done
 
-          curl --fail --silent --show-error http://127.0.0.1:8000/ready
+          for attempt in {1..60}; do
+            if curl --fail --silent --show-error \
+              "http://${alb_hostname}/live" >/dev/null; then
+              break
+            fi
+
+            if [[ "${attempt}" == "60" ]]; then
+              echo "ALB targets did not become healthy within 10 minutes." >&2
+              exit 1
+            fi
+
+            sleep 10
+          done
+
+          curl --fail --silent --show-error "http://${alb_hostname}/ready"
+          echo "### Staging ALB" >> "${GITHUB_STEP_SUMMARY}"
+          echo "http://${alb_hostname}" >> "${GITHUB_STEP_SUMMARY}"

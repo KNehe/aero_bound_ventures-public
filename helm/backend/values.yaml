@@ -26,6 +26,12 @@ service:
 
 ingress:
   enabled: false
+  className: ""
+  paths:
+    - path: /live
+      pathType: Exact
+    - path: /ready
+      pathType: Exact
 
 secrets:
   existingSecretName: backend-secrets

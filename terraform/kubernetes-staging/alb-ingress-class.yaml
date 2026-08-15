@@ -1,0 +1,20 @@
+apiVersion: eks.amazonaws.com/v1
+kind: IngressClassParams
+metadata:
+  name: aero-staging-alb
+spec:
+  scheme: internet-facing
+  namespaceSelector:
+    matchLabels:
+      environment: staging
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: aero-staging-alb
+spec:
+  controller: eks.amazonaws.com/alb
+  parameters:
+    apiGroup: eks.amazonaws.com
+    kind: IngressClassParams
+    name: aero-staging-alb

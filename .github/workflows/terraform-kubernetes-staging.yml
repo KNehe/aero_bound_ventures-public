@@ -104,6 +104,16 @@ jobs:
             --region "${AWS_REGION}" \
             --name "${EKS_CLUSTER_NAME}"
 
+      - name: Configure public ALB ingress class
+        if: github.event_name == 'push' || inputs.operation == 'apply'
+        run: |
+          kubectl create namespace "${KUBERNETES_NAMESPACE}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl label namespace "${KUBERNETES_NAMESPACE}" \
+            environment=staging --overwrite
+          kubectl apply \
+            -f terraform/kubernetes-staging/alb-ingress-class.yaml
+
       - name: Publish staging infrastructure configuration
         if: github.event_name == 'push' || inputs.operation == 'apply'
         run: |
