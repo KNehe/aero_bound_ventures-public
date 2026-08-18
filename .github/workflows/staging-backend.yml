@@ -1,0 +1,37 @@
+name: Staging Backend Pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "helm/**"
+      - "terraform/kubernetes-staging/**"
+      - ".github/workflows/deploy-backend-staging.yml"
+      - ".github/workflows/terraform-kubernetes-staging.yml"
+      - ".github/workflows/staging-backend.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: staging-backend-pipeline-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  infrastructure:
+    name: Provision infrastructure
+    if: github.repository == 'KNehe/aero_bound_ventures'
+    uses: ./.github/workflows/terraform-kubernetes-staging.yml
+    with:
+      operation: apply
+    secrets: inherit
+
+  deployment:
+    name: Deploy backend
+    needs: infrastructure
+    uses: ./.github/workflows/deploy-backend-staging.yml
+    secrets: inherit

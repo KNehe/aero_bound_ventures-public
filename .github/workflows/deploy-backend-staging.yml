@@ -1,14 +1,8 @@
 name: Deploy Backend to EKS Staging
 
 on:
+  workflow_call:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - "backend/**"
-      - "helm/**"
-      - ".github/workflows/deploy-backend-staging.yml"
 
 permissions:
   contents: read
