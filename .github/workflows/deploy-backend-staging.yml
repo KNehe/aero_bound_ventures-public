@@ -24,6 +24,7 @@ env:
   EKS_CLUSTER_NAME: aero-backend-staging
   ECR_REPOSITORY: aero-backend
   KUBERNETES_NAMESPACE: aero-staging
+  STAGING_API_HOSTNAME: api-staging.aeroboundventures.com
   PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/backend
   DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
   SECRET_KEY: ci-only-secret-key
@@ -253,9 +254,43 @@ jobs:
             sleep 10
           done
 
+          echo "### Staging API DNS" >> "${GITHUB_STEP_SUMMARY}"
+          echo "Add this record with your DNS provider before activating HTTPS:" >> "${GITHUB_STEP_SUMMARY}"
+          echo "\`${STAGING_API_HOSTNAME}\` \`CNAME\` \`${alb_hostname}\`" >> "${GITHUB_STEP_SUMMARY}"
+
+          endpoint=""
+          https_enabled="$(kubectl --namespace "${KUBERNETES_NAMESPACE}" \
+            get configmap/backend-infrastructure \
+            --output jsonpath='{.data.STAGING_HTTPS_ENABLED}' \
+            2>/dev/null || true)"
+          https_enabled="${https_enabled:-false}"
+
           for attempt in {1..60}; do
-            if curl --fail --silent --show-error \
-              "http://${alb_hostname}/live" >/dev/null; then
+            if [[ "${https_enabled}" == "true" ]]; then
+              if curl --fail --silent \
+                --connect-timeout 3 \
+                --max-time 5 \
+                --connect-to "${STAGING_API_HOSTNAME}:443:${alb_hostname}:443" \
+                "https://${STAGING_API_HOSTNAME}/live" >/dev/null 2>&1; then
+                curl --fail --silent --show-error \
+                  --connect-timeout 3 \
+                  --max-time 5 \
+                  --connect-to "${STAGING_API_HOSTNAME}:443:${alb_hostname}:443" \
+                  "https://${STAGING_API_HOSTNAME}/ready"
+                endpoint="https://${STAGING_API_HOSTNAME}"
+                break
+              fi
+            elif curl --fail --silent \
+              --connect-timeout 3 \
+              --max-time 5 \
+              --header "Host: ${STAGING_API_HOSTNAME}" \
+              "http://${alb_hostname}/live" >/dev/null 2>&1; then
+              curl --fail --silent --show-error \
+                --connect-timeout 3 \
+                --max-time 5 \
+                --header "Host: ${STAGING_API_HOSTNAME}" \
+                "http://${alb_hostname}/ready"
+              endpoint="http://${alb_hostname} (HTTPS pending)"
               break
             fi
 
@@ -264,9 +299,8 @@ jobs:
               exit 1
             fi
 
-            sleep 10
+            sleep 5
           done
 
-          curl --fail --silent --show-error "http://${alb_hostname}/ready"
           echo "### Staging ALB" >> "${GITHUB_STEP_SUMMARY}"
-          echo "http://${alb_hostname}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "${endpoint}" >> "${GITHUB_STEP_SUMMARY}"

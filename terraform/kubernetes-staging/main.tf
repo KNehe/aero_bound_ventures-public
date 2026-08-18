@@ -22,6 +22,16 @@ resource "aws_ec2_tag" "public_load_balancer_subnets" {
 locals {
   name = "${var.project_name}-${var.environment}"
 
+  staging_alb_ingress_class_http_manifest = templatefile(
+    "${path.module}/alb-ingress-class.yaml.tftpl",
+    { certificate_arn = "" }
+  )
+
+  staging_alb_ingress_class_https_manifest = templatefile(
+    "${path.module}/alb-ingress-class.yaml.tftpl",
+    { certificate_arn = aws_acm_certificate.staging_api.arn }
+  )
+
   common_tags = {
     Project     = var.project_name
     Environment = var.environment

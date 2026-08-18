@@ -27,3 +27,9 @@ variable "kubernetes_namespace" {
   type        = string
   default     = "aero-staging"
 }
+
+variable "staging_api_hostname" {
+  description = "Public hostname for the staging API."
+  type        = string
+  default     = "api-staging.aeroboundventures.com"
+}

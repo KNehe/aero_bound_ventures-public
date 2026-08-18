@@ -6,7 +6,8 @@ metadata:
 spec:
   ingressClassName: {{ required "ingress.className is required when ingress is enabled" .Values.ingress.className }}
   rules:
-    - http:
+    - host: {{ required "ingress.host is required when ingress is enabled" .Values.ingress.host | quote }}
+      http:
         paths:
           {{- range .Values.ingress.paths }}
           - path: {{ .path }}

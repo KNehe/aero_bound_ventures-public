@@ -10,6 +10,7 @@ on:
         type: choice
         options:
           - apply
+          - activate-https
           - destroy
   push:
     branches:
@@ -39,6 +40,7 @@ env:
   TF_IN_AUTOMATION: "true"
   EKS_CLUSTER_NAME: aero-backend-staging
   KUBERNETES_NAMESPACE: aero-staging
+  STAGING_API_HOSTNAME: api-staging.aeroboundventures.com
   INFRASTRUCTURE_CONFIG_MAP: backend-infrastructure
   DOPPLER_OPERATOR_NAMESPACE: doppler-operator-system
   DOPPLER_PROJECT: fastapi-backend
@@ -78,19 +80,15 @@ jobs:
         run: terraform -chdir=terraform/kubernetes-staging plan -input=false -no-color
 
       - name: Create staging apply plan
-        if: github.event_name == 'push' || inputs.operation == 'apply'
+        if: github.event_name == 'push' || inputs.operation == 'apply' || inputs.operation == 'activate-https'
         run: terraform -chdir=terraform/kubernetes-staging plan -input=false -out=tfplan
 
       - name: Apply staging infrastructure
-        if: github.event_name == 'push' || inputs.operation == 'apply'
+        if: github.event_name == 'push' || inputs.operation == 'apply' || inputs.operation == 'activate-https'
         run: terraform -chdir=terraform/kubernetes-staging apply -input=false -auto-approve tfplan
 
-      - name: Destroy staging infrastructure
-        if: github.event_name == 'workflow_dispatch' && inputs.operation == 'destroy'
-        run: terraform -chdir=terraform/kubernetes-staging destroy -input=false -auto-approve
-
       - name: Set up kubectl
-        if: github.event_name == 'push' || inputs.operation == 'apply'
+        if: github.event_name == 'push' || inputs.operation == 'apply' || inputs.operation == 'activate-https' || inputs.operation == 'destroy'
         uses: azure/setup-kubectl@v5
 
       - name: Set up Helm
@@ -98,24 +96,72 @@ jobs:
         uses: azure/setup-helm@v5
 
       - name: Configure staging kubeconfig
-        if: github.event_name == 'push' || inputs.operation == 'apply'
+        if: github.event_name == 'push' || inputs.operation == 'apply' || inputs.operation == 'activate-https'
         run: |
           aws eks update-kubeconfig \
             --region "${AWS_REGION}" \
             --name "${EKS_CLUSTER_NAME}"
 
-      - name: Configure public ALB ingress class
-        if: github.event_name == 'push' || inputs.operation == 'apply'
+      - name: Destroy staging infrastructure
+        if: github.event_name == 'workflow_dispatch' && inputs.operation == 'destroy'
         run: |
+          if aws eks describe-cluster \
+            --region "${AWS_REGION}" \
+            --name "${EKS_CLUSTER_NAME}" >/dev/null 2>&1; then
+            aws eks update-kubeconfig \
+              --region "${AWS_REGION}" \
+              --name "${EKS_CLUSTER_NAME}"
+            kubectl --namespace "${KUBERNETES_NAMESPACE}" \
+              delete ingress/aero-backend-api \
+              --ignore-not-found \
+              --wait=true \
+              --timeout=10m
+          fi
+
+          terraform -chdir=terraform/kubernetes-staging \
+            destroy -input=false -auto-approve
+
+      - name: Verify ACM certificate issuance
+        if: inputs.operation == 'activate-https'
+        run: |
+          certificate_status="$(terraform \
+            -chdir=terraform/kubernetes-staging \
+            output -raw staging_api_certificate_status)"
+
+          if [[ "${certificate_status}" != "ISSUED" ]]; then
+            echo "ACM certificate status is ${certificate_status}; add the validation CNAME with your DNS provider before activating HTTPS." >&2
+            exit 1
+          fi
+
+      - name: Configure public ALB ingress class
+        id: ingress-class
+        if: github.event_name == 'push' || inputs.operation == 'apply' || inputs.operation == 'activate-https'
+        run: |
+          set -o pipefail
+
           kubectl create namespace "${KUBERNETES_NAMESPACE}" \
             --dry-run=client -o yaml | kubectl apply -f -
           kubectl label namespace "${KUBERNETES_NAMESPACE}" \
             environment=staging --overwrite
-          kubectl apply \
-            -f terraform/kubernetes-staging/alb-ingress-class.yaml
+
+          manifest_output=staging_alb_ingress_class_http_manifest
+          https_enabled=false
+          current_certificate_arn="$(kubectl \
+            get ingressclassparams/aero-staging-alb \
+            --output jsonpath='{.spec.certificateARNs[0]}' \
+            2>/dev/null || true)"
+
+          if [[ "${{ inputs.operation }}" == "activate-https" || -n "${current_certificate_arn}" ]]; then
+            manifest_output=staging_alb_ingress_class_https_manifest
+            https_enabled=true
+          fi
+
+          terraform -chdir=terraform/kubernetes-staging \
+            output -raw "${manifest_output}" | kubectl apply -f -
+          echo "https_enabled=${https_enabled}" >> "${GITHUB_OUTPUT}"
 
       - name: Publish staging infrastructure configuration
-        if: github.event_name == 'push' || inputs.operation == 'apply'
+        if: github.event_name == 'push' || inputs.operation == 'apply' || inputs.operation == 'activate-https'
         run: |
           # Redis endpoints can change after recreation, so Terraform publishes
           # the current non-secret endpoint instead of storing it in Doppler.
@@ -129,7 +175,54 @@ jobs:
           kubectl --namespace "${KUBERNETES_NAMESPACE}" \
             create configmap "${INFRASTRUCTURE_CONFIG_MAP}" \
             --from-literal="REDIS_URL=rediss://${redis_endpoint}:6379" \
+            --from-literal="STAGING_HTTPS_ENABLED=${{ steps.ingress-class.outputs.https_enabled }}" \
             --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Verify staging HTTPS endpoint
+        if: inputs.operation == 'activate-https'
+        run: |
+          for attempt in {1..60}; do
+            if curl --fail --silent \
+              --connect-timeout 3 \
+              --max-time 5 \
+              "https://${STAGING_API_HOSTNAME}/live" >/dev/null; then
+              curl --fail --silent --show-error \
+                --connect-timeout 3 \
+                --max-time 5 \
+                "https://${STAGING_API_HOSTNAME}/ready"
+              echo "### Staging HTTPS" >> "${GITHUB_STEP_SUMMARY}"
+              echo "https://${STAGING_API_HOSTNAME}" >> "${GITHUB_STEP_SUMMARY}"
+              exit 0
+            fi
+
+            if [[ "${attempt}" == "60" ]]; then
+              echo "HTTPS endpoint did not become ready within 10 minutes." >&2
+              exit 1
+            fi
+
+            sleep 5
+          done
+
+      - name: Publish ACM DNS validation record
+        if: github.event_name == 'push' || inputs.operation == 'apply'
+        run: |
+          certificate_status="$(terraform \
+            -chdir=terraform/kubernetes-staging \
+            output -raw staging_api_certificate_status)"
+          record_name="$(terraform \
+            -chdir=terraform/kubernetes-staging \
+            output -raw staging_api_certificate_validation_record_name)"
+          record_type="$(terraform \
+            -chdir=terraform/kubernetes-staging \
+            output -raw staging_api_certificate_validation_record_type)"
+          record_value="$(terraform \
+            -chdir=terraform/kubernetes-staging \
+            output -raw staging_api_certificate_validation_record_value)"
+
+          echo "### ACM DNS Validation" >> "${GITHUB_STEP_SUMMARY}"
+          echo "Certificate status: ${certificate_status}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "Add this record with your DNS provider:" >> "${GITHUB_STEP_SUMMARY}"
+          echo "\`${record_name}\` \`${record_type}\` \`${record_value}\`" >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Install Doppler Operator
         if: github.event_name == 'push' || inputs.operation == 'apply'

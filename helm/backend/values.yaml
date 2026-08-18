@@ -27,6 +27,7 @@ service:
 ingress:
   enabled: false
   className: ""
+  host: ""
   paths:
     - path: /live
       pathType: Exact

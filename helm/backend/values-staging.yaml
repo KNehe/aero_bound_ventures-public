@@ -22,6 +22,10 @@ worker:
 ingress:
   enabled: true
   className: aero-staging-alb
+  host: api-staging.aeroboundventures.com
+  paths:
+    - path: /
+      pathType: Prefix
 
 infrastructure:
   # The explicit REDIS_URL Pod env from this ConfigMap overrides Doppler's copy.
