@@ -311,13 +311,8 @@ jobs:
           kubectl apply -f gitops/staging/root-application.yaml
 
           kubectl --namespace "${ARGOCD_NAMESPACE}" wait \
-            --for=jsonpath='{.status.sync.status}'=Synced \
-            application/aero-staging-root \
-            --timeout=5m
-
-          kubectl --namespace "${ARGOCD_NAMESPACE}" wait \
             --for=create application/aero-staging-backend-secrets \
-            --timeout=120s
+            --timeout=5m
 
           kubectl --namespace "${DOPPLER_OPERATOR_NAMESPACE}" wait \
             --for=condition=secrets.doppler.com/SecretSyncReady \
@@ -327,3 +322,20 @@ jobs:
           kubectl --namespace "${KUBERNETES_NAMESPACE}" wait \
             --for=create secret/backend-secrets \
             --timeout=120s
+
+          kubectl --namespace "${ARGOCD_NAMESPACE}" wait \
+            --for=create application/aero-staging-backend \
+            --timeout=120s
+
+      - name: Diagnose failed GitOps bootstrap
+        if: failure() && (github.event_name == 'push' || inputs.operation == 'apply')
+        run: |
+          kubectl --namespace "${ARGOCD_NAMESPACE}" \
+            get applications --output wide || true
+
+          kubectl --namespace "${ARGOCD_NAMESPACE}" \
+            describe application/aero-staging-root || true
+
+          kubectl --namespace "${ARGOCD_NAMESPACE}" \
+            logs deployment/argocd-repo-server \
+            --tail=200 || true

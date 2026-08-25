@@ -77,6 +77,23 @@ rg --quiet --fixed-strings 'gitops/staging/root-application.yaml' \
   .github/workflows/terraform-kubernetes-staging.yml
 rg --quiet --fixed-strings 'bash .github/scripts/validate-gitops.sh' \
   .github/workflows/validate-gitops.yml
+rg --quiet --fixed-strings 'sudo apt-get install --yes ripgrep' \
+  .github/workflows/validate-gitops.yml
+
+if rg --quiet --fixed-strings \
+  -- \
+  "--for=jsonpath='{.status.sync.status}'=Synced" \
+  .github/workflows/terraform-kubernetes-staging.yml; then
+  echo "Bootstrap must not wait for the root Application to become fully synced." >&2
+  exit 1
+fi
+
+rg --quiet --fixed-strings \
+  'get applications --output wide' \
+  .github/workflows/terraform-kubernetes-staging.yml
+rg --quiet --fixed-strings \
+  'describe application/aero-staging-root' \
+  .github/workflows/terraform-kubernetes-staging.yml
 
 ruby -ryaml -e '
   workflow = YAML.load_file(ARGV.fetch(0))
