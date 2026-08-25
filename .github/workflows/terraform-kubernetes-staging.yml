@@ -266,6 +266,10 @@ jobs:
             --wait \
             --timeout 10m
 
+      - name: Configure GitOps deployment access
+        if: github.event_name == 'push' || inputs.operation == 'apply'
+        run: kubectl apply -f gitops/bootstrap/deploy-role-rbac.yaml
+
       - name: Configure Argo CD repository authentication
         if: github.event_name == 'push' || inputs.operation == 'apply'
         env:
@@ -326,6 +330,44 @@ jobs:
           kubectl --namespace "${ARGOCD_NAMESPACE}" wait \
             --for=create application/aero-staging-backend \
             --timeout=120s
+
+          stale_migration_image="$(kubectl \
+            --namespace "${KUBERNETES_NAMESPACE}" \
+            get job/aero-backend-migration \
+            --ignore-not-found \
+            --output jsonpath='{.spec.template.spec.containers[0].image}')"
+
+          if [[ "${stale_migration_image}" == *":bootstrap-required" ]]; then
+            echo "Removing the stale bootstrap migration operation."
+            kubectl --namespace "${ARGOCD_NAMESPACE}" \
+              patch application/aero-staging-backend \
+              --type=merge \
+              --patch='{"operation":null}'
+
+            for attempt in {1..30}; do
+              operation_phase="$(kubectl \
+                --namespace "${ARGOCD_NAMESPACE}" \
+                get application/aero-staging-backend \
+                --output jsonpath='{.status.operationState.phase}')"
+
+              if [[ "${operation_phase}" != "Running" ]]; then
+                break
+              fi
+
+              if [[ "${attempt}" == "30" ]]; then
+                echo "The stale Argo CD operation did not terminate within 60 seconds." >&2
+                exit 1
+              fi
+
+              sleep 2
+            done
+
+            kubectl --namespace "${KUBERNETES_NAMESPACE}" \
+              delete job/aero-backend-migration \
+              --ignore-not-found \
+              --wait=true \
+              --timeout=2m
+          fi
 
       - name: Diagnose failed GitOps bootstrap
         if: failure() && (github.event_name == 'push' || inputs.operation == 'apply')

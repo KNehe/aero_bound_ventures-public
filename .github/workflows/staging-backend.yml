@@ -7,6 +7,8 @@ on:
       - main
     paths:
       - "backend/**"
+      - "gitops/bootstrap/**"
+      - "gitops/staging/root-application.yaml"
       - "helm/**"
       - "terraform/kubernetes-staging/**"
       - ".github/workflows/deploy-backend-staging.yml"

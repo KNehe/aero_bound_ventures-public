@@ -71,9 +71,10 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
 }
 
 resource "aws_eks_access_entry" "github_actions_deploy" {
-  cluster_name  = aws_eks_cluster.staging.name
-  principal_arn = aws_iam_role.github_actions_deploy.arn
-  type          = "STANDARD"
+  cluster_name      = aws_eks_cluster.staging.name
+  principal_arn     = aws_iam_role.github_actions_deploy.arn
+  kubernetes_groups = ["aero-staging-deploy"]
+  type              = "STANDARD"
 }
 
 resource "aws_eks_access_policy_association" "github_actions_deploy" {
@@ -84,19 +85,6 @@ resource "aws_eks_access_policy_association" "github_actions_deploy" {
   access_scope {
     type       = "namespace"
     namespaces = [var.kubernetes_namespace]
-  }
-
-  depends_on = [aws_eks_access_entry.github_actions_deploy]
-}
-
-resource "aws_eks_access_policy_association" "github_actions_argocd_view" {
-  cluster_name  = aws_eks_cluster.staging.name
-  principal_arn = aws_iam_role.github_actions_deploy.arn
-  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy"
-
-  access_scope {
-    type       = "namespace"
-    namespaces = ["argocd"]
   }
 
   depends_on = [aws_eks_access_entry.github_actions_deploy]

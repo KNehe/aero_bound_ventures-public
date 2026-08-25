@@ -11,6 +11,7 @@ required_files=(
   .github/workflows/terraform-kubernetes-staging.yml
   .github/workflows/validate-gitops.yml
   gitops/bootstrap/argocd-values.yaml
+  gitops/bootstrap/deploy-role-rbac.yaml
   gitops/staging/root-application.yaml
   gitops/staging/applications/project.yaml
   gitops/staging/applications/backend-secrets.yaml
@@ -46,6 +47,44 @@ rg --quiet --fixed-strings 'argocd.argoproj.io/sync-wave: "-1"' \
 rg --quiet --fixed-strings 'argocd.argoproj.io/sync-wave: "0"' \
   gitops/staging/applications/backend.yaml
 
+if rg --quiet --fixed-strings 'bootstrap-required' gitops/staging; then
+  echo "The staging desired state must reference a deployable image, not bootstrap-required." >&2
+  exit 1
+fi
+
+ruby -ryaml -e '
+  documents = YAML.load_stream(File.read(ARGV.fetch(0))).compact
+  role = documents.find { |document| document["kind"] == "Role" }
+  binding = documents.find { |document| document["kind"] == "RoleBinding" }
+
+  abort("Deploy Role is missing") unless role
+  abort("Deploy RoleBinding is missing") unless binding
+  abort("Deploy Role must be namespace-scoped to argocd") unless
+    role.dig("metadata", "namespace") == "argocd"
+
+  rules = role.fetch("rules", [])
+  abort("Deploy Role must contain exactly one rule") unless rules.length == 1
+  application_rule = rules.first
+  abort("Deploy Role must only target Argo CD Applications") unless
+    application_rule.fetch("apiGroups", []) == ["argoproj.io"] &&
+    application_rule.fetch("resources", []) == ["applications"]
+  abort("Deploy Role may only grant get, list, and watch") unless
+    application_rule.fetch("verbs", []).sort == %w[get list watch]
+
+  deploy_group = binding.fetch("subjects", []).find do |subject|
+    subject["kind"] == "Group" && subject["name"] == "aero-staging-deploy"
+  end
+  abort("Deploy RoleBinding must bind the aero-staging-deploy group") unless deploy_group
+  abort("Deploy RoleBinding must only bind the deployment group") unless
+    binding.fetch("subjects", []).length == 1
+  abort("Deploy RoleBinding must reference the deploy Role") unless
+    binding["roleRef"] == {
+      "apiGroup" => "rbac.authorization.k8s.io",
+      "kind" => "Role",
+      "name" => "staging-deploy-argocd-reader"
+    }
+' gitops/bootstrap/deploy-role-rbac.yaml
+
 helm lint helm/backend --strict \
   -f helm/backend/values-staging.yaml \
   -f gitops/staging/values/backend.yaml
@@ -74,6 +113,26 @@ rg --quiet --fixed-strings 'gitops/staging/values/backend.yaml' \
 rg --quiet --fixed-strings 'argo-cd --version 10.2.1' \
   .github/workflows/terraform-kubernetes-staging.yml
 rg --quiet --fixed-strings 'gitops/staging/root-application.yaml' \
+  .github/workflows/terraform-kubernetes-staging.yml
+rg --quiet --fixed-strings 'gitops/bootstrap/deploy-role-rbac.yaml' \
+  .github/workflows/terraform-kubernetes-staging.yml
+rg --quiet --fixed-strings 'gitops/bootstrap/**' \
+  .github/workflows/staging-backend.yml
+rg --quiet --fixed-strings 'gitops/staging/root-application.yaml' \
+  .github/workflows/staging-backend.yml
+rg --quiet --fixed-strings 'kubernetes_groups = ["aero-staging-deploy"]' \
+  terraform/kubernetes-staging/github_actions.tf
+
+if rg --quiet --fixed-strings \
+  'resource "aws_eks_access_policy_association" "github_actions_argocd_view"' \
+  terraform/kubernetes-staging/github_actions.tf; then
+  echo "The ineffective EKS Argo CD view policy must not be configured." >&2
+  exit 1
+fi
+
+rg --quiet --fixed-strings 'bootstrap-required' \
+  .github/workflows/terraform-kubernetes-staging.yml
+rg --quiet --fixed-strings -- "--patch='{\"operation\":null}'" \
   .github/workflows/terraform-kubernetes-staging.yml
 rg --quiet --fixed-strings 'bash .github/scripts/validate-gitops.sh' \
   .github/workflows/validate-gitops.yml
@@ -124,5 +183,22 @@ ruby -ryaml -e '
     abort("Child Application health must become Healthy when synchronization completes")
   end
 ' gitops/bootstrap/argocd-values.yaml
+
+ruby -ryaml -e '
+  workflow = YAML.load_file(ARGV.fetch(0))
+  steps = workflow.fetch("jobs").fetch("deploy").fetch("steps")
+  wait = steps.find { |step| step["name"] == "Wait for Argo CD reconciliation" }
+  abort("Argo CD reconciliation step is missing") unless wait
+
+  script = wait.fetch("run")
+  reads = script.scan("get application/aero-staging-backend").length
+  abort("Reconciliation must read the Application exactly once per attempt") unless reads == 1
+  abort("Reconciliation must not suppress Application read failures") if
+    script.include?("2>/dev/null") || script.include?("|| true")
+  abort("Reconciliation must use a wall-clock deadline") unless
+    script.include?("reconciliation_deadline=$((SECONDS + 600))")
+  abort("Reconciliation must report every observed status") unless
+    script.include?("sync=${sync_status} health=${health_status}")
+' .github/workflows/deploy-backend-staging.yml
 
 echo "GitOps contract validation passed."

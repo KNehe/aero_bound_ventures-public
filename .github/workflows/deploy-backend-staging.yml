@@ -191,33 +191,31 @@ jobs:
         env:
           DESIRED_REVISION: ${{ steps.promotion.outputs.revision }}
         run: |
-          for attempt in {1..120}; do
-            sync_status="$(kubectl --namespace "${ARGOCD_NAMESPACE}" \
+          reconciliation_deadline=$((SECONDS + 600))
+          reconciled=false
+
+          while (( SECONDS < reconciliation_deadline )); do
+            application_status="$(kubectl --namespace "${ARGOCD_NAMESPACE}" \
               get application/aero-staging-backend \
-              --output jsonpath='{.status.sync.status}' \
-              2>/dev/null || true)"
-            health_status="$(kubectl --namespace "${ARGOCD_NAMESPACE}" \
-              get application/aero-staging-backend \
-              --output jsonpath='{.status.health.status}' \
-              2>/dev/null || true)"
-            revisions="$(kubectl --namespace "${ARGOCD_NAMESPACE}" \
-              get application/aero-staging-backend \
-              --output jsonpath='{.status.sync.revisions}' \
-              2>/dev/null || true)"
+              --output jsonpath='{.status.sync.status}{"|"}{.status.health.status}{"|"}{.status.sync.revisions}')"
+            IFS='|' read -r sync_status health_status revisions <<< "${application_status}"
+
+            echo "Argo CD status: sync=${sync_status} health=${health_status} revisions=${revisions}"
 
             if [[ "${sync_status}" == "Synced" && \
                   "${health_status}" == "Healthy" && \
                   "${revisions}" == *"${DESIRED_REVISION}"* ]]; then
+              reconciled=true
               break
             fi
 
-            if [[ "${attempt}" == "120" ]]; then
-              echo "Argo CD did not reconcile revision ${DESIRED_REVISION} within 10 minutes." >&2
-              exit 1
-            fi
-
-            sleep 5
+            sleep 10
           done
+
+          if [[ "${reconciled}" != "true" ]]; then
+            echo "Argo CD did not reconcile revision ${DESIRED_REVISION} within 10 minutes." >&2
+            exit 1
+          fi
 
       - name: Diagnose failed deployment
         if: failure()
