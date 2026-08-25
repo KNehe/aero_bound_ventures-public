@@ -112,4 +112,17 @@ ruby -ryaml -e '
   end
 ' .github/workflows/terraform-kubernetes-staging.yml
 
+ruby -ryaml -e '
+  values = YAML.load_file(ARGV.fetch(0))
+  health_check = values.dig(
+    "configs",
+    "cm",
+    "resource.customizations.health.argoproj.io_Application"
+  )
+
+  unless health_check&.include?(%q(obj.status.sync.status == "Synced"))
+    abort("Child Application health must become Healthy when synchronization completes")
+  end
+' gitops/bootstrap/argocd-values.yaml
+
 echo "GitOps contract validation passed."
