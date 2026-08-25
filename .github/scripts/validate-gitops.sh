@@ -132,8 +132,15 @@ fi
 
 rg --quiet --fixed-strings 'bootstrap-required' \
   .github/workflows/terraform-kubernetes-staging.yml
-rg --quiet --fixed-strings -- "--patch='{\"operation\":null}'" \
+rg --quiet --fixed-strings -- \
+  "--patch='{\"status\":{\"operationState\":{\"phase\":\"Terminating\"}}}'" \
   .github/workflows/terraform-kubernetes-staging.yml
+
+if rg --quiet --fixed-strings -- "--patch='{\"operation\":null}'" \
+  .github/workflows/terraform-kubernetes-staging.yml; then
+  echo "Recovery must use Argo CD's Terminating operation phase." >&2
+  exit 1
+fi
 rg --quiet --fixed-strings 'bash .github/scripts/validate-gitops.sh' \
   .github/workflows/validate-gitops.yml
 rg --quiet --fixed-strings 'sudo apt-get install --yes ripgrep' \

@@ -342,7 +342,7 @@ jobs:
             kubectl --namespace "${ARGOCD_NAMESPACE}" \
               patch application/aero-staging-backend \
               --type=merge \
-              --patch='{"operation":null}'
+              --patch='{"status":{"operationState":{"phase":"Terminating"}}}'
 
             for attempt in {1..30}; do
               operation_phase="$(kubectl \
@@ -350,7 +350,8 @@ jobs:
                 get application/aero-staging-backend \
                 --output jsonpath='{.status.operationState.phase}')"
 
-              if [[ "${operation_phase}" != "Running" ]]; then
+              if [[ "${operation_phase}" != "Running" && \
+                    "${operation_phase}" != "Terminating" ]]; then
                 break
               fi
 
