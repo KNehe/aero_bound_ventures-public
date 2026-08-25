@@ -1,0 +1,6 @@
+# The staging workflow changes only this tag after pushing the matching immutable
+# image to ECR. Argo CD then reconciles this desired state into the cluster.
+image:
+  repository: 245209218155.dkr.ecr.us-east-2.amazonaws.com/aero-backend
+  tag: bootstrap-required
+  pullPolicy: IfNotPresent

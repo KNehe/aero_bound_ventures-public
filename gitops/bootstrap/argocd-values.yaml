@@ -1,0 +1,46 @@
+server:
+  service:
+    type: ClusterIP
+
+configs:
+  params:
+    server.insecure: true
+  cm:
+    resource.customizations.health.argoproj.io_Application: |
+      health = {
+        status = "Progressing",
+        message = "Waiting for the child Application to report health"
+      }
+      if obj.status ~= nil and obj.status.health ~= nil then
+        health.status = obj.status.health.status
+        health.message = obj.status.health.message or ""
+      end
+      return health
+    resource.customizations.health.secrets.doppler.com_DopplerSecret: |
+      health = {
+        status = "Progressing",
+        message = "Waiting for Doppler to synchronize the managed Secret"
+      }
+      if obj.status ~= nil and obj.status.conditions ~= nil then
+        for _, condition in ipairs(obj.status.conditions) do
+          if condition.type == "SecretSyncReady" then
+            health.message = condition.message or condition.reason or ""
+            if condition.status == "True" then
+              health.status = "Healthy"
+            elseif condition.status == "False" then
+              health.status = "Degraded"
+            end
+            return health
+          end
+        end
+      end
+      return health
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
+
+redis-ha:
+  enabled: false

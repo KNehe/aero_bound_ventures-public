@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: aero-staging
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  description: Aero Bound Ventures staging workloads managed from Git
+  sourceRepos:
+    - git@github.com:KNehe/aero_bound_ventures.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: aero-staging
+    - server: https://kubernetes.default.svc
+      namespace: doppler-operator-system
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

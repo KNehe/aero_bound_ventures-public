@@ -24,6 +24,10 @@ on:
     paths:
       - "terraform/kubernetes-staging/**"
       - "helm/backend-secrets/**"
+      - "gitops/bootstrap/**"
+      - "gitops/staging/root-application.yaml"
+      - "gitops/staging/applications/**"
+      - "gitops/staging/values/backend-secrets.yaml"
       - ".github/workflows/terraform-kubernetes-staging.yml"
 
 permissions:
@@ -42,8 +46,8 @@ env:
   STAGING_API_HOSTNAME: api-staging.aeroboundventures.com
   INFRASTRUCTURE_CONFIG_MAP: backend-infrastructure
   DOPPLER_OPERATOR_NAMESPACE: doppler-operator-system
-  DOPPLER_PROJECT: fastapi-backend
-  DOPPLER_CONFIG: stg
+  ARGOCD_NAMESPACE: argocd
+  GITOPS_REPOSITORY: git@github.com:KNehe/aero_bound_ventures.git
 
 jobs:
   terraform:
@@ -110,6 +114,20 @@ jobs:
             aws eks update-kubeconfig \
               --region "${AWS_REGION}" \
               --name "${EKS_CLUSTER_NAME}"
+
+            # Stop GitOps reconciliation before deleting the ALB-backed Ingress.
+            # The root and child Application finalizers remove their managed
+            # resources in dependency order.
+            if kubectl get crd applications.argoproj.io >/dev/null 2>&1; then
+              kubectl --namespace "${ARGOCD_NAMESPACE}" \
+                delete application/aero-staging-root \
+                --ignore-not-found \
+                --wait=true \
+                --timeout=10m
+            fi
+
+            # Also remove a legacy or partially adopted Ingress that was not
+            # deleted through the Argo CD Application cascade.
             kubectl --namespace "${KUBERNETES_NAMESPACE}" \
               delete ingress/aero-backend-api \
               --ignore-not-found \
@@ -236,6 +254,40 @@ jobs:
             --wait \
             --timeout 5m
 
+      - name: Install Argo CD
+        if: github.event_name == 'push' || inputs.operation == 'apply'
+        run: |
+          helm repo add argo https://argoproj.github.io/argo-helm --force-update
+          helm repo update argo
+          helm upgrade --install argocd argo/argo-cd --version 10.2.1 \
+            --namespace "${ARGOCD_NAMESPACE}" \
+            --create-namespace \
+            --values gitops/bootstrap/argocd-values.yaml \
+            --wait \
+            --timeout 10m
+
+      - name: Configure Argo CD repository authentication
+        if: github.event_name == 'push' || inputs.operation == 'apply'
+        env:
+          ARGOCD_REPO_SSH_PRIVATE_KEY: ${{ secrets.ARGOCD_REPO_SSH_PRIVATE_KEY }}
+        run: |
+          set -o pipefail
+          : "${ARGOCD_REPO_SSH_PRIVATE_KEY:?ARGOCD_REPO_SSH_PRIVATE_KEY is required}"
+
+          printf '%s\n' "${ARGOCD_REPO_SSH_PRIVATE_KEY}" |
+            kubectl --namespace "${ARGOCD_NAMESPACE}" \
+              create secret generic aero-bound-repository \
+              --from-literal=type=git \
+              --from-literal="url=${GITOPS_REPOSITORY}" \
+              --from-file=sshPrivateKey=/dev/stdin \
+              --dry-run=client -o yaml |
+            kubectl apply -f -
+
+          kubectl --namespace "${ARGOCD_NAMESPACE}" \
+            label secret aero-bound-repository \
+            argocd.argoproj.io/secret-type=repository \
+            --overwrite
+
       - name: Configure Doppler authentication
         if: github.event_name == 'push' || inputs.operation == 'apply'
         env:
@@ -253,19 +305,19 @@ jobs:
               --dry-run=client -o yaml |
             kubectl apply -f -
 
-      - name: Synchronize backend configuration
+      - name: Bootstrap staging GitOps
         if: github.event_name == 'push' || inputs.operation == 'apply'
         run: |
-          helm lint helm/backend-secrets --strict \
-            --set-string "doppler.project=${DOPPLER_PROJECT}" \
-            --set-string "doppler.config=${DOPPLER_CONFIG}" \
-            --set-string "managedSecret.namespace=${KUBERNETES_NAMESPACE}"
+          kubectl apply -f gitops/staging/root-application.yaml
 
-          helm upgrade --install aero-backend-secrets helm/backend-secrets \
-            --namespace "${DOPPLER_OPERATOR_NAMESPACE}" \
-            --set-string "doppler.project=${DOPPLER_PROJECT}" \
-            --set-string "doppler.config=${DOPPLER_CONFIG}" \
-            --set-string "managedSecret.namespace=${KUBERNETES_NAMESPACE}"
+          kubectl --namespace "${ARGOCD_NAMESPACE}" wait \
+            --for=jsonpath='{.status.sync.status}'=Synced \
+            application/aero-staging-root \
+            --timeout=5m
+
+          kubectl --namespace "${ARGOCD_NAMESPACE}" wait \
+            --for=create application/aero-staging-backend-secrets \
+            --timeout=120s
 
           kubectl --namespace "${DOPPLER_OPERATOR_NAMESPACE}" wait \
             --for=condition=secrets.doppler.com/SecretSyncReady \

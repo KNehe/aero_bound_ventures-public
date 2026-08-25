@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aero-staging-backend
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: aero-staging
+  sources:
+    - repoURL: git@github.com:KNehe/aero_bound_ventures.git
+      targetRevision: main
+      path: helm/backend
+      helm:
+        releaseName: aero-backend
+        valueFiles:
+          - $values/helm/backend/values-staging.yaml
+          - $values/gitops/staging/values/backend.yaml
+    - repoURL: git@github.com:KNehe/aero_bound_ventures.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: aero-staging
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
