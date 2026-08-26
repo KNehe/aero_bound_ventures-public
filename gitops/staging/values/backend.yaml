@@ -2,5 +2,5 @@
 # image to ECR. Argo CD then reconciles this desired state into the cluster.
 image:
   repository: 245209218155.dkr.ecr.us-east-2.amazonaws.com/aero-backend
-  tag: cf913f18387e58693f5e7ca0265b46150a1e9dd5
+  tag: ae0e2398577e8b75d3315784aaaa9b4ecc6faeb9
   pullPolicy: IfNotPresent
