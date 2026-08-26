@@ -9,7 +9,6 @@ required_files=(
   .github/workflows/deploy-backend-staging.yml
   .github/workflows/staging-backend.yml
   .github/workflows/terraform-kubernetes-staging.yml
-  .github/workflows/validate-gitops.yml
   gitops/bootstrap/argocd-values.yaml
   gitops/bootstrap/deploy-role-rbac.yaml
   gitops/staging/root-application.yaml
@@ -30,6 +29,11 @@ for required_file in "${required_files[@]}"; do
     exit 1
   fi
 done
+
+if [[ -e .github/workflows/validate-gitops.yml ]]; then
+  echo "GitOps validation must remain part of the staging pipeline." >&2
+  exit 1
+fi
 
 ruby -ryaml -e '
   ARGV.each do |path|
@@ -157,9 +161,7 @@ rg --quiet --fixed-strings 'gitops/staging/root-application.yaml' \
   .github/workflows/terraform-kubernetes-staging.yml
 rg --quiet --fixed-strings 'gitops/bootstrap/deploy-role-rbac.yaml' \
   .github/workflows/terraform-kubernetes-staging.yml
-rg --quiet --fixed-strings 'gitops/bootstrap/**' \
-  .github/workflows/staging-backend.yml
-rg --quiet --fixed-strings 'gitops/staging/root-application.yaml' \
+rg --quiet --fixed-strings 'gitops/**' \
   .github/workflows/staging-backend.yml
 rg --quiet --fixed-strings 'kubernetes_groups = ["aero-staging-deploy"]' \
   terraform/kubernetes-staging/github_actions.tf
@@ -183,9 +185,11 @@ if rg --quiet --fixed-strings -- "--patch='{\"operation\":null}'" \
   exit 1
 fi
 rg --quiet --fixed-strings 'bash .github/scripts/validate-gitops.sh' \
-  .github/workflows/validate-gitops.yml
+  .github/workflows/staging-backend.yml
 rg --quiet --fixed-strings 'sudo apt-get install --yes ripgrep' \
-  .github/workflows/validate-gitops.yml
+  .github/workflows/staging-backend.yml
+rg --quiet --fixed-strings 'needs: validate' \
+  .github/workflows/staging-backend.yml
 
 if rg --quiet --fixed-strings \
   -- \
