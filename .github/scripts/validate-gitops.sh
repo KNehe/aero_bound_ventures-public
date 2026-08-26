@@ -16,8 +16,12 @@ required_files=(
   gitops/staging/applications/project.yaml
   gitops/staging/applications/backend-secrets.yaml
   gitops/staging/applications/backend.yaml
+  gitops/staging/applications/monitoring.yaml
   gitops/staging/values/backend-secrets.yaml
   gitops/staging/values/backend.yaml
+  helm/monitoring/Chart.yaml
+  helm/monitoring/Chart.lock
+  helm/monitoring/values.yaml
 )
 
 for required_file in "${required_files[@]}"; do
@@ -36,16 +40,30 @@ ruby -ryaml -e '
   end
 ' "${required_files[@]}"
 
-rg --quiet --fixed-strings 'repoURL: git@github.com:KNehe/aero_bound_ventures.git' \
-  gitops/staging/root-application.yaml \
-  gitops/staging/applications/backend-secrets.yaml \
+repository_files=(
+  gitops/staging/root-application.yaml
+  gitops/staging/applications/backend-secrets.yaml
   gitops/staging/applications/backend.yaml
+  gitops/staging/applications/monitoring.yaml
+)
+
+for repository_file in "${repository_files[@]}"; do
+  if ! rg --quiet --fixed-strings \
+    'repoURL: git@github.com:KNehe/aero_bound_ventures.git' \
+    "${repository_file}"; then
+    echo "Unexpected repository URL in ${repository_file}" >&2
+    exit 1
+  fi
+done
+
 rg --quiet --fixed-strings 'prune: true' gitops/staging/root-application.yaml
 rg --quiet --fixed-strings 'selfHeal: true' gitops/staging/root-application.yaml
 rg --quiet --fixed-strings 'argocd.argoproj.io/sync-wave: "-1"' \
   gitops/staging/applications/backend-secrets.yaml
 rg --quiet --fixed-strings 'argocd.argoproj.io/sync-wave: "0"' \
   gitops/staging/applications/backend.yaml
+rg --quiet --fixed-strings 'argocd.argoproj.io/sync-wave: "1"' \
+  gitops/staging/applications/monitoring.yaml
 
 if rg --quiet --fixed-strings 'bootstrap-required' gitops/staging; then
   echo "The staging desired state must reference a deployable image, not bootstrap-required." >&2
@@ -98,6 +116,29 @@ helm lint helm/backend-secrets --strict \
 helm template aero-backend-secrets helm/backend-secrets \
   --namespace doppler-operator-system \
   -f gitops/staging/values/backend-secrets.yaml >/dev/null
+
+monitoring_workspace="$(mktemp -d)"
+trap 'rm -rf "${monitoring_workspace}"' EXIT
+monitoring_chart="${monitoring_workspace}/chart"
+monitoring_repository_config="${monitoring_workspace}/repositories.yaml"
+monitoring_repository_cache="${monitoring_workspace}/repository-cache"
+mkdir "${monitoring_chart}"
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts \
+  --repository-config "${monitoring_repository_config}" \
+  --repository-cache "${monitoring_repository_cache}"
+helm repo add grafana-community https://grafana-community.github.io/helm-charts \
+  --repository-config "${monitoring_repository_config}" \
+  --repository-cache "${monitoring_repository_cache}"
+cp helm/monitoring/Chart.yaml \
+  helm/monitoring/Chart.lock \
+  helm/monitoring/values.yaml \
+  "${monitoring_chart}/"
+helm dependency build "${monitoring_chart}" \
+  --repository-config "${monitoring_repository_config}" \
+  --repository-cache "${monitoring_repository_cache}"
+helm lint "${monitoring_chart}"
+helm template aero-monitoring "${monitoring_chart}" \
+  --namespace monitoring >/dev/null
 
 if rg --quiet --fixed-strings \
   'helm upgrade --install aero-backend helm/backend' \

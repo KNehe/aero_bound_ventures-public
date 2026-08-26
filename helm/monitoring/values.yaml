@@ -1,0 +1,66 @@
+prometheus:
+  alertmanager:
+    enabled: false
+  kube-state-metrics:
+    enabled: false
+  prometheus-node-exporter:
+    enabled: false
+  prometheus-pushgateway:
+    enabled: false
+
+  rbac:
+    create: false
+  server:
+    automountServiceAccountToken: false
+    fullnameOverride: prometheus
+    persistentVolume:
+      enabled: false
+
+  scrapeConfigs:
+    prometheus:
+      enabled: false
+    kubernetes-api-servers:
+      enabled: false
+    kubernetes-nodes:
+      enabled: false
+    kubernetes-nodes-cadvisor:
+      enabled: false
+    kubernetes-service-endpoints:
+      enabled: false
+    kubernetes-service-endpoints-slow:
+      enabled: false
+    prometheus-pushgateway:
+      enabled: false
+    kubernetes-services:
+      enabled: false
+    kubernetes-pods:
+      enabled: false
+    kubernetes-pods-slow:
+      enabled: false
+    backend:
+      enabled: true
+      metrics_path: /metrics
+      static_configs:
+        - targets:
+            - aero-backend-api.aero-staging.svc.cluster.local:80
+
+grafana:
+  fullnameOverride: grafana
+  automountServiceAccountToken: false
+  rbac:
+    create: false
+  testFramework:
+    enabled: false
+  persistence:
+    enabled: false
+  service:
+    type: ClusterIP
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://prometheus
+          access: proxy
+          isDefault: true

@@ -14,6 +14,8 @@ spec:
       namespace: aero-staging
     - server: https://kubernetes.default.svc
       namespace: doppler-operator-system
+    - server: https://kubernetes.default.svc
+      namespace: monitoring
   namespaceResourceWhitelist:
     - group: "*"
       kind: "*"
