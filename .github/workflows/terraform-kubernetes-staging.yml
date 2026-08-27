@@ -348,6 +348,34 @@ jobs:
             --for=create application/aero-staging-backend \
             --timeout=120s
 
+          kubectl --namespace "${ARGOCD_NAMESPACE}" wait \
+            --for=create application/aero-staging-monitoring \
+            --timeout=5m
+
+          kubectl --namespace "${ARGOCD_NAMESPACE}" wait \
+            --for=jsonpath='{.status.sync.status}'=Synced \
+            application/aero-staging-monitoring \
+            --timeout=10m
+
+          kubectl --namespace "${ARGOCD_NAMESPACE}" wait \
+            --for=jsonpath='{.status.health.status}'=Healthy \
+            application/aero-staging-monitoring \
+            --timeout=10m
+
+          kubectl --namespace monitoring wait \
+            --for=create ingress/grafana \
+            --timeout=120s
+
+          backend_alb_hostname="$(kubectl --namespace "${KUBERNETES_NAMESPACE}" \
+            get ingress/aero-backend-api \
+            --output jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+          : "${backend_alb_hostname:?Backend Ingress has no ALB hostname}"
+
+          kubectl --namespace monitoring wait \
+            --for=jsonpath='{.status.loadBalancer.ingress[0].hostname}'="${backend_alb_hostname}" \
+            ingress/grafana \
+            --timeout=10m
+
           stale_migration_image="$(kubectl \
             --namespace "${KUBERNETES_NAMESPACE}" \
             get job/aero-backend-migration \
@@ -395,6 +423,15 @@ jobs:
 
           kubectl --namespace "${ARGOCD_NAMESPACE}" \
             describe application/aero-staging-root || true
+
+          kubectl --namespace "${ARGOCD_NAMESPACE}" \
+            describe application/aero-staging-monitoring || true
+
+          kubectl --namespace monitoring \
+            get deployments,pods,services,ingresses --output wide || true
+
+          kubectl --namespace monitoring \
+            describe ingress/grafana || true
 
           kubectl --namespace "${ARGOCD_NAMESPACE}" \
             logs deployment/argocd-repo-server \

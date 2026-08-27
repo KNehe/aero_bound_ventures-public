@@ -226,13 +226,18 @@ rg --quiet --fixed-strings 'sudo apt-get install --yes ripgrep' \
 rg --quiet --fixed-strings 'needs: validate' \
   .github/workflows/staging-backend.yml
 
-if rg --quiet --fixed-strings \
-  -- \
-  "--for=jsonpath='{.status.sync.status}'=Synced" \
-  .github/workflows/terraform-kubernetes-staging.yml; then
-  echo "Bootstrap must not wait for the root Application to become fully synced." >&2
-  exit 1
-fi
+ruby -ryaml -e '
+  workflow = YAML.load_file(ARGV.fetch(0))
+  steps = workflow.fetch("jobs").fetch("terraform").fetch("steps")
+  bootstrap = steps.find { |step| step["name"] == "Bootstrap staging GitOps" }
+  abort("GitOps bootstrap step is missing") unless bootstrap
+
+  root_sync_wait = bootstrap.fetch("run").match?(
+    %r{--for=jsonpath=.\{\.status\.sync\.status\}=Synced\s+\\?\s*application/aero-staging-root}
+  )
+  abort("Bootstrap must not wait for the root Application to become fully synced") if
+    root_sync_wait
+' .github/workflows/terraform-kubernetes-staging.yml
 
 rg --quiet --fixed-strings \
   'get applications --output wide' \
@@ -287,5 +292,23 @@ ruby -ryaml -e '
   abort("Reconciliation must report every observed status") unless
     script.include?("sync=${sync_status} health=${health_status}")
 ' .github/workflows/deploy-backend-staging.yml
+
+ruby -ryaml -e '
+  workflow = YAML.load_file(ARGV.fetch(0))
+  steps = workflow.fetch("jobs").fetch("terraform").fetch("steps")
+  bootstrap = steps.find { |step| step["name"] == "Bootstrap staging GitOps" }
+  abort("GitOps bootstrap step is missing") unless bootstrap
+
+  script = bootstrap.fetch("run")
+  abort("Bootstrap must wait for the monitoring Application") unless
+    script.include?("--for=create application/aero-staging-monitoring")
+  abort("Bootstrap must verify monitoring synchronization and health") unless
+    script.include?(".status.sync.status}") && script.include?("=Synced") &&
+      script.include?(".status.health.status}") && script.include?("=Healthy")
+  abort("Bootstrap must verify that the Grafana Ingress receives an ALB hostname") unless
+    script.include?("ingress/grafana") &&
+      script.include?("status.loadBalancer.ingress[0].hostname") &&
+      script.include?(%q(="${backend_alb_hostname}"))
+' .github/workflows/terraform-kubernetes-staging.yml
 
 echo "GitOps contract validation passed."
