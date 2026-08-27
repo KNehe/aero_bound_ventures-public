@@ -55,6 +55,7 @@ jobs:
     name: Plan or Apply Staging Infrastructure
     if: github.repository == 'KNehe/aero_bound_ventures'
     runs-on: ubuntu-latest
+    environment: staging
 
     steps:
       - name: Checkout repository
@@ -325,6 +326,34 @@ jobs:
               --from-file=serviceToken=/dev/stdin \
               --dry-run=client -o yaml |
             kubectl apply -f -
+
+      - name: Configure Grafana authentication
+        if: github.event_name == 'push' || inputs.operation == 'apply'
+        env:
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        run: |
+          set -o pipefail
+          : "${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}"
+
+          kubectl create namespace monitoring \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl label namespace monitoring environment=staging --overwrite
+
+          grafana_secret_result="$(
+            printf '%s' "${GRAFANA_ADMIN_PASSWORD}" |
+              kubectl --namespace monitoring \
+                create secret generic grafana-admin-credentials \
+                --from-literal=admin-user=admin \
+                --from-file=admin-password=/dev/stdin \
+                --dry-run=client -o yaml |
+              kubectl apply -f -
+          )"
+          echo "${grafana_secret_result}"
+
+          if [[ "${grafana_secret_result}" != *"unchanged" ]] && \
+             kubectl --namespace monitoring get deployment/grafana >/dev/null 2>&1; then
+            kubectl --namespace monitoring rollout restart deployment/grafana
+          fi
 
       - name: Bootstrap staging GitOps
         if: github.event_name == 'push' || inputs.operation == 'apply'

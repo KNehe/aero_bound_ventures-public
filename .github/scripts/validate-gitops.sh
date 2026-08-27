@@ -102,6 +102,12 @@ ruby -ryaml -e '
   abort("Grafana must use its public HTTPS root URL") unless
     values.dig("grafana", "grafana.ini", "server", "root_url") ==
       "https://grafana-staging.aeroboundventures.com"
+  abort("Grafana must read its admin credentials from the external Secret") unless
+    values.dig("grafana", "admin") == {
+      "existingSecret" => "grafana-admin-credentials",
+      "userKey" => "admin-user",
+      "passwordKey" => "admin-password"
+    }
 ' gitops/staging/applications/monitoring.yaml helm/monitoring/values.yaml
 
 ruby -ryaml -e '
@@ -236,7 +242,25 @@ rg --quiet --fixed-strings 'needs: validate' \
 
 ruby -ryaml -e '
   workflow = YAML.load_file(ARGV.fetch(0))
-  steps = workflow.fetch("jobs").fetch("terraform").fetch("steps")
+  terraform_job = workflow.fetch("jobs").fetch("terraform")
+  abort("Staging infrastructure must use the staging environment") unless
+    terraform_job["environment"] == "staging"
+
+  steps = terraform_job.fetch("steps")
+  credentials = steps.find { |step| step["name"] == "Configure Grafana authentication" }
+  abort("Grafana authentication step is missing") unless credentials
+  abort("Grafana password must come from a GitHub secret") unless
+    credentials.dig("env", "GRAFANA_ADMIN_PASSWORD") ==
+      "${{ secrets.GRAFANA_ADMIN_PASSWORD }}"
+
+  credentials_script = credentials.fetch("run")
+  abort("Grafana password must be required before deployment") unless
+    credentials_script.include?("GRAFANA_ADMIN_PASSWORD is required")
+  abort("Workflow must create the external Grafana credential Secret") unless
+    credentials_script.include?("create secret generic grafana-admin-credentials") &&
+      credentials_script.include?("--from-literal=admin-user=admin") &&
+      credentials_script.include?("--from-file=admin-password=/dev/stdin")
+
   bootstrap = steps.find { |step| step["name"] == "Bootstrap staging GitOps" }
   abort("GitOps bootstrap step is missing") unless bootstrap
 

@@ -46,6 +46,10 @@ prometheus:
 
 grafana:
   fullnameOverride: grafana
+  admin:
+    existingSecret: grafana-admin-credentials
+    userKey: admin-user
+    passwordKey: admin-password
   automountServiceAccountToken: false
   rbac:
     create: false
