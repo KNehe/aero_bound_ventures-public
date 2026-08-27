@@ -20,6 +20,7 @@ env:
   KUBERNETES_NAMESPACE: aero-staging
   ARGOCD_NAMESPACE: argocd
   STAGING_API_HOSTNAME: api-staging.aeroboundventures.com
+  STAGING_GRAFANA_HOSTNAME: grafana-staging.aeroboundventures.com
   PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/backend
   DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
   SECRET_KEY: ci-only-secret-key
@@ -304,9 +305,20 @@ jobs:
             sleep 10
           done
 
-          echo "### Staging API DNS" >> "${GITHUB_STEP_SUMMARY}"
-          echo "Add this record with your DNS provider before activating HTTPS:" >> "${GITHUB_STEP_SUMMARY}"
-          echo "\`${STAGING_API_HOSTNAME}\` \`CNAME\` \`${alb_hostname}\`" >> "${GITHUB_STEP_SUMMARY}"
+          shared_alb_enabled="$(kubectl --namespace "${KUBERNETES_NAMESPACE}" \
+            get configmap/backend-infrastructure \
+            --output jsonpath='{.data.STAGING_SHARED_ALB_ENABLED}' \
+            2>/dev/null || true)"
+          shared_alb_enabled="${shared_alb_enabled:-false}"
+
+          echo "### Staging DNS" >> "${GITHUB_STEP_SUMMARY}"
+          if [[ "${shared_alb_enabled}" == "true" ]]; then
+            echo "Point both staging hostnames to the shared ALB:" >> "${GITHUB_STEP_SUMMARY}"
+            echo "\`${STAGING_API_HOSTNAME}\` \`CNAME\` \`${alb_hostname}\`" >> "${GITHUB_STEP_SUMMARY}"
+            echo "\`${STAGING_GRAFANA_HOSTNAME}\` \`CNAME\` \`${alb_hostname}\`" >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "The combined certificate is pending; keep the existing API CNAME unchanged." >> "${GITHUB_STEP_SUMMARY}"
+          fi
 
           endpoint=""
           https_enabled="$(kubectl --namespace "${KUBERNETES_NAMESPACE}" \

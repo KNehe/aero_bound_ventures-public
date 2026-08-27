@@ -55,6 +55,21 @@ grafana:
     enabled: false
   service:
     type: ClusterIP
+  ingress:
+    enabled: true
+    ingressClassName: aero-staging-alb
+    annotations:
+      alb.ingress.kubernetes.io/healthcheck-path: /api/health
+    path: /
+    pathType: Prefix
+    hosts:
+      - grafana-staging.aeroboundventures.com
+  grafana.ini:
+    server:
+      domain: grafana-staging.aeroboundventures.com
+      root_url: https://grafana-staging.aeroboundventures.com
+    security:
+      cookie_secure: true
   datasources:
     datasources.yaml:
       apiVersion: 1

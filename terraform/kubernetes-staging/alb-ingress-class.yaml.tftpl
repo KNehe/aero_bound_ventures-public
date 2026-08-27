@@ -4,6 +4,8 @@ metadata:
   name: aero-staging-alb
 spec:
   scheme: internet-facing
+  group:
+    name: "aero-staging"
   namespaceSelector:
     matchLabels:
       environment: staging

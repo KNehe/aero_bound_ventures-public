@@ -44,6 +44,7 @@ env:
   EKS_CLUSTER_NAME: aero-backend-staging
   KUBERNETES_NAMESPACE: aero-staging
   STAGING_API_HOSTNAME: api-staging.aeroboundventures.com
+  STAGING_GRAFANA_HOSTNAME: grafana-staging.aeroboundventures.com
   INFRASTRUCTURE_CONFIG_MAP: backend-infrastructure
   DOPPLER_OPERATOR_NAMESPACE: doppler-operator-system
   ARGOCD_NAMESPACE: argocd
@@ -143,7 +144,7 @@ jobs:
         run: |
           certificate_status="$(terraform \
             -chdir=terraform/kubernetes-staging \
-            output -raw staging_api_certificate_status)"
+            output -raw staging_https_certificate_status)"
 
           if [[ "${certificate_status}" != "ISSUED" ]]; then
             echo "ACM certificate status is ${certificate_status}; add the validation CNAME with your DNS provider before activating HTTPS." >&2
@@ -162,20 +163,39 @@ jobs:
             environment=staging --overwrite
 
           manifest_output=staging_alb_ingress_class_http_manifest
+          apply_ingress_class=true
           https_enabled=false
+          shared_alb_enabled=false
+          desired_certificate_status="$(terraform \
+            -chdir=terraform/kubernetes-staging \
+            output -raw staging_https_certificate_status)"
           current_certificate_arn="$(kubectl \
             get ingressclassparams/aero-staging-alb \
             --output jsonpath='{.spec.certificateARNs[0]}' \
             2>/dev/null || true)"
+          current_group_name="$(kubectl \
+            get ingressclassparams/aero-staging-alb \
+            --output jsonpath='{.spec.group.name}' \
+            2>/dev/null || true)"
 
-          if [[ "${{ inputs.operation }}" == "activate-https" || -n "${current_certificate_arn}" ]]; then
+          if [[ "${{ inputs.operation }}" == "activate-https" || "${desired_certificate_status}" == "ISSUED" ]]; then
             manifest_output=staging_alb_ingress_class_https_manifest
             https_enabled=true
+          elif [[ -n "${current_certificate_arn}" ]]; then
+            apply_ingress_class=false
+            https_enabled=true
+            echo "The combined certificate is pending; preserving the active API certificate."
           fi
 
-          terraform -chdir=terraform/kubernetes-staging \
-            output -raw "${manifest_output}" | kubectl apply -f -
+          if [[ "${apply_ingress_class}" == "true" ]]; then
+            terraform -chdir=terraform/kubernetes-staging \
+              output -raw "${manifest_output}" | kubectl apply -f -
+            shared_alb_enabled=true
+          elif [[ "${current_group_name}" == "aero-staging" ]]; then
+            shared_alb_enabled=true
+          fi
           echo "https_enabled=${https_enabled}" >> "${GITHUB_OUTPUT}"
+          echo "shared_alb_enabled=${shared_alb_enabled}" >> "${GITHUB_OUTPUT}"
 
       - name: Publish staging infrastructure configuration
         if: github.event_name == 'push' || inputs.operation == 'apply' || inputs.operation == 'activate-https'
@@ -193,6 +213,7 @@ jobs:
             create configmap "${INFRASTRUCTURE_CONFIG_MAP}" \
             --from-literal="REDIS_URL=rediss://${redis_endpoint}:6379" \
             --from-literal="STAGING_HTTPS_ENABLED=${{ steps.ingress-class.outputs.https_enabled }}" \
+            --from-literal="STAGING_SHARED_ALB_ENABLED=${{ steps.ingress-class.outputs.shared_alb_enabled }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Verify staging HTTPS endpoint
@@ -225,21 +246,17 @@ jobs:
         run: |
           certificate_status="$(terraform \
             -chdir=terraform/kubernetes-staging \
-            output -raw staging_api_certificate_status)"
-          record_name="$(terraform \
+            output -raw staging_https_certificate_status)"
+          validation_records="$(terraform \
             -chdir=terraform/kubernetes-staging \
-            output -raw staging_api_certificate_validation_record_name)"
-          record_type="$(terraform \
-            -chdir=terraform/kubernetes-staging \
-            output -raw staging_api_certificate_validation_record_type)"
-          record_value="$(terraform \
-            -chdir=terraform/kubernetes-staging \
-            output -raw staging_api_certificate_validation_record_value)"
+            output -json staging_certificate_validation_records)"
 
           echo "### ACM DNS Validation" >> "${GITHUB_STEP_SUMMARY}"
           echo "Certificate status: ${certificate_status}" >> "${GITHUB_STEP_SUMMARY}"
-          echo "Add this record with your DNS provider:" >> "${GITHUB_STEP_SUMMARY}"
-          echo "\`${record_name}\` \`${record_type}\` \`${record_value}\`" >> "${GITHUB_STEP_SUMMARY}"
+          echo "Ensure these records exist with your DNS provider:" >> "${GITHUB_STEP_SUMMARY}"
+          jq --raw-output \
+            'to_entries[] | "`\(.value.name)` `\(.value.type)` `\(.value.value)`"' \
+            <<< "${validation_records}" >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Install Doppler Operator
         if: github.event_name == 'push' || inputs.operation == 'apply'

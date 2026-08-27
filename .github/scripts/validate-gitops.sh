@@ -68,6 +68,41 @@ rg --quiet --fixed-strings 'argocd.argoproj.io/sync-wave: "0"' \
   gitops/staging/applications/backend.yaml
 rg --quiet --fixed-strings 'argocd.argoproj.io/sync-wave: "1"' \
   gitops/staging/applications/monitoring.yaml
+rg --quiet --fixed-strings '"grafana-staging.aeroboundventures.com"' \
+  terraform/kubernetes-staging/variables.tf
+rg --quiet --fixed-strings 'subject_alternative_names = [var.staging_grafana_hostname]' \
+  terraform/kubernetes-staging/acm.tf
+rg --quiet --fixed-strings 'name: "aero-staging"' \
+  terraform/kubernetes-staging/alb-ingress-class.yaml.tftpl
+rg --quiet --fixed-strings 'staging_certificate_validation_records' \
+  .github/workflows/terraform-kubernetes-staging.yml
+rg --quiet --fixed-strings 'STAGING_SHARED_ALB_ENABLED' \
+  .github/workflows/terraform-kubernetes-staging.yml
+rg --quiet --fixed-strings 'shared_alb_enabled' \
+  .github/workflows/deploy-backend-staging.yml
+
+ruby -ryaml -e '
+  application = YAML.load_file(ARGV.fetch(0))
+  labels = application.dig(
+    "spec",
+    "syncPolicy",
+    "managedNamespaceMetadata",
+    "labels"
+  )
+  abort("Argo CD must label the monitoring namespace for the staging ALB") unless
+    labels == { "environment" => "staging" }
+
+  values = YAML.load_file(ARGV.fetch(1))
+  ingress = values.dig("grafana", "ingress")
+  abort("Grafana HTTPS ingress must be enabled") unless ingress&.fetch("enabled", false)
+  abort("Grafana ingress must use the staging ALB class") unless
+    ingress["ingressClassName"] == "aero-staging-alb"
+  abort("Grafana ingress hostname is incorrect") unless
+    ingress["hosts"] == ["grafana-staging.aeroboundventures.com"]
+  abort("Grafana must use its public HTTPS root URL") unless
+    values.dig("grafana", "grafana.ini", "server", "root_url") ==
+      "https://grafana-staging.aeroboundventures.com"
+' gitops/staging/applications/monitoring.yaml helm/monitoring/values.yaml
 
 if rg --quiet --fixed-strings 'bootstrap-required' gitops/staging; then
   echo "The staging desired state must reference a deployable image, not bootstrap-required." >&2

@@ -23,29 +23,31 @@ output "staging_api_hostname" {
   value       = var.staging_api_hostname
 }
 
-output "staging_api_certificate_arn" {
-  description = "ACM certificate ARN for the staging API hostname."
-  value       = aws_acm_certificate.staging_api.arn
+output "staging_grafana_hostname" {
+  description = "Public hostname reserved for the staging Grafana dashboard."
+  value       = var.staging_grafana_hostname
 }
 
-output "staging_api_certificate_status" {
-  description = "Current ACM validation status for the staging API certificate."
-  value       = aws_acm_certificate.staging_api.status
+output "staging_https_certificate_arn" {
+  description = "ACM certificate ARN shared by the staging API and Grafana."
+  value       = aws_acm_certificate.staging_services.arn
 }
 
-output "staging_api_certificate_validation_record_name" {
-  description = "CNAME name required by the DNS provider for ACM validation."
-  value       = one(aws_acm_certificate.staging_api.domain_validation_options).resource_record_name
+output "staging_https_certificate_status" {
+  description = "Current validation status of the shared staging certificate."
+  value       = aws_acm_certificate.staging_services.status
 }
 
-output "staging_api_certificate_validation_record_type" {
-  description = "Record type required by the DNS provider for ACM validation."
-  value       = one(aws_acm_certificate.staging_api.domain_validation_options).resource_record_type
-}
-
-output "staging_api_certificate_validation_record_value" {
-  description = "CNAME value required by the DNS provider for ACM validation."
-  value       = one(aws_acm_certificate.staging_api.domain_validation_options).resource_record_value
+output "staging_certificate_validation_records" {
+  description = "DNS records required to validate every staging certificate hostname."
+  value = {
+    for option in aws_acm_certificate.staging_services.domain_validation_options :
+    option.domain_name => {
+      name  = option.resource_record_name
+      type  = option.resource_record_type
+      value = option.resource_record_value
+    }
+  }
 }
 
 output "staging_alb_ingress_class_http_manifest" {

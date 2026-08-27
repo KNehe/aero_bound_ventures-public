@@ -29,7 +29,7 @@ locals {
 
   staging_alb_ingress_class_https_manifest = templatefile(
     "${path.module}/alb-ingress-class.yaml.tftpl",
-    { certificate_arn = aws_acm_certificate.staging_api.arn }
+    { certificate_arn = aws_acm_certificate.staging_services.arn }
   )
 
   common_tags = {

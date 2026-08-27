@@ -26,6 +26,9 @@ spec:
       jsonPointers:
         - /data/admin-password
   syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        environment: staging
     automated:
       enabled: true
       prune: true

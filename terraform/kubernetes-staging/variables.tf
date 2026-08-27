@@ -33,3 +33,9 @@ variable "staging_api_hostname" {
   type        = string
   default     = "api-staging.aeroboundventures.com"
 }
+
+variable "staging_grafana_hostname" {
+  description = "Public hostname for the staging Grafana dashboard."
+  type        = string
+  default     = "grafana-staging.aeroboundventures.com"
+}
