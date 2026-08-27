@@ -104,6 +104,14 @@ ruby -ryaml -e '
       "https://grafana-staging.aeroboundventures.com"
 ' gitops/staging/applications/monitoring.yaml helm/monitoring/values.yaml
 
+ruby -ryaml -e '
+  project = YAML.load_file(ARGV.fetch(0))
+  allowed_cluster_resources = project.dig("spec", "clusterResourceWhitelist")
+  expected = [{ "group" => "", "kind" => "Namespace" }]
+  abort("The staging project must permit only Namespace as a cluster-scoped resource") unless
+    allowed_cluster_resources == expected
+' gitops/staging/applications/project.yaml
+
 if rg --quiet --fixed-strings 'bootstrap-required' gitops/staging; then
   echo "The staging desired state must reference a deployable image, not bootstrap-required." >&2
   exit 1

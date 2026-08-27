@@ -16,6 +16,9 @@ spec:
       namespace: doppler-operator-system
     - server: https://kubernetes.default.svc
       namespace: monitoring
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
   namespaceResourceWhitelist:
     - group: "*"
       kind: "*"
