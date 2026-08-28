@@ -50,7 +50,12 @@ class TicketBookingRepository(Protocol):
 
 
 class TicketFileStorage(Protocol):
-    def store_ticket_file(self, file: Any) -> StoredTicketFile: ...
+    def store_ticket_file(
+        self,
+        file: Any,
+        *,
+        user_email: str,
+    ) -> StoredTicketFile: ...
 
 
 class TicketEventPublisher(Protocol):
@@ -81,7 +86,10 @@ class UploadTicket:
         if not booking:
             raise TicketBookingNotFound
 
-        stored_ticket = self.ticket_file_storage.store_ticket_file(command.file)
+        stored_ticket = self.ticket_file_storage.store_ticket_file(
+            command.file,
+            user_email=booking.user_email,
+        )
         updated = self.ticket_booking_repository.update_ticket_url(
             booking_id=booking.id,
             ticket_url=stored_ticket.ticket_url,

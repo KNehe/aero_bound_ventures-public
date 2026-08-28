@@ -37,8 +37,8 @@ class StubTicketFileStorage:
     def __init__(self):
         self.calls = []
 
-    def store_ticket_file(self, file):
-        self.calls.append(file)
+    def store_ticket_file(self, file, *, user_email: str):
+        self.calls.append({"file": file, "user_email": user_email})
         return StoredTicketFile(
             ticket_url="https://tickets.example.com/ticket.pdf",
             public_id="ticket-public-id",
@@ -92,7 +92,12 @@ def test_upload_ticket_stores_file_updates_booking_and_publishes_event():
         public_id="ticket-public-id",
     )
     assert repository.lookup_calls == [BOOKING_ID]
-    assert storage.calls == [file]
+    assert storage.calls == [
+        {
+            "file": file,
+            "user_email": "traveler@example.com",
+        }
+    ]
     assert repository.update_calls == [
         {
             "booking_id": BOOKING_ID,
