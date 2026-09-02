@@ -135,6 +135,7 @@ class SqlModelBookingRepository:
             id=booking.id,
             user_id=booking.user_id,
             status=booking.status,
+            total_price=booking.total_price,
         )
 
     def get_payment_callback_booking(

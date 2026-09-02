@@ -10,6 +10,7 @@ class PaymentBookingRecord:
     id: UUID
     user_id: UUID
     status: str
+    total_price: float
 
 
 @dataclass(frozen=True)
@@ -122,7 +123,7 @@ class InitiatePayment:
 
         return await self.payment_initiation_provider.initiate_payment(
             merchant_reference=str(booking.id),
-            amount=command.amount,
+            amount=booking.total_price,
             currency=command.currency,
             description=f"Flight booking payment - {booking.id}",
             callback_url=command.callback_url or self.default_callback_url,

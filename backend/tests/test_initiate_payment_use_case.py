@@ -72,6 +72,7 @@ async def test_initiate_payment_builds_provider_request():
             id=booking_id,
             user_id=user_id,
             status=BookingStatus.CONFIRMED,
+            total_price=125.5,
         )
     )
     provider = StubPaymentProvider()
@@ -81,7 +82,10 @@ async def test_initiate_payment_builds_provider_request():
         default_callback_url="https://default.example.com/payment/callback",
     )
 
-    result = await use_case.execute(user_id=user_id, command=build_command())
+    result = await use_case.execute(
+        user_id=user_id,
+        command=build_command(amount=1.0),
+    )
 
     assert result.redirect_url == "https://payment.example.com/pay/123"
     assert repository.calls == ["booking_123"]
@@ -118,6 +122,7 @@ async def test_initiate_payment_uses_default_callback_when_missing():
             id=uuid4(),
             user_id=user_id,
             status=BookingStatus.CONFIRMED,
+            total_price=125.5,
         )
     )
     provider = StubPaymentProvider()
@@ -153,6 +158,7 @@ async def test_initiate_payment_rejects_other_users_booking():
             id=uuid4(),
             user_id=uuid4(),
             status=BookingStatus.CONFIRMED,
+            total_price=125.5,
         )
     )
     provider = StubPaymentProvider()
@@ -176,6 +182,7 @@ async def test_initiate_payment_rejects_paid_booking():
             id=uuid4(),
             user_id=user_id,
             status=BookingStatus.PAID,
+            total_price=125.5,
         )
     )
     provider = StubPaymentProvider()
@@ -199,6 +206,7 @@ async def test_initiate_payment_requires_configured_provider():
             id=uuid4(),
             user_id=user_id,
             status=BookingStatus.CONFIRMED,
+            total_price=125.5,
         )
     )
     provider = StubPaymentProvider(configured=False)
