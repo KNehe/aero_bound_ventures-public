@@ -35,7 +35,6 @@ class InitiatePaymentCommand:
     amount: float
     currency: str
     description: str
-    callback_url: str | None
     billing_address: PaymentBillingAddress
 
 
@@ -126,7 +125,7 @@ class InitiatePayment:
             amount=booking.total_price,
             currency=command.currency,
             description=f"Flight booking payment - {booking.id}",
-            callback_url=command.callback_url or self.default_callback_url,
+            callback_url=self.default_callback_url,
             billing_address=self._billing_address_payload(command.billing_address),
         )
 

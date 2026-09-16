@@ -248,7 +248,7 @@ def test_initiate_payment_route_uses_payment_use_case(client, test_user, auth_he
         "booking_id": "booking_123",
         "amount": 100.0,
         "description": "Test payment",
-        "callback_url": "https://frontend.com/callback",
+        "callback_url": "https://attacker.example.com/callback",
         "billing_address": {
             "email_address": "test@example.com",
             "first_name": "Test",
@@ -270,7 +270,7 @@ def test_initiate_payment_route_uses_payment_use_case(client, test_user, auth_he
     assert command.booking_id == "booking_123"
     assert command.amount == 100.0
     assert command.currency == "USD"
-    assert command.callback_url == "https://frontend.com/callback"
+    assert not hasattr(command, "callback_url")
     assert command.billing_address.email_address == "test@example.com"
 
 

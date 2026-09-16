@@ -27,7 +27,6 @@ class PesapalPaymentRequest(BaseModel):
     amount: float
     currency: str = Field(default="USD", description="Currency code (USD only)")
     description: str
-    callback_url: str
     billing_address: BillingAddress
 
     @field_validator("currency")

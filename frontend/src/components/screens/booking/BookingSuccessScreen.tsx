@@ -16,7 +16,6 @@ interface PesapalPaymentRequest {
   amount: number;
   currency: string;
   description: string;
-  callback_url: string;
   notification_id?: string;
   billing_address: {
     email_address: string;
@@ -137,7 +136,6 @@ export default function BookingSuccessPage() {
       amount: parseFloat(bookingData.pricing.total),
       currency: "USD",
       description: `Flight booking ${bookingData.pnr}`,
-      callback_url: `${window.location.origin}/booking/payment/callback`,
       billing_address: {
         email_address: bookingData.contact.email,
         phone_number: phoneNumber,

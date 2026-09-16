@@ -50,7 +50,6 @@ def build_command(**overrides) -> InitiatePaymentCommand:
         "amount": 125.5,
         "currency": "USD",
         "description": "Flight booking ABC123",
-        "callback_url": "https://frontend.example.com/payment/callback",
         "billing_address": PaymentBillingAddress(
             email_address="traveler@example.com",
             phone_number="5551234",
@@ -95,7 +94,7 @@ async def test_initiate_payment_builds_provider_request():
             "amount": 125.5,
             "currency": "USD",
             "description": f"Flight booking payment - {booking_id}",
-            "callback_url": "https://frontend.example.com/payment/callback",
+            "callback_url": "https://default.example.com/payment/callback",
             "billing_address": {
                 "email_address": "traveler@example.com",
                 "phone_number": "5551234",
@@ -112,31 +111,6 @@ async def test_initiate_payment_builds_provider_request():
             },
         }
     ]
-
-
-@pytest.mark.asyncio
-async def test_initiate_payment_uses_default_callback_when_missing():
-    user_id = uuid4()
-    repository = StubBookingRepository(
-        PaymentBookingRecord(
-            id=uuid4(),
-            user_id=user_id,
-            status=BookingStatus.CONFIRMED,
-            total_price=125.5,
-        )
-    )
-    provider = StubPaymentProvider()
-    use_case = InitiatePayment(
-        booking_repository=repository,
-        payment_initiation_provider=provider,
-        default_callback_url="https://default.example.com/payment/callback",
-    )
-
-    await use_case.execute(user_id=user_id, command=build_command(callback_url=""))
-
-    assert provider.calls[0]["callback_url"] == (
-        "https://default.example.com/payment/callback"
-    )
 
 
 @pytest.mark.asyncio

@@ -132,7 +132,6 @@ async def initiate_payment(
                 amount=payment_request.amount,
                 currency=payment_request.currency,
                 description=payment_request.description,
-                callback_url=payment_request.callback_url,
                 billing_address=PaymentBillingAddress(
                     email_address=str(billing_address.email_address),
                     phone_number=billing_address.phone_number,
